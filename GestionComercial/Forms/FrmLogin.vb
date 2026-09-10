@@ -30,6 +30,7 @@ Namespace Forms
             Me.MinimizeBox = False
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
+            Me.AutoScaleMode = AutoScaleMode.Dpi
 
             ' Banner superior
             Dim pnlBanner As New Panel() With {
@@ -40,7 +41,7 @@ Namespace Forms
             }
 
             Dim lblIcon As New Label() With {
-                .Text = "👗",
+                .Text = "👕",
                 .Font = New Font("Segoe UI Emoji", 26.0F),
                 .ForeColor = Color.White,
                 .Location = New Point(25, 20),
@@ -51,7 +52,7 @@ Namespace Forms
                 .Text = "SISTEMA DE GESTIÓN",
                 .Font = New Font("Segoe UI", 14.0F, FontStyle.Bold),
                 .ForeColor = Color.White,
-                .Location = New Point(85, 25),
+                .Location = New Point(140, 25),
                 .AutoSize = True
             }
 
@@ -59,7 +60,7 @@ Namespace Forms
                 .Text = "Local de Ropa & Punto de Venta",
                 .Font = New Font("Segoe UI", 9.5F, FontStyle.Regular),
                 .ForeColor = Color.FromArgb(148, 163, 184),
-                .Location = New Point(87, 55),
+                .Location = New Point(142, 55),
                 .AutoSize = True
             }
 

@@ -48,7 +48,7 @@ Namespace Forms
             ' Toolbar
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 55,
+                .Height = 90,
                 .BackColor = UITheme.ColorSurface,
                 .Padding = New Padding(15, 10, 15, 10)
             }
@@ -219,7 +219,7 @@ Namespace Forms
 
         Private Sub InitializeUI()
             Me.Text = "Ingreso de Mercadería / Ajuste de Stock"
-            Me.Size = New Size(500, 380)
+            Me.Size = New Size(500, 420)
             Me.StartPosition = FormStartPosition.CenterParent
             Me.FormBorderStyle = FormBorderStyle.FixedDialog
             Me.MaximizeBox = False
@@ -228,21 +228,21 @@ Namespace Forms
             Me.Font = UITheme.FontRegular
 
             Dim lblP As New Label() With {.Text = "Prenda / Artículo:", .Font = UITheme.FontBold, .Location = New Point(30, 20), .AutoSize = True}
-            cboPrendas = New ComboBox() With {.Location = New Point(30, 45), .Size = New Size(420, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            cboPrendas = New ComboBox() With {.Location = New Point(30, 50), .Size = New Size(420, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
             AddHandler cboPrendas.SelectedIndexChanged, AddressOf CboPrendas_SelectedIndexChanged
 
-            Dim lblT As New Label() With {.Text = "Talle:", .Font = UITheme.FontBold, .Location = New Point(30, 85), .AutoSize = True}
-            cboTalles = New ComboBox() With {.Location = New Point(30, 110), .Size = New Size(190, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            Dim lblT As New Label() With {.Text = "Talle:", .Font = UITheme.FontBold, .Location = New Point(30, 95), .AutoSize = True}
+            cboTalles = New ComboBox() With {.Location = New Point(30, 120), .Size = New Size(190, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
 
-            Dim lblC As New Label() With {.Text = "Color:", .Font = UITheme.FontBold, .Location = New Point(250, 85), .AutoSize = True}
-            txtColor = New TextBox() With {.Location = New Point(250, 110), .Size = New Size(200, 26), .Text = "Único"}
+            Dim lblC As New Label() With {.Text = "Color:", .Font = UITheme.FontBold, .Location = New Point(250, 95), .AutoSize = True}
+            txtColor = New TextBox() With {.Location = New Point(250, 120), .Size = New Size(200, 26), .Text = "Único"}
             UITheme.StyleTextBox(txtColor)
 
-            Dim lblCant As New Label() With {.Text = "Cantidad a Ingresar / Ajustar:", .Font = UITheme.FontBold, .Location = New Point(30, 150), .AutoSize = True}
-            numCantidad = New NumericUpDown() With {.Location = New Point(30, 175), .Size = New Size(190, 26), .Minimum = -9999, .Maximum = 9999, .Value = 1}
+            Dim lblCant As New Label() With {.Text = "Cantidad a Ingresar / Ajustar:", .Font = UITheme.FontBold, .Location = New Point(30, 165), .AutoSize = True}
+            numCantidad = New NumericUpDown() With {.Location = New Point(30, 190), .Size = New Size(190, 26), .Minimum = -9999, .Maximum = 9999, .Value = 1}
 
-            Dim lblM As New Label() With {.Text = "Motivo (Ej: Factura Proveedor, Reposición):", .Font = UITheme.FontBold, .Location = New Point(30, 215), .AutoSize = True}
-            txtMotivo = New TextBox() With {.Location = New Point(30, 240), .Size = New Size(420, 26), .Text = "Ingreso de mercadería"}
+            Dim lblM As New Label() With {.Text = "Motivo (Ej: Factura Proveedor, Reposición):", .Font = UITheme.FontBold, .Location = New Point(30, 235), .AutoSize = True}
+            txtMotivo = New TextBox() With {.Location = New Point(30, 260), .Size = New Size(420, 26), .Text = "Ingreso de mercadería"}
             UITheme.StyleTextBox(txtMotivo)
 
             Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = Color.FromArgb(241, 245, 249), .Padding = New Padding(20, 10, 20, 10)}
@@ -302,11 +302,11 @@ Namespace Forms
 
             Dim errMsg As String = ""
             If catalogService.AjustarStockManual(prod.Id, talle.Id, color, cant, motivo, userId, errMsg) Then
-                MessageBox.Show("Stock ajustado correctamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                UITheme.ShowToast(Me, "Stock ajustado correctamente.", "Success")
                 Me.DialogResult = DialogResult.OK
                 Me.Close()
             Else
-                MessageBox.Show("Error al registrar ajuste: " & errMsg, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                UITheme.ShowToast(Me, "Error al registrar ajuste: " & errMsg, "Error")
             End If
         End Sub
 

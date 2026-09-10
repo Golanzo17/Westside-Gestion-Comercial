@@ -169,7 +169,7 @@ Namespace Forms
             Dim grpArticulo As New GroupBox() With {
                 .Text = "Búsqueda de Prendas y Talles",
                 .Dock = DockStyle.Top,
-                .Height = 228,
+                .Height = 255,
                 .BackColor = UITheme.ColorSurface,
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorPrimaryDark,
@@ -177,12 +177,12 @@ Namespace Forms
             }
 
             ' Fila 1: Caja de búsqueda
-            Dim lblBuscar As New Label() With {.Text = "Escanear Código de Barras o Nombre de Prenda:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(15, 22), .AutoSize = True}
-            txtBuscarArticulo = New TextBox() With {.Location = New Point(15, 42), .Size = New Size(380, 28)}
+            Dim lblBuscar As New Label() With {.Text = "Escanear Código de Barras o Nombre de Prenda:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(15, 25), .AutoSize = True}
+            txtBuscarArticulo = New TextBox() With {.Location = New Point(15, 52), .Size = New Size(380, 28)}
             UITheme.StyleTextBox(txtBuscarArticulo)
             AddHandler txtBuscarArticulo.KeyDown, AddressOf TxtBuscarArticulo_KeyDown
 
-            btnBuscarArticulo = New Button() With {.Text = "Buscar", .Location = New Point(405, 41), .Size = New Size(95, 30)}
+            btnBuscarArticulo = New Button() With {.Text = "Buscar", .Location = New Point(405, 51), .Size = New Size(95, 30)}
             UITheme.StyleButton(btnBuscarArticulo, "Primary")
             AddHandler btnBuscarArticulo.Click, AddressOf BtnBuscarArticulo_Click
 
@@ -191,22 +191,22 @@ Namespace Forms
                 .Text = "Seleccione una prenda para ver talles y stock disponible.",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorTextPrimary,
-                .Location = New Point(15, 78),
-                .Size = New Size(400, 22),
+                .Location = New Point(15, 92),
+                .Size = New Size(400, 30),
                 .AutoEllipsis = True
             }
             lblPrecioUnitario = New Label() With {
                 .Text = "",
-                .Font = New Font("Segoe UI", 12.0F, FontStyle.Bold),
+                .Font = New Font("Segoe UI", 13.0F, FontStyle.Bold),
                 .ForeColor = UITheme.ColorSuccess,
-                .Location = New Point(425, 76),
+                .Location = New Point(425, 90),
                 .AutoSize = True
             }
 
             ' Fila 3: Selector dinámico de talles (Botones interactivos)
-            Dim lblTalles As New Label() With {.Text = "Talles y Stock Disponible:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextSecondary, .Location = New Point(15, 105), .AutoSize = True}
+            Dim lblTalles As New Label() With {.Text = "Talles y Stock Disponible:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextSecondary, .Location = New Point(15, 125), .AutoSize = True}
             pnlTallesContainer = New FlowLayoutPanel() With {
-                .Location = New Point(15, 125),
+                .Location = New Point(15, 148),
                 .Size = New Size(560, 42),
                 .AutoScroll = True,
                 .WrapContents = False,
@@ -214,16 +214,16 @@ Namespace Forms
             }
 
             ' Fila 4: Color, Cantidad y Botón Agregar al Carrito (bien espaciado, sin cortes)
-            Dim lblCol As New Label() With {.Text = "Color:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextSecondary, .Location = New Point(15, 181), .AutoSize = True}
-            cboColor = New ComboBox() With {.Location = New Point(60, 178), .Size = New Size(110, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            Dim lblCol As New Label() With {.Text = "Color:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextSecondary, .Location = New Point(15, 203), .AutoSize = True}
+            cboColor = New ComboBox() With {.Location = New Point(60, 200), .Size = New Size(110, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
 
-            Dim lblCant As New Label() With {.Text = "Cant:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextSecondary, .Location = New Point(185, 181), .AutoSize = True}
-            numCantidad = New NumericUpDown() With {.Location = New Point(225, 178), .Size = New Size(65, 26), .Minimum = 1, .Maximum = 999, .Value = 1}
+            Dim lblCant As New Label() With {.Text = "Cant:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextSecondary, .Location = New Point(185, 203), .AutoSize = True}
+            numCantidad = New NumericUpDown() With {.Location = New Point(225, 200), .Size = New Size(65, 26), .Minimum = 1, .Maximum = 999, .Value = 1}
 
             ' Botón agregar al carrito: amplio, destacado y con margen amplio respecto al borde derecho
             btnAgregarAlCarrito = New Button() With {
                 .Text = "+ AGREGAR AL CARRITO",
-                .Location = New Point(310, 174),
+                .Location = New Point(310, 196),
                 .Size = New Size(210, 36),
                 .Font = New Font("Segoe UI", 10.0F, FontStyle.Bold)
             }
@@ -305,11 +305,11 @@ Namespace Forms
             dgvCarrito.Columns("Cantidad").Width = 70
 
             dgvCarrito.Columns.Add("PrecioUnitario", "Precio Unit.")
-            dgvCarrito.Columns("PrecioUnitario").Width = 110
+            dgvCarrito.Columns("PrecioUnitario").Width = 140
             dgvCarrito.Columns("PrecioUnitario").DefaultCellStyle.Format = "C2"
 
             dgvCarrito.Columns.Add("Subtotal", "Subtotal")
-            dgvCarrito.Columns("Subtotal").Width = 120
+            dgvCarrito.Columns("Subtotal").Width = 140
             dgvCarrito.Columns("Subtotal").DefaultCellStyle.Format = "C2"
         End Sub
 

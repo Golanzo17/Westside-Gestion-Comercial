@@ -52,7 +52,7 @@ Namespace Forms
             ' Barra de Filtros y Acciones
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 65,
+                .Height = 95,
                 .BackColor = UITheme.ColorSurface,
                 .Padding = New Padding(15, 15, 15, 10)
             }
@@ -218,10 +218,10 @@ Namespace Forms
                 If resp = DialogResult.Yes Then
                     Dim errMsg As String = ""
                     If catalogService.EliminarProducto(prodId, errMsg) Then
-                        MessageBox.Show("Prenda desactivada correctamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                        UITheme.ShowToast(Me, "Prenda desactivada correctamente.", "Success")
                         LoadProductos()
                     Else
-                        MessageBox.Show("Error al eliminar: " & errMsg, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        UITheme.ShowToast(Me, "Error al eliminar: " & errMsg, "Error")
                     End If
                 End If
             End If

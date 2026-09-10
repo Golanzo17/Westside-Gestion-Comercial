@@ -66,7 +66,7 @@ Friend Module Program
             Return
         End If
 
-        Application.SetHighDpiMode(HighDpiMode.SystemAware)
+        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2)
         Application.EnableVisualStyles()
         Application.SetCompatibleTextRenderingDefault(False)
         Application.Run(New Forms.FrmLogin())

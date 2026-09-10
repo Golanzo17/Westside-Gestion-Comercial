@@ -28,6 +28,7 @@ Namespace Forms
         Private reporteService As New ReporteService()
         Private cajaService As New CajaService()
         Private activeChildForm As Form = Nothing
+        Private activeNavBtn As Button = Nothing  ' Botón de nav activo (para indicador visual)
 
         Public Sub New()
             InitializeUI()
@@ -42,11 +43,12 @@ Namespace Forms
             Me.StartPosition = FormStartPosition.CenterScreen
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
+            Me.AutoScaleMode = AutoScaleMode.Dpi
 
             ' ==================== SIDEBAR (IZQUIERDA) ====================
             pnlSidebar = New Panel() With {
                 .Dock = DockStyle.Left,
-                .Width = 240,
+                .Width = 320,
                 .BackColor = UITheme.ColorSidebar,
                 .Padding = New Padding(0, 0, 0, 10)
             }
@@ -54,16 +56,16 @@ Namespace Forms
             ' Logo y Marca en Sidebar
             Dim pnlBrand As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 85,
+                .Height = 120,
                 .BackColor = Color.FromArgb(15, 23, 42),
                 .Padding = New Padding(15, 18, 15, 10)
             }
 
             Dim lblBrandIcon As New Label() With {
-                .Text = "👗",
+                .Text = "👕",
                 .Font = New Font("Segoe UI Emoji", 20.0F),
                 .ForeColor = Color.White,
-                .Location = New Point(15, 18),
+                .Location = New Point(15, 22),
                 .AutoSize = True
             }
 
@@ -71,15 +73,15 @@ Namespace Forms
                 .Text = "GESTIÓN RETAIL",
                 .Font = New Font("Segoe UI", 12.0F, FontStyle.Bold),
                 .ForeColor = Color.White,
-                .Location = New Point(60, 18),
+                .Location = New Point(120, 22),
                 .AutoSize = True
             }
 
             Dim lblBrandSubtitle As New Label() With {
                 .Text = "Local de Indumentaria",
-                .Font = New Font("Segoe UI", 8.5F, FontStyle.Regular),
+                .Font = New Font("Segoe UI", 9.0F, FontStyle.Regular),
                 .ForeColor = Color.FromArgb(148, 163, 184),
-                .Location = New Point(62, 42),
+                .Location = New Point(122, 55),
                 .AutoSize = True
             }
 
@@ -209,12 +211,42 @@ Namespace Forms
         Private Function CreateNavButton(text As String, clickHandler As EventHandler) As Button
             Dim btn As New Button() With {
                 .Text = text,
-                .Height = 48
+                .Height = 52
             }
             UITheme.StyleButton(btn, "SIDEBAR")
             AddHandler btn.Click, clickHandler
+
+            ' Pintado del indicador activo (franja de color en borde izquierdo)
+            AddHandler btn.Paint, Sub(s, ev)
+                                      Dim b = CType(s, Button)
+                                      If b Is activeNavBtn Then
+                                          ' Franja accent de 4px al borde izquierdo
+                                          ev.Graphics.FillRectangle(New SolidBrush(UITheme.ColorPrimary), 0, 0, 4, b.Height)
+                                          ' Texto más claro cuando está activo
+                                          b.ForeColor = Color.White
+                                          b.BackColor = UITheme.ColorSidebarActive
+                                      Else
+                                          b.ForeColor = Color.FromArgb(203, 213, 225)
+                                          b.BackColor = Color.Transparent
+                                      End If
+                                  End Sub
             Return btn
         End Function
+
+        ''' <summary>Marca el botón nav como activo y refresca todos los demás.</summary>
+        Private Sub SetActiveNavButton(btn As Button)
+            activeNavBtn = btn
+            ' Forzar repintado de todos los botones del nav
+            For Each ctrl As Control In pnlSidebar.Controls
+                If TypeOf ctrl Is Panel Then
+                    For Each inner As Control In ctrl.Controls
+                        If TypeOf inner Is Button Then inner.Invalidate()
+                    Next
+                ElseIf TypeOf ctrl Is Button Then
+                    ctrl.Invalidate()
+                End If
+            Next
+        End Sub
 
         Private Sub BuildDashboardHome()
             pnlDashboardHome = New Panel() With {
@@ -235,7 +267,7 @@ Namespace Forms
                 .Text = "Métricas en tiempo real de ventas, inventario y movimientos del local.",
                 .Font = UITheme.FontRegular,
                 .ForeColor = UITheme.ColorTextSecondary,
-                .Location = New Point(27, 50),
+                .Location = New Point(27, 65),
                 .AutoSize = True
             }
 
@@ -243,7 +275,7 @@ Namespace Forms
 
             ' Fila de 4 KPI Cards
             Dim pnlCardsRow As New FlowLayoutPanel() With {
-                .Location = New Point(20, 85),
+                .Location = New Point(20, 110),
                 .Size = New Size(980, 115),
                 .AutoSize = True
             }
@@ -266,7 +298,7 @@ Namespace Forms
             ' Tarjetas de Acceso Rápido / Módulos
             Dim pnlAcciones As New GroupBox() With {
                 .Text = "Acceso Rápido a Operaciones",
-                .Location = New Point(25, 220),
+                .Location = New Point(25, 245),
                 .Size = New Size(950, 160),
                 .BackColor = UITheme.ColorSurface,
                 .Font = UITheme.FontBold,
@@ -335,6 +367,7 @@ Namespace Forms
             childForm.TopLevel = False
             childForm.FormBorderStyle = FormBorderStyle.None
             childForm.Dock = DockStyle.Fill
+            childForm.AutoScaleMode = AutoScaleMode.None
 
             pnlContentHost.Controls.Clear()
             pnlContentHost.Controls.Add(childForm)
@@ -344,6 +377,7 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_Home(sender As Object, e As EventArgs)
+            SetActiveNavButton(Nothing)
             If activeChildForm IsNot Nothing Then
                 activeChildForm.Close()
                 activeChildForm = Nothing
@@ -354,26 +388,32 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_POS(sender As Object, e As EventArgs)
+            If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmVentasPOS())
         End Sub
 
         Private Sub Nav_Productos(sender As Object, e As EventArgs)
+            If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmProductos())
         End Sub
 
         Private Sub Nav_Stock(sender As Object, e As EventArgs)
+            If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmStock())
         End Sub
 
         Private Sub Nav_Clientes(sender As Object, e As EventArgs)
+            If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmClientes())
         End Sub
 
         Private Sub Nav_Caja(sender As Object, e As EventArgs)
+            If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmCaja())
         End Sub
 
         Private Sub Nav_Reportes(sender As Object, e As EventArgs)
+            If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmReportes())
         End Sub
 

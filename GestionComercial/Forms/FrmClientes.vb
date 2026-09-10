@@ -49,31 +49,31 @@ Namespace Forms
             ' Toolbar
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 60,
+                .Height = 95,
                 .BackColor = UITheme.ColorSurface,
                 .Padding = New Padding(15, 15, 15, 10)
             }
 
             Dim lblB As New Label() With {.Text = "Buscar por DNI o Nombre:", .Font = UITheme.FontBold, .Location = New Point(15, 20), .AutoSize = True}
-            txtBuscar = New TextBox() With {.Location = New Point(185, 18), .Size = New Size(260, 26)}
+            txtBuscar = New TextBox() With {.Location = New Point(215, 18), .Size = New Size(260, 26)}
             UITheme.StyleTextBox(txtBuscar)
             AddHandler txtBuscar.KeyDown, Sub(s, e)
                                               If e.KeyCode = Keys.Enter Then LoadClientes()
                                           End Sub
 
-            btnBuscar = New Button() With {.Text = "Buscar", .Location = New Point(455, 16), .Size = New Size(80, 30)}
+            btnBuscar = New Button() With {.Text = "Buscar", .Location = New Point(485, 16), .Size = New Size(80, 30)}
             UITheme.StyleButton(btnBuscar, "Primary")
             AddHandler btnBuscar.Click, Sub() LoadClientes()
 
-            btnNuevo = New Button() With {.Text = "+ Nuevo Cliente", .Location = New Point(555, 16), .Size = New Size(130, 30)}
+            btnNuevo = New Button() With {.Text = "+ Nuevo Cliente", .Location = New Point(575, 16), .Size = New Size(130, 30)}
             UITheme.StyleButton(btnNuevo, "Success")
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-            btnEditar = New Button() With {.Text = "✏ Editar", .Location = New Point(695, 16), .Size = New Size(95, 30)}
+            btnEditar = New Button() With {.Text = "✏ Editar", .Location = New Point(715, 16), .Size = New Size(95, 30)}
             UITheme.StyleButton(btnEditar, "Secondary")
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
-            btnEliminar = New Button() With {.Text = "Eliminar", .Location = New Point(800, 16), .Size = New Size(95, 30)}
+            btnEliminar = New Button() With {.Text = "Eliminar", .Location = New Point(820, 16), .Size = New Size(95, 30)}
             UITheme.StyleButton(btnEliminar, "Danger")
             AddHandler btnEliminar.Click, AddressOf BtnEliminar_Click
 
@@ -162,10 +162,10 @@ Namespace Forms
                 If MessageBox.Show($"¿Deseas dar de baja a {nombre}?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.Yes Then
                     Dim errMsg As String = ""
                     If clienteService.EliminarCliente(id, errMsg) Then
-                        MessageBox.Show("Cliente eliminado con éxito.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                        UITheme.ShowToast(Me, "Cliente dado de baja correctamente.", "Success")
                         LoadClientes()
                     Else
-                        MessageBox.Show("Error: " & errMsg, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        UITheme.ShowToast(Me, "Error: " & errMsg, "Error")
                     End If
                 End If
             End If
@@ -199,7 +199,7 @@ Namespace Forms
 
         Private Sub InitializeUI()
             Me.Text = If(_clienteId = 0, "Nuevo Cliente", "Editar Cliente")
-            Me.Size = New Size(540, 480)
+            Me.Size = New Size(540, 530)
             Me.StartPosition = FormStartPosition.CenterParent
             Me.FormBorderStyle = FormBorderStyle.FixedDialog
             Me.MaximizeBox = False
@@ -208,35 +208,35 @@ Namespace Forms
             Me.Font = UITheme.FontRegular
 
             Dim lblDni As New Label() With {.Text = "DNI / CUIT:", .Font = UITheme.FontBold, .Location = New Point(30, 20), .AutoSize = True}
-            txtDni = New TextBox() With {.Location = New Point(30, 45), .Size = New Size(220, 26)}
+            txtDni = New TextBox() With {.Location = New Point(30, 50), .Size = New Size(220, 26)}
             UITheme.StyleTextBox(txtDni)
 
             Dim lblTel As New Label() With {.Text = "Teléfono / Celular:", .Font = UITheme.FontBold, .Location = New Point(270, 20), .AutoSize = True}
-            txtTelefono = New TextBox() With {.Location = New Point(270, 45), .Size = New Size(220, 26)}
+            txtTelefono = New TextBox() With {.Location = New Point(270, 50), .Size = New Size(220, 26)}
             UITheme.StyleTextBox(txtTelefono)
 
-            Dim lblNom As New Label() With {.Text = "Nombre:", .Font = UITheme.FontBold, .Location = New Point(30, 85), .AutoSize = True}
-            txtNombre = New TextBox() With {.Location = New Point(30, 110), .Size = New Size(220, 26)}
+            Dim lblNom As New Label() With {.Text = "Nombre:", .Font = UITheme.FontBold, .Location = New Point(30, 95), .AutoSize = True}
+            txtNombre = New TextBox() With {.Location = New Point(30, 125), .Size = New Size(220, 26)}
             UITheme.StyleTextBox(txtNombre)
 
-            Dim lblApe As New Label() With {.Text = "Apellido:", .Font = UITheme.FontBold, .Location = New Point(270, 85), .AutoSize = True}
-            txtApellido = New TextBox() With {.Location = New Point(270, 110), .Size = New Size(220, 26)}
+            Dim lblApe As New Label() With {.Text = "Apellido:", .Font = UITheme.FontBold, .Location = New Point(270, 95), .AutoSize = True}
+            txtApellido = New TextBox() With {.Location = New Point(270, 125), .Size = New Size(220, 26)}
             UITheme.StyleTextBox(txtApellido)
 
-            Dim lblEmail As New Label() With {.Text = "Email:", .Font = UITheme.FontBold, .Location = New Point(30, 150), .AutoSize = True}
-            txtEmail = New TextBox() With {.Location = New Point(30, 175), .Size = New Size(460, 26)}
+            Dim lblEmail As New Label() With {.Text = "Email:", .Font = UITheme.FontBold, .Location = New Point(30, 170), .AutoSize = True}
+            txtEmail = New TextBox() With {.Location = New Point(30, 200), .Size = New Size(460, 26)}
             UITheme.StyleTextBox(txtEmail)
 
-            Dim lblDir As New Label() With {.Text = "Dirección:", .Font = UITheme.FontBold, .Location = New Point(30, 215), .AutoSize = True}
-            txtDireccion = New TextBox() With {.Location = New Point(30, 240), .Size = New Size(290, 26)}
+            Dim lblDir As New Label() With {.Text = "Dirección:", .Font = UITheme.FontBold, .Location = New Point(30, 245), .AutoSize = True}
+            txtDireccion = New TextBox() With {.Location = New Point(30, 275), .Size = New Size(290, 26)}
             UITheme.StyleTextBox(txtDireccion)
 
-            Dim lblCiu As New Label() With {.Text = "Ciudad:", .Font = UITheme.FontBold, .Location = New Point(330, 215), .AutoSize = True}
-            txtCiudad = New TextBox() With {.Location = New Point(330, 240), .Size = New Size(160, 26)}
+            Dim lblCiu As New Label() With {.Text = "Ciudad:", .Font = UITheme.FontBold, .Location = New Point(330, 245), .AutoSize = True}
+            txtCiudad = New TextBox() With {.Location = New Point(330, 275), .Size = New Size(160, 26)}
             UITheme.StyleTextBox(txtCiudad)
 
-            Dim lblNotas As New Label() With {.Text = "Notas / Preferencias (Talles preferidos, etc.):", .Font = UITheme.FontBold, .Location = New Point(30, 280), .AutoSize = True}
-            txtNotas = New TextBox() With {.Location = New Point(30, 305), .Size = New Size(460, 60), .Multiline = True}
+            Dim lblNotas As New Label() With {.Text = "Notas / Preferencias (Talles preferidos, etc.):", .Font = UITheme.FontBold, .Location = New Point(30, 320), .AutoSize = True}
+            txtNotas = New TextBox() With {.Location = New Point(30, 350), .Size = New Size(460, 60), .Multiline = True}
             UITheme.StyleTextBox(txtNotas)
 
             Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = Color.FromArgb(241, 245, 249), .Padding = New Padding(20, 10, 20, 10)}
