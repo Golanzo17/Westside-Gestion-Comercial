@@ -6,11 +6,40 @@ Imports GestionComercial.Models
 Namespace Services
     Public Class VentaService
 
-        Public Function GenerarNumeroTicket() As String
-            Dim prefijo As String = "TICK-" & DateTime.Now.ToString("yyyyMMdd") & "-"
-            Dim query As String = "SELECT COUNT(*) FROM `ventas` WHERE DATE(`fecha`) = CURDATE();"
-            Dim count As Long = Convert.ToInt64(DatabaseHelper.ExecuteScalar(query))
-            Return prefijo & (count + 1).ToString("D4")
+        Public Function GenerarNumeroTicket(Optional conn As Common.DbConnection = Nothing, Optional trans As Common.DbTransaction = Nothing) As String
+            Dim hoyStr As String = DateTime.Now.ToString("yyyyMMdd")
+            Dim prefijo As String = "TICK-" & hoyStr & "-"
+            Dim query As String = "SELECT `numero_ticket` FROM `ventas` WHERE `numero_ticket` LIKE @prefijo ORDER BY `id` DESC LIMIT 1;"
+
+            Dim lastTicket As String = Nothing
+            If conn IsNot Nothing Then
+                Using cmd = DatabaseHelper.CreateCommand(conn, query, trans)
+                    DatabaseHelper.AddParam(cmd, "@prefijo", prefijo & "%")
+                    Dim obj = cmd.ExecuteScalar()
+                    If obj IsNot Nothing AndAlso Not IsDBNull(obj) Then
+                        lastTicket = obj.ToString()
+                    End If
+                End Using
+            Else
+                Dim params As New Dictionary(Of String, Object) From {{"@prefijo", prefijo & "%"}}
+                Dim dt = DatabaseHelper.ExecuteQuery(query, params)
+                If dt.Rows.Count > 0 Then
+                    lastTicket = dt.Rows(0)("numero_ticket").ToString()
+                End If
+            End If
+
+            Dim nextSeq As Integer = 1
+            If Not String.IsNullOrEmpty(lastTicket) Then
+                Dim parts = lastTicket.Split("-"c)
+                If parts.Length >= 3 Then
+                    Dim currentSeq As Integer
+                    If Integer.TryParse(parts(2), currentSeq) Then
+                        nextSeq = currentSeq + 1
+                    End If
+                End If
+            End If
+
+            Return prefijo & nextSeq.ToString("D4")
         End Function
 
         Public Function ProcesarVenta(venta As Venta, ByRef errorMessage As String) As Boolean
@@ -24,6 +53,20 @@ Namespace Services
                     conn.Open()
                     Using trans As Common.DbTransaction = conn.BeginTransaction()
                         Try
+                            ' 0. Garantizar número de ticket único y correlativo dentro de la transacción atómica
+                            If String.IsNullOrWhiteSpace(venta.NumeroTicket) Then
+                                venta.NumeroTicket = GenerarNumeroTicket(conn, trans)
+                            Else
+                                Dim queryCheckTicket As String = "SELECT COUNT(*) FROM `ventas` WHERE `numero_ticket` = @num;"
+                                Using cmdCheck = DatabaseHelper.CreateCommand(conn, queryCheckTicket, trans)
+                                    DatabaseHelper.AddParam(cmdCheck, "@num", venta.NumeroTicket)
+                                    Dim countTicket = Convert.ToInt64(cmdCheck.ExecuteScalar())
+                                    If countTicket > 0 Then
+                                        venta.NumeroTicket = GenerarNumeroTicket(conn, trans)
+                                    End If
+                                End Using
+                            End If
+
                             ' 1. Validar y descontar stock de cada prenda por su Talle y Color
                             For Each item In venta.Detalles
                                 Dim queryStock As String = "SELECT stock_actual FROM `producto_talles` WHERE `producto_id` = @prodId AND `talle_id` = @talleId AND `color` = @color FOR UPDATE;"

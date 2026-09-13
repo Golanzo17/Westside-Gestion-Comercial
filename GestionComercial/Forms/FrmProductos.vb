@@ -322,7 +322,7 @@ Namespace Forms
                 .AllowUserToAddRows = False,
                 .AllowUserToDeleteRows = False
             }
-            UITheme.StyleDataGrid(dgvTalles)
+            UITheme.StyleDataGrid(dgvTalles, readOnlyGrid:=False)
             ConfigurarColumnasTalles()
             grpTalles.Controls.Add(dgvTalles)
             Me.Controls.Add(grpTalles)

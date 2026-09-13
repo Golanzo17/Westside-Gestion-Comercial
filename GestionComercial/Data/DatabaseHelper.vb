@@ -150,9 +150,25 @@ Namespace Data
         End Function
 
         ''' <summary>
-        ''' Genera hash SHA256 seguro para contraseñas de usuarios
+        ''' Genera hash seguro PBKDF2 con Salt aleatorio y 100.000 iteraciones (Estándar OWASP)
+        ''' Formato: PBKDF2$SHA256${iterations}${saltBase64}${hashBase64}
         ''' </summary>
-        Public Function HashPassword(password As String) As String
+        Public Function HashPasswordSecure(password As String) As String
+            If String.IsNullOrEmpty(password) Then Return String.Empty
+            Const iterations As Integer = 100000
+            Const saltSize As Integer = 16
+            Const keySize As Integer = 32
+
+            Dim salt As Byte() = RandomNumberGenerator.GetBytes(saltSize)
+            Dim subKey As Byte() = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, keySize)
+
+            Return $"PBKDF2$SHA256${iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(subKey)}"
+        End Function
+
+        ''' <summary>
+        ''' Hash legacy SHA-256 (mantenido para verificar y migrar contraseñas existentes)
+        ''' </summary>
+        Public Function LegacyHashPassword(password As String) As String
             If String.IsNullOrEmpty(password) Then Return String.Empty
             Using sha As SHA256 = SHA256.Create()
                 Dim bytes As Byte() = sha.ComputeHash(Encoding.UTF8.GetBytes(password))
@@ -165,6 +181,87 @@ Namespace Data
         End Function
 
         ''' <summary>
+        ''' Valida una contraseña contra un hash almacenado (soporta PBKDF2 y legado SHA-256).
+        ''' Si el hash es legado y la clave es correcta, needsRehash se pone en True para auto-migrar.
+        ''' Utiliza CryptographicOperations.FixedTimeEquals para prevenir ataques de temporización (timing attacks).
+        ''' </summary>
+        Public Function VerifyPassword(password As String, storedHash As String, ByRef needsRehash As Boolean) As Boolean
+            needsRehash = False
+            If String.IsNullOrEmpty(password) OrElse String.IsNullOrEmpty(storedHash) Then Return False
+
+            Try
+                ' 1. Caso formato moderno: PBKDF2$SHA256${iterations}${salt}${hash}
+                If storedHash.StartsWith("PBKDF2$SHA256$", StringComparison.OrdinalIgnoreCase) Then
+                    Dim parts As String() = storedHash.Split("$"c)
+                    If parts.Length >= 5 Then
+                        Dim iterations As Integer = 100000
+                        Integer.TryParse(parts(2), iterations)
+                        Dim salt As Byte() = Convert.FromBase64String(parts(3))
+                        Dim expectedKey As Byte() = Convert.FromBase64String(parts(4))
+                        Dim actualKey As Byte() = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, expectedKey.Length)
+
+                        Return CryptographicOperations.FixedTimeEquals(actualKey, expectedKey)
+                    End If
+                End If
+
+                ' 2. Caso formato legado: SHA-256 hexadecimal (64 caracteres)
+                Dim legacyExpected = LegacyHashPassword(password)
+                Dim match = CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(legacyExpected.ToLowerInvariant()),
+                    Encoding.UTF8.GetBytes(storedHash.Trim().ToLowerInvariant())
+                )
+                If match Then
+                    needsRehash = True
+                    Return True
+                End If
+            Catch
+                Return False
+            End Try
+
+            Return False
+        End Function
+
+        ''' <summary>
+        ''' Mapeo predeterminado de hash para nuevos usuarios o cambios de contraseña
+        ''' </summary>
+        Public Function HashPassword(password As String) As String
+            Return HashPasswordSecure(password)
+        End Function
+
+        ''' <summary>
+        ''' Resuelve dinámicamente la ubicación de scripts SQL sin rutas hardcodeadas
+        ''' </summary>
+        Public Function ResolveDatabaseScriptPath(fileName As String) As String
+            ' 1. Directorio base del ejecutable / bin
+            Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
+            Dim p1 = Path.Combine(baseDir, "Database", fileName)
+            If File.Exists(p1) Then Return Path.GetFullPath(p1)
+
+            Dim p2 = Path.Combine(baseDir, fileName)
+            If File.Exists(p2) Then Return Path.GetFullPath(p2)
+
+            ' 2. Búsqueda recursiva ascendente hacia la raíz del proyecto (hasta 6 niveles)
+            Dim currentDir As DirectoryInfo = New DirectoryInfo(baseDir)
+            For i As Integer = 0 To 5
+                If currentDir Is Nothing Then Exit For
+                Dim candDir = Path.Combine(currentDir.FullName, "Database", fileName)
+                If File.Exists(candDir) Then Return Path.GetFullPath(candDir)
+
+                Dim candRoot = Path.Combine(currentDir.FullName, fileName)
+                If File.Exists(candRoot) Then Return Path.GetFullPath(candRoot)
+
+                currentDir = currentDir.Parent
+            Next
+
+            ' 3. Directorio de trabajo actual
+            Dim cwd = Environment.CurrentDirectory
+            Dim pCwd = Path.Combine(cwd, "Database", fileName)
+            If File.Exists(pCwd) Then Return Path.GetFullPath(pCwd)
+
+            Return String.Empty
+        End Function
+
+        ''' <summary>
         ''' Inicializa automáticamente la base de datos (SQLite o MySQL) y crea las tablas si aún no existen
         ''' </summary>
         Public Function InitializeDatabaseAndTables(ByRef outMessage As String) As Boolean
@@ -174,22 +271,7 @@ Namespace Data
                     Using conn As DbConnection = GetConnection()
                         conn.Open()
 
-                        Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
-                        Dim searchPaths As String() = {
-                            Path.Combine(baseDir, "Database", "schema_sqlite.sql"),
-                            Path.Combine(baseDir, "..", "..", "..", "..", "Database", "schema_sqlite.sql"),
-                            Path.Combine(baseDir, "..", "..", "..", "Database", "schema_sqlite.sql"),
-                            "c:\Users\gonza\Desktop\Proyecto\Database\schema_sqlite.sql"
-                        }
-
-                        Dim schemaFile As String = ""
-                        For Each p In searchPaths
-                            Dim fullPath = Path.GetFullPath(p)
-                            If File.Exists(fullPath) Then
-                                schemaFile = fullPath
-                                Exit For
-                            End If
-                        Next
+                        Dim schemaFile As String = ResolveDatabaseScriptPath("schema_sqlite.sql")
 
                         If Not String.IsNullOrEmpty(schemaFile) Then
                             Dim sql = File.ReadAllText(schemaFile)
@@ -203,8 +285,8 @@ Namespace Data
                                 cmdCount.CommandText = "SELECT COUNT(*) FROM usuarios;"
                                 Dim count As Long = Convert.ToInt64(cmdCount.ExecuteScalar())
                                 If count = 0 Then
-                                    Dim seedFile = Path.Combine(Path.GetDirectoryName(schemaFile), "seed_sqlite.sql")
-                                    If File.Exists(seedFile) Then
+                                    Dim seedFile = ResolveDatabaseScriptPath("seed_sqlite.sql")
+                                    If Not String.IsNullOrEmpty(seedFile) AndAlso File.Exists(seedFile) Then
                                         Dim seedSql = File.ReadAllText(seedFile)
                                         Using cmdSeed = conn.CreateCommand()
                                             cmdSeed.CommandText = seedSql
@@ -231,22 +313,7 @@ Namespace Data
                     Using dbConn As MySqlConnection = New MySqlConnection(AppConfig.ConnectionString)
                         dbConn.Open()
 
-                        Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
-                        Dim searchPaths As String() = {
-                            Path.Combine(baseDir, "Database", "schema_mysql.sql"),
-                            Path.Combine(baseDir, "..", "..", "..", "..", "Database", "schema_mysql.sql"),
-                            Path.Combine(baseDir, "..", "..", "..", "Database", "schema_mysql.sql"),
-                            "c:\Users\gonza\Desktop\Proyecto\Database\schema_mysql.sql"
-                        }
-
-                        Dim schemaFile As String = ""
-                        For Each p In searchPaths
-                            Dim fullPath = Path.GetFullPath(p)
-                            If File.Exists(fullPath) Then
-                                schemaFile = fullPath
-                                Exit For
-                            End If
-                        Next
+                        Dim schemaFile As String = ResolveDatabaseScriptPath("schema_mysql.sql")
 
                         If Not String.IsNullOrEmpty(schemaFile) Then
                             Dim schemaSql As String = File.ReadAllText(schemaFile)
@@ -258,8 +325,8 @@ Namespace Data
                             Dim countCmd As New MySqlCommand("SELECT COUNT(*) FROM `usuarios`;", dbConn)
                             Dim userCount As Long = Convert.ToInt64(countCmd.ExecuteScalar())
                             If userCount = 0 Then
-                                Dim seedFile = Path.Combine(Path.GetDirectoryName(schemaFile), "seed_data.sql")
-                                If File.Exists(seedFile) Then
+                                Dim seedFile = ResolveDatabaseScriptPath("seed_data.sql")
+                                If Not String.IsNullOrEmpty(seedFile) AndAlso File.Exists(seedFile) Then
                                     Dim seedSql As String = File.ReadAllText(seedFile)
                                     Using cmdSeed As New MySqlCommand(seedSql, dbConn)
                                         cmdSeed.CommandTimeout = 120

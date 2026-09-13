@@ -18,6 +18,36 @@ Friend Module Program
             Dim okLogin = Services.AuthService.Login("admin", "admin123", authErr)
             Console.WriteLine("TEST_AUTH:" & okLogin.ToString() & ":" & authErr)
 
+            ' Verificación de auto-migración a PBKDF2 en BD
+            Dim userRow = Data.DatabaseHelper.ExecuteQuery("SELECT password_hash FROM usuarios WHERE username = 'admin' LIMIT 1;")
+            Dim currentHash As String = If(userRow.Rows.Count > 0, userRow.Rows(0)("password_hash").ToString(), "")
+            Dim isPbkdf2 As Boolean = currentHash.StartsWith("PBKDF2$SHA256$")
+            Console.WriteLine("TEST_PBKDF2_MIGRATION:" & isPbkdf2.ToString() & ":Prefix=" & If(isPbkdf2, "PBKDF2_OK", currentHash.Substring(0, Math.Min(10, currentHash.Length))))
+
+            ' Verificación de protección Anti-Fuerza Bruta
+            Dim fakeErr As String = ""
+            Dim lockoutTriggered As Boolean = False
+            For i As Integer = 1 To 6
+                Services.AuthService.Login("test_brute_user", "wrong_password", fakeErr)
+                If fakeErr.Contains("bloqueada") OrElse fakeErr.Contains("bloqueo") OrElse fakeErr.Contains("Demasiados intentos") Then
+                    lockoutTriggered = True
+                    Exit For
+                End If
+            Next
+            Console.WriteLine("TEST_BRUTE_FORCE_LOCKOUT:" & lockoutTriggered.ToString() & ":" & fakeErr)
+
+            ' Verificación de resolución dinámica de scripts
+            Dim resolvedScript = Data.DatabaseHelper.ResolveDatabaseScriptPath("schema_sqlite.sql")
+            Dim scriptFound = Not String.IsNullOrEmpty(resolvedScript) AndAlso IO.File.Exists(resolvedScript)
+            Console.WriteLine("TEST_SCRIPT_PATH_RESOLVED:" & scriptFound.ToString() & ":" & IO.Path.GetFileName(resolvedScript))
+
+            Dim cfgSvc As New Services.ConfiguracionService()
+            Dim cfg = cfgSvc.GetConfiguracion()
+            cfg.NombreComercio = "Boutique Urbana"
+            Dim cfgErr As String = ""
+            Dim okCfg = cfgSvc.GuardarConfiguracion(cfg, cfgErr)
+            Console.WriteLine("TEST_GUARDAR_CONFIG:" & okCfg.ToString() & ":Err=" & cfgErr)
+
             Dim catSvc As New Services.CatalogService()
             Dim prods = catSvc.GetProductos()
             Console.WriteLine("TEST_PRODUCTS:" & prods.Count.ToString())

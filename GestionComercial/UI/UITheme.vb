@@ -109,9 +109,12 @@ Namespace UI
         End Sub
 
         ' ═══════════════════════════════════════════════════════════
-        ' DATAGRIDVIEW – Con hover en filas
+        ' DATAGRIDVIEW – Con hover en filas y modo lectura por defecto
         ' ═══════════════════════════════════════════════════════════
-        Public Sub StyleDataGrid(dgv As DataGridView)
+        Public Sub StyleDataGrid(dgv As DataGridView, Optional readOnlyGrid As Boolean = True)
+            dgv.ReadOnly = readOnlyGrid
+            dgv.AllowUserToAddRows = False
+            dgv.AllowUserToDeleteRows = False
             dgv.BackgroundColor = ColorSurface
             dgv.BorderStyle = BorderStyle.None
             dgv.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal

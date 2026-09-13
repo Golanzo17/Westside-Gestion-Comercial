@@ -30,10 +30,18 @@ Namespace Services
 
         Public Function GuardarConfiguracion(cfg As ConfiguracionComercio, ByRef errorMessage As String) As Boolean
             Try
-                Dim query As String = "INSERT INTO `configuracion` (`id`, `nombre_comercio`, `cuit`, `direccion`, `telefono`, `email`, `condicion_iva`, `mensaje_ticket`, `moneda_simbolo`) " &
-                                     "VALUES (1, @nombre, @cuit, @dir, @tel, @email, @iva, @mensaje, @moneda) " &
-                                     "ON DUPLICATE KEY UPDATE " &
-                                     "`nombre_comercio` = @nombre, `cuit` = @cuit, `direccion` = @dir, `telefono` = @tel, `email` = @email, `condicion_iva` = @iva, `mensaje_ticket` = @mensaje, `moneda_simbolo` = @moneda;"
+                Dim query As String
+                If DatabaseHelper.IsSQLite Then
+                    query = "INSERT INTO `configuracion` (`id`, `nombre_comercio`, `cuit`, `direccion`, `telefono`, `email`, `condicion_iva`, `mensaje_ticket`, `moneda_simbolo`) " &
+                            "VALUES (1, @nombre, @cuit, @dir, @tel, @email, @iva, @mensaje, @moneda) " &
+                            "ON CONFLICT(`id`) DO UPDATE SET " &
+                            "`nombre_comercio` = @nombre, `cuit` = @cuit, `direccion` = @dir, `telefono` = @tel, `email` = @email, `condicion_iva` = @iva, `mensaje_ticket` = @mensaje, `moneda_simbolo` = @moneda;"
+                Else
+                    query = "INSERT INTO `configuracion` (`id`, `nombre_comercio`, `cuit`, `direccion`, `telefono`, `email`, `condicion_iva`, `mensaje_ticket`, `moneda_simbolo`) " &
+                            "VALUES (1, @nombre, @cuit, @dir, @tel, @email, @iva, @mensaje, @moneda) " &
+                            "ON DUPLICATE KEY UPDATE " &
+                            "`nombre_comercio` = @nombre, `cuit` = @cuit, `direccion` = @dir, `telefono` = @tel, `email` = @email, `condicion_iva` = @iva, `mensaje_ticket` = @mensaje, `moneda_simbolo` = @moneda;"
+                End If
 
                 Dim params As New Dictionary(Of String, Object) From {
                     {"@nombre", cfg.NombreComercio},

@@ -17,8 +17,7 @@ Namespace Config
             Dim candidates As String() = {
                 Path.Combine(baseDir, "Database"),
                 Path.Combine(baseDir, "..", "..", "..", "..", "Database"),
-                Path.Combine(baseDir, "..", "..", "..", "Database"),
-                "c:\Users\gonza\Desktop\Proyecto\Database"
+                Path.Combine(baseDir, "..", "..", "..", "Database")
             }
 
             For Each c In candidates
