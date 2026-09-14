@@ -4,11 +4,26 @@ Namespace Models
         Public Property Id As Integer
         Public Property Username As String = String.Empty
         Public Property PasswordHash As String = String.Empty
-        Public Property NombreCompleto As String = String.Empty
-        Public Property Rol As String = "Vendedor" ' Administrador, Vendedor, Cajero
+        Public Property Nombre As String = String.Empty
+        Public Property Apellido As String = String.Empty
+        Public Property Rol As String = "Vendedor" ' Administrador, Vendedor
+        Public Property Telefono As String = String.Empty
+        Public Property Email As String = String.Empty
+        Public Property Direccion As String = String.Empty
+        Public Property Ciudad As String = String.Empty
+        Public Property Notas As String = String.Empty
+        Public Property FechaNacimiento As Nullable(Of DateTime)
         Public Property Activo As Boolean = True
         Public Property UltimoLogin As Nullable(Of DateTime)
         Public Property CreatedAt As DateTime = DateTime.Now
+
+        ''' <summary>Propiedad calculada para compatibilidad con el resto del sistema.</summary>
+        Public ReadOnly Property NombreCompleto As String
+            Get
+                Dim s = $"{Apellido}, {Nombre}".Trim(" "c, ","c)
+                Return If(String.IsNullOrWhiteSpace(s), Username, s)
+            End Get
+        End Property
     End Class
 
     Public Class Categoria
@@ -75,6 +90,7 @@ Namespace Models
         Public Property Direccion As String = String.Empty
         Public Property Ciudad As String = String.Empty
         Public Property Notas As String = String.Empty
+        Public Property FechaNacimiento As Nullable(Of DateTime)
         Public Property Activo As Boolean = True
 
         Public ReadOnly Property NombreCompleto As String

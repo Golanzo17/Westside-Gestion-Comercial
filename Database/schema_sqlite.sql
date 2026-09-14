@@ -22,8 +22,16 @@ CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    nombre_completo TEXT NOT NULL,
+    nombre TEXT NOT NULL DEFAULT '',
+    apellido TEXT NOT NULL DEFAULT '',
+    nombre_completo TEXT NOT NULL DEFAULT '',  -- columna legacy, se mantiene para compatibilidad con seeds
     rol TEXT NOT NULL DEFAULT 'Vendedor',
+    telefono TEXT NULL,
+    email TEXT NULL,
+    direccion TEXT NULL,
+    ciudad TEXT NULL,
+    notas TEXT NULL,
+    fecha_nacimiento TEXT NULL,
     activo INTEGER NOT NULL DEFAULT 1,
     ultimo_login TEXT NULL,
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
@@ -90,6 +98,7 @@ CREATE TABLE IF NOT EXISTS clientes (
     direccion TEXT NULL,
     ciudad TEXT NULL,
     notas TEXT NULL,
+    fecha_nacimiento TEXT NULL,
     activo INTEGER NOT NULL DEFAULT 1,
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );

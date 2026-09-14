@@ -23,18 +23,7 @@ Namespace Services
 
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, params)
             For Each row As DataRow In dt.Rows
-                list.Add(New Cliente() With {
-                    .Id = Convert.ToInt32(row("id")),
-                    .DniCuit = row("dni_cuit").ToString(),
-                    .Nombre = row("nombre").ToString(),
-                    .Apellido = row("apellido").ToString(),
-                    .Telefono = If(IsDBNull(row("telefono")), "", row("telefono").ToString()),
-                    .Email = If(IsDBNull(row("email")), "", row("email").ToString()),
-                    .Direccion = If(IsDBNull(row("direccion")), "", row("direccion").ToString()),
-                    .Ciudad = If(IsDBNull(row("ciudad")), "", row("ciudad").ToString()),
-                    .Notas = If(IsDBNull(row("notas")), "", row("notas").ToString()),
-                    .Activo = Convert.ToBoolean(row("activo"))
-                })
+                list.Add(MapCliente(row))
             Next
             Return list
         End Function
@@ -43,8 +32,17 @@ Namespace Services
             Dim query As String = "SELECT * FROM `clientes` WHERE `id` = @id LIMIT 1;"
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, New Dictionary(Of String, Object) From {{"@id", id}})
             If dt.Rows.Count = 0 Then Return Nothing
+            Return MapCliente(dt.Rows(0))
+        End Function
 
-            Dim row As DataRow = dt.Rows(0)
+        Private Function MapCliente(row As DataRow) As Cliente
+            Dim fnac As Nullable(Of DateTime) = Nothing
+            If Not IsDBNull(row("fecha_nacimiento")) Then
+                Dim parsed As DateTime
+                If DateTime.TryParse(row("fecha_nacimiento").ToString(), parsed) Then
+                    fnac = parsed
+                End If
+            End If
             Return New Cliente() With {
                 .Id = Convert.ToInt32(row("id")),
                 .DniCuit = row("dni_cuit").ToString(),
@@ -55,6 +53,7 @@ Namespace Services
                 .Direccion = If(IsDBNull(row("direccion")), "", row("direccion").ToString()),
                 .Ciudad = If(IsDBNull(row("ciudad")), "", row("ciudad").ToString()),
                 .Notas = If(IsDBNull(row("notas")), "", row("notas").ToString()),
+                .FechaNacimiento = fnac,
                 .Activo = Convert.ToBoolean(row("activo"))
             }
         End Function
@@ -63,23 +62,25 @@ Namespace Services
             Try
                 Dim query As String
                 Dim params As New Dictionary(Of String, Object) From {
-                    {"@dni", cli.DniCuit.Trim()},
-                    {"@nom", cli.Nombre.Trim()},
-                    {"@ape", cli.Apellido.Trim()},
-                    {"@tel", cli.Telefono.Trim()},
+                    {"@dni",   cli.DniCuit.Trim()},
+                    {"@nom",   cli.Nombre.Trim()},
+                    {"@ape",   cli.Apellido.Trim()},
+                    {"@tel",   cli.Telefono.Trim()},
                     {"@email", cli.Email.Trim()},
-                    {"@dir", cli.Direccion.Trim()},
-                    {"@ciu", cli.Ciudad.Trim()},
+                    {"@dir",   cli.Direccion.Trim()},
+                    {"@ciu",   cli.Ciudad.Trim()},
                     {"@notas", cli.Notas.Trim()},
+                    {"@fnac",  If(cli.FechaNacimiento.HasValue, CObj(cli.FechaNacimiento.Value.ToString("yyyy-MM-dd")), DBNull.Value)},
                     {"@activo", If(cli.Activo, 1, 0)}
                 }
 
                 If cli.Id = 0 Then
-                    query = "INSERT INTO `clientes` (`dni_cuit`, `nombre`, `apellido`, `telefono`, `email`, `direccion`, `ciudad`, `notas`, `activo`) " &
-                            "VALUES (@dni, @nom, @ape, @tel, @email, @dir, @ciu, @notas, @activo);"
+                    query = "INSERT INTO `clientes` (`dni_cuit`, `nombre`, `apellido`, `telefono`, `email`, `direccion`, `ciudad`, `notas`, `fecha_nacimiento`, `activo`) " &
+                            "VALUES (@dni, @nom, @ape, @tel, @email, @dir, @ciu, @notas, @fnac, @activo);"
                 Else
                     query = "UPDATE `clientes` SET `dni_cuit` = @dni, `nombre` = @nom, `apellido` = @ape, `telefono` = @tel, " &
-                            "`email` = @email, `direccion` = @dir, `ciudad` = @ciu, `notas` = @notas, `activo` = @activo WHERE `id` = @id;"
+                            "`email` = @email, `direccion` = @dir, `ciudad` = @ciu, `notas` = @notas, " &
+                            "`fecha_nacimiento` = @fnac, `activo` = @activo WHERE `id` = @id;"
                     params.Add("@id", cli.Id)
                 End If
 

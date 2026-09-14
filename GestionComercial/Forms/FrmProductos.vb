@@ -49,45 +49,50 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Barra de Filtros y Acciones
+            ' Barra de Filtros y Acciones con FlowLayoutPanel para evitar recorte
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 95,
-                .BackColor = UITheme.ColorSurface,
-                .Padding = New Padding(15, 15, 15, 10)
+                .BackColor = UITheme.ColorSurface
+            }
+            Dim flpToolbar As New FlowLayoutPanel() With {
+                .Dock = DockStyle.Fill,
+                .Padding = New Padding(10, 15, 10, 10),
+                .WrapContents = False
             }
 
-            Dim lblB As New Label() With {.Text = "Buscar:", .Font = UITheme.FontBold, .Location = New Point(15, 20), .AutoSize = True}
-            txtBuscar = New TextBox() With {.Location = New Point(70, 18), .Size = New Size(220, 26)}
+            Dim lblB As New Label() With {.Text = "Buscar:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 5, 4, 0)}
+            txtBuscar = New TextBox() With {.Size = New Size(220, 26), .Margin = New Padding(0, 2, 0, 0)}
             UITheme.StyleTextBox(txtBuscar)
             AddHandler txtBuscar.KeyDown, Sub(s, e)
                                               If e.KeyCode = Keys.Enter Then LoadProductos()
                                           End Sub
 
-            Dim lblC As New Label() With {.Text = "Categoría:", .Font = UITheme.FontBold, .Location = New Point(305, 20), .AutoSize = True}
-            cboFiltroCategoria = New ComboBox() With {.Location = New Point(380, 18), .Size = New Size(180, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            Dim lblC As New Label() With {.Text = "Categoría:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(12, 5, 4, 0)}
+            cboFiltroCategoria = New ComboBox() With {.Size = New Size(180, 26), .DropDownStyle = ComboBoxStyle.DropDownList, .Margin = New Padding(0, 2, 0, 0)}
             AddHandler cboFiltroCategoria.SelectedIndexChanged, Sub() LoadProductos()
 
-            btnBuscar = New Button() With {.Text = "Filtrar", .Location = Point.Add(New Point(570, 16), New Size(0, 0)), .Size = New Size(80, 30)}
+            btnBuscar = New Button() With {.Text = "Filtrar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
             UITheme.StyleButton(btnBuscar, "Primary")
             AddHandler btnBuscar.Click, Sub() LoadProductos()
 
-            btnNuevo = New Button() With {.Text = "+ Nueva Prenda", .Location = New Point(680, 16), .Size = New Size(130, 30)}
+            btnNuevo = New Button() With {.Text = "+ Nueva Prenda", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
             UITheme.StyleButton(btnNuevo, "Success")
             btnNuevo.Visible = AuthService.IsAdmin
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-            btnEditar = New Button() With {.Text = "✏ Editar", .Location = New Point(820, 16), .Size = New Size(95, 30)}
+            btnEditar = New Button() With {.Text = "✏ Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
             UITheme.StyleButton(btnEditar, "Secondary")
             btnEditar.Visible = AuthService.IsAdmin
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
-            btnEliminar = New Button() With {.Text = "Desactivar", .Location = New Point(925, 16), .Size = New Size(95, 30)}
+            btnEliminar = New Button() With {.Text = "Desactivar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
             UITheme.StyleButton(btnEliminar, "Danger")
             btnEliminar.Visible = AuthService.IsAdmin
             AddHandler btnEliminar.Click, AddressOf BtnEliminar_Click
 
-            pnlToolbar.Controls.AddRange({lblB, txtBuscar, lblC, cboFiltroCategoria, btnBuscar, btnNuevo, btnEditar, btnEliminar})
+            flpToolbar.Controls.AddRange({lblB, txtBuscar, lblC, cboFiltroCategoria, btnBuscar, btnNuevo, btnEditar, btnEliminar})
+            pnlToolbar.Controls.Add(flpToolbar)
 
             ' Grilla
             Dim pnlGrid As New Panel() With {

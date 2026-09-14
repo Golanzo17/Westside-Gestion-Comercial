@@ -108,7 +108,8 @@ Namespace Services
                 CurrentUser = New Usuario() With {
                     .Id = userId,
                     .Username = row("username").ToString(),
-                    .NombreCompleto = row("nombre_completo").ToString(),
+                    .Nombre = If(IsDBNull(row("nombre")), "", row("nombre").ToString()),
+                    .Apellido = If(IsDBNull(row("apellido")), "", row("apellido").ToString()),
                     .Rol = row("rol").ToString(),
                     .Activo = Convert.ToBoolean(row("activo")),
                     .UltimoLogin = DateTime.Now

@@ -45,20 +45,24 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Toolbar
+            ' Toolbar con FlowLayoutPanel para evitar recorte de botones
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 90,
-                .BackColor = UITheme.ColorSurface,
-                .Padding = New Padding(15, 10, 15, 10)
+                .Height = 55,
+                .BackColor = UITheme.ColorSurface
+            }
+            Dim flpToolbar As New FlowLayoutPanel() With {
+                .Dock = DockStyle.Fill,
+                .Padding = New Padding(10, 10, 10, 10),
+                .WrapContents = False
             }
 
-            btnIngresoMercaderia = New Button() With {.Text = "+ Ingreso de Mercadería / Ajuste", .Location = New Point(15, 10), .Size = New Size(240, 34)}
+            btnIngresoMercaderia = New Button() With {.Text = "+ Ingreso de Mercadería / Ajuste", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0)}
             UITheme.StyleButton(btnIngresoMercaderia, "Success")
             btnIngresoMercaderia.Visible = AuthService.IsAdmin
             AddHandler btnIngresoMercaderia.Click, AddressOf BtnIngresoMercaderia_Click
 
-            btnRefrescar = New Button() With {.Text = "🔄 Actualizar", .Location = New Point(If(AuthService.IsAdmin, 265, 15), 10), .Size = New Size(120, 34)}
+            btnRefrescar = New Button() With {.Text = "🔄 Actualizar", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 0, 0, 0)}
             UITheme.StyleButton(btnRefrescar, "Secondary")
             AddHandler btnRefrescar.Click, Sub() LoadStockData()
 
@@ -66,11 +70,12 @@ Namespace Forms
                 .Text = "Verificando niveles de inventario...",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorWarning,
-                .Location = New Point(If(AuthService.IsAdmin, 420, 150), 18),
-                .AutoSize = True
+                .AutoSize = True,
+                .Margin = New Padding(20, 8, 0, 0)
             }
 
-            pnlToolbar.Controls.AddRange({btnIngresoMercaderia, btnRefrescar, lblResumenAlertas})
+            flpToolbar.Controls.AddRange({btnIngresoMercaderia, btnRefrescar, lblResumenAlertas})
+            pnlToolbar.Controls.Add(flpToolbar)
 
             ' TabControl para separar "Prendas con Stock Crítico" de "Historial de Movimientos"
             Dim tabControl As New TabControl() With {

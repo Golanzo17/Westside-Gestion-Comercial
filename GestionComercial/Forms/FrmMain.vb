@@ -135,8 +135,7 @@ Namespace Forms
             pnlTopBar = New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 60,
-                .BackColor = UITheme.ColorSurface,
-                .Padding = New Padding(20, 12, 20, 12)
+                .BackColor = UITheme.ColorSurface
             }
 
             Dim pnlBorderBottom As New Panel() With {
@@ -146,6 +145,21 @@ Namespace Forms
             }
             pnlTopBar.Controls.Add(pnlBorderBottom)
 
+            ' TableLayoutPanel para distribuir los controles del TopBar sin solapamientos
+            Dim tlpTopBar As New TableLayoutPanel() With {
+                .Dock = DockStyle.Fill,
+                .ColumnCount = 4,
+                .RowCount = 1,
+                .Padding = New Padding(12, 0, 12, 0)
+            }
+            ' Columna 0: Usuario+Rol  (30%)  |  Columna 1: Estado Caja  (30%)
+            ' Columna 2: Botón Venta  (auto) |  Columna 3: Reloj        (Resto)
+            tlpTopBar.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 30.0F))  ' usuario
+            tlpTopBar.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 30.0F))  ' caja
+            tlpTopBar.ColumnStyles.Add(New ColumnStyle(SizeType.AutoSize))         ' botón
+            tlpTopBar.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 40.0F))  ' reloj
+            tlpTopBar.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
+
             ' Usuario Conectado con Distintivo de Rol
             Dim rolBadge As String = If(AuthService.IsAdmin, "👑 [ADMINISTRADOR]", "👤 [VENDEDOR]")
             Dim nombreUser As String = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.NombreCompleto, "Invitado")
@@ -153,41 +167,44 @@ Namespace Forms
                 .Text = $"{rolBadge} {nombreUser}",
                 .Font = UITheme.FontBold,
                 .ForeColor = If(AuthService.IsAdmin, UITheme.ColorPrimaryDark, UITheme.ColorTextPrimary),
-                .Location = New Point(20, 18),
-                .AutoSize = True
+                .Dock = DockStyle.Fill,
+                .TextAlign = ContentAlignment.MiddleLeft,
+                .AutoEllipsis = True
             }
-            pnlTopBar.Controls.Add(lblUserSession)
 
             ' Estado de Caja en TopBar
             lblCajaStatus = New Label() With {
                 .Text = "● Verificando caja...",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorWarning,
-                .Location = New Point(320, 18),
-                .AutoSize = True
+                .Dock = DockStyle.Fill,
+                .TextAlign = ContentAlignment.MiddleLeft,
+                .AutoEllipsis = True
             }
-            pnlTopBar.Controls.Add(lblCajaStatus)
 
-            ' Botón Venta Rápida
+            ' Botón Venta Rápida — ancho suficiente para que el texto no se recorte
             Dim btnQuickPOS As New Button() With {
                 .Text = "+ NUEVA VENTA (F1)",
-                .Location = New Point(550, 12),
-                .Size = New Size(160, 36)
+                .Size = New Size(195, 36),
+                .Anchor = AnchorStyles.None
             }
             UITheme.StyleButton(btnQuickPOS, "Primary")
             AddHandler btnQuickPOS.Click, AddressOf Nav_POS
-            pnlTopBar.Controls.Add(btnQuickPOS)
 
             ' Reloj en vivo
             lblClock = New Label() With {
                 .Text = DateTime.Now.ToString("dddd, dd MMMM yyyy - HH:mm:ss"),
                 .Font = UITheme.FontRegular,
                 .ForeColor = UITheme.ColorTextSecondary,
-                .Dock = DockStyle.Right,
-                .TextAlign = ContentAlignment.MiddleRight,
-                .Width = 320
+                .Dock = DockStyle.Fill,
+                .TextAlign = ContentAlignment.MiddleRight
             }
-            pnlTopBar.Controls.Add(lblClock)
+
+            tlpTopBar.Controls.Add(lblUserSession, 0, 0)
+            tlpTopBar.Controls.Add(lblCajaStatus, 1, 0)
+            tlpTopBar.Controls.Add(btnQuickPOS, 2, 0)
+            tlpTopBar.Controls.Add(lblClock, 3, 0)
+            pnlTopBar.Controls.Add(tlpTopBar)
 
             ' ==================== CONTENT HOST (CENTRAL) ====================
             pnlContentHost = New Panel() With {
@@ -303,39 +320,79 @@ Namespace Forms
             pnlCardsRow.Controls.AddRange({card1, card2, card3, card4})
             pnlDashboardHome.Controls.Add(pnlCardsRow)
 
-            ' Tarjetas de Acceso Rápido / Módulos
+            ' Tarjetas de Acceso Rápido — FlowLayoutPanel para que los botones no recorten el texto
             Dim pnlAcciones As New GroupBox() With {
                 .Text = "Acceso Rápido a Operaciones",
                 .Location = New Point(25, 245),
-                .Size = New Size(950, 160),
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .MinimumSize = New Size(950, 90),
                 .BackColor = UITheme.ColorSurface,
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorPrimaryDark,
-                .Padding = New Padding(20)
+                .Padding = New Padding(15, 8, 15, 8)
             }
 
-            Dim btnAccionPOS As New Button() With {.Text = "🛒 Realizar Nueva Venta", .Location = New Point(25, 40), .Size = New Size(210, 48)}
+            Dim flpAcciones As New FlowLayoutPanel() With {
+                .Dock = DockStyle.Fill,
+                .Padding = New Padding(5, 10, 5, 5),
+                .WrapContents = False,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink
+            }
+
+            Dim btnAccionPOS As New Button() With {
+                .Text = "🛒 Realizar Nueva Venta",
+                .Height = 48,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(14, 0, 14, 0),
+                .Margin = New Padding(0, 0, 10, 0)
+            }
             UITheme.StyleButton(btnAccionPOS, "Primary")
             AddHandler btnAccionPOS.Click, AddressOf Nav_POS
-
-            Dim btnAccionCaja As New Button() With {.Text = "💵 Arqueo / Cierre de Caja", .Location = New Point(If(AuthService.IsAdmin, 715, 255), 40), .Size = New Size(210, 48)}
-            UITheme.StyleButton(btnAccionCaja, "Secondary")
-            AddHandler btnAccionCaja.Click, AddressOf Nav_Caja
-
-            pnlAcciones.Controls.AddRange({btnAccionPOS, btnAccionCaja})
+            flpAcciones.Controls.Add(btnAccionPOS)
 
             ' Acciones exclusivas del Administrador
             If AuthService.IsAdmin Then
-                Dim btnAccionPrenda As New Button() With {.Text = "+ Cargar Nueva Prenda", .Location = New Point(255, 40), .Size = New Size(210, 48)}
+                Dim btnAccionPrenda As New Button() With {
+                    .Text = "+ Cargar Nueva Prenda",
+                    .Height = 48,
+                    .AutoSize = True,
+                    .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    .Padding = New Padding(14, 0, 14, 0),
+                    .Margin = New Padding(0, 0, 10, 0)
+                }
                 UITheme.StyleButton(btnAccionPrenda, "Success")
                 AddHandler btnAccionPrenda.Click, AddressOf Nav_Productos
+                flpAcciones.Controls.Add(btnAccionPrenda)
 
-                Dim btnAccionStock As New Button() With {.Text = "📦 Ingreso de Mercadería", .Location = New Point(485, 40), .Size = New Size(210, 48)}
+                Dim btnAccionStock As New Button() With {
+                    .Text = "📦 Ingreso de Mercadería",
+                    .Height = 48,
+                    .AutoSize = True,
+                    .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    .Padding = New Padding(14, 0, 14, 0),
+                    .Margin = New Padding(0, 0, 10, 0)
+                }
                 UITheme.StyleButton(btnAccionStock, "Secondary")
                 AddHandler btnAccionStock.Click, AddressOf Nav_Stock
-
-                pnlAcciones.Controls.AddRange({btnAccionPrenda, btnAccionStock})
+                flpAcciones.Controls.Add(btnAccionStock)
             End If
+
+            Dim btnAccionCaja As New Button() With {
+                .Text = "💵 Arqueo / Cierre de Caja",
+                .Height = 48,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(14, 0, 14, 0),
+                .Margin = New Padding(0, 0, 0, 0)
+            }
+            UITheme.StyleButton(btnAccionCaja, "Secondary")
+            AddHandler btnAccionCaja.Click, AddressOf Nav_Caja
+            flpAcciones.Controls.Add(btnAccionCaja)
+
+            pnlAcciones.Controls.Add(flpAcciones)
             pnlDashboardHome.Controls.Add(pnlAcciones)
         End Sub
 
