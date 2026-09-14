@@ -1,6 +1,9 @@
 Imports System.Data
+Imports System.Drawing
+Imports System.Windows.Forms
 Imports GestionComercial.Data
 Imports GestionComercial.Models
+Imports GestionComercial.UI
 
 Namespace Services
     Public Module AuthService
@@ -146,5 +149,142 @@ Namespace Services
         Public Sub Logout()
             CurrentUser = Nothing
         End Sub
+
+        ''' <summary>
+        ''' Valida una contraseña contra los administradores activos del sistema.
+        ''' Si se especifica un username, valida contra ese administrador específico.
+        ''' </summary>
+        Public Function ValidarCredencialesAdmin(password As String, Optional username As String = "") As Boolean
+            Try
+                If String.IsNullOrWhiteSpace(password) Then Return False
+
+                Dim sql As String
+                Dim prms As New Dictionary(Of String, Object)()
+                If Not String.IsNullOrWhiteSpace(username) Then
+                    sql = "SELECT id, password_hash FROM `usuarios` WHERE `username` = @user AND `rol` = 'Administrador' AND `activo` = 1 LIMIT 1;"
+                    prms.Add("@user", username.Trim())
+                Else
+                    sql = "SELECT id, password_hash FROM `usuarios` WHERE `rol` = 'Administrador' AND `activo` = 1;"
+                End If
+
+                Dim dt = DatabaseHelper.ExecuteQuery(sql, prms)
+                For Each row As DataRow In dt.Rows
+                    Dim storedHash = row("password_hash").ToString()
+                    Dim dummyRehash As Boolean = False
+                    If DatabaseHelper.VerifyPassword(password, storedHash, dummyRehash) Then
+                        Return True
+                    End If
+                Next
+                Return False
+            Catch ex As Exception
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>
+        ''' Solicita autorización de un Administrador mediante un diálogo modal si el usuario actual no es Administrador.
+        ''' Si el usuario actual ya es Administrador, retorna True directamente.
+        ''' </summary>
+        Public Function SolicitarAutorizacionAdmin(owner As Form, motivo As String) As Boolean
+            If IsAdmin Then Return True
+
+            Using dlg As New Form()
+                dlg.Text = "Autorización Requerida"
+                dlg.Size = New Size(430, 270)
+                dlg.StartPosition = FormStartPosition.CenterParent
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog
+                dlg.MaximizeBox = False
+                dlg.MinimizeBox = False
+                dlg.BackColor = Color.White
+
+                Dim pnlTop As New Panel() With {
+                    .Dock = DockStyle.Top,
+                    .Height = 55,
+                    .BackColor = UITheme.ColorSecondary,
+                    .Padding = New Padding(15, 12, 15, 10)
+                }
+                Dim lblTitle As New Label() With {
+                    .Text = "🔒 AUTORIZACIÓN DE ADMINISTRADOR",
+                    .Font = UITheme.FontSubheading,
+                    .ForeColor = Color.White,
+                    .AutoSize = True,
+                    .Location = New Point(12, 15)
+                }
+                pnlTop.Controls.Add(lblTitle)
+
+                Dim lblMotivo As New Label() With {
+                    .Text = motivo,
+                    .Font = UITheme.FontRegular,
+                    .ForeColor = UITheme.ColorDanger,
+                    .Location = New Point(20, 68),
+                    .Size = New Size(375, 40)
+                }
+
+                Dim lblPass As New Label() With {
+                    .Text = "Contraseña de Administrador:",
+                    .Font = UITheme.FontBold,
+                    .Location = New Point(20, 115),
+                    .AutoSize = True
+                }
+
+                Dim txtPass As New TextBox() With {
+                    .Location = New Point(20, 138),
+                    .Size = New Size(375, 26),
+                    .UseSystemPasswordChar = True
+                }
+                UITheme.StyleTextBox(txtPass)
+
+                Dim btnConfirmar As New Button() With {
+                    .Text = "Autorizar",
+                    .Location = New Point(185, 180),
+                    .Size = New Size(100, 34)
+                }
+                UITheme.StyleButton(btnConfirmar, "Primary")
+
+                Dim btnCancelar As New Button() With {
+                    .Text = "Cancelar",
+                    .Location = New Point(295, 180),
+                    .Size = New Size(100, 34)
+                }
+                UITheme.StyleButton(btnCancelar, "Secondary")
+
+                Dim autorizado As Boolean = False
+
+                AddHandler btnConfirmar.Click, Sub()
+                    If String.IsNullOrWhiteSpace(txtPass.Text) Then
+                        MessageBox.Show("Ingrese la contraseña de Administrador.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                        Return
+                    End If
+
+                    If ValidarCredencialesAdmin(txtPass.Text) Then
+                        autorizado = True
+                        dlg.DialogResult = DialogResult.OK
+                        dlg.Close()
+                    Else
+                        MessageBox.Show("Contraseña de Administrador incorrecta.", "Acceso Denegado", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        txtPass.Clear()
+                        txtPass.Focus()
+                    End If
+                End Sub
+
+                AddHandler btnCancelar.Click, Sub()
+                    dlg.DialogResult = DialogResult.Cancel
+                    dlg.Close()
+                End Sub
+
+                AddHandler txtPass.KeyDown, Sub(s, e)
+                    If e.KeyCode = Keys.Enter Then
+                        btnConfirmar.PerformClick()
+                    End If
+                End Sub
+
+                dlg.Controls.AddRange({pnlTop, lblMotivo, lblPass, txtPass, btnConfirmar, btnCancelar})
+                dlg.AcceptButton = btnConfirmar
+                dlg.CancelButton = btnCancelar
+
+                dlg.ShowDialog(owner)
+                Return autorizado
+            End Using
+        End Function
     End Module
 End Namespace

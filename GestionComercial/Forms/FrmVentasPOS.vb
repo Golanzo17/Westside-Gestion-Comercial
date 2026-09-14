@@ -48,6 +48,7 @@ Namespace Forms
         Private talleSeleccionado As ProductoTalle = Nothing
         Private listaClientes As List(Of Cliente) = New List(Of Cliente)()
         Private ventaActual As Venta = New Venta()
+        Private _descuentoAutorizado As Boolean = False
 
         Public Sub New()
             InitializeUI()
@@ -117,6 +118,7 @@ Namespace Forms
             Dim lblDesc As New Label() With {.Text = "Descuento (%):", .Font = UITheme.FontRegular, .Location = New Point(15, 170), .AutoSize = True}
             numDescuentoPorc = New NumericUpDown() With {.Location = New Point(15, 190), .Size = New Size(120, 26), .Minimum = 0, .Maximum = 100, .Value = 0}
             AddHandler numDescuentoPorc.ValueChanged, AddressOf RecalcularTotales
+            AddHandler numDescuentoPorc.Leave, Sub() ValidarDescuentoVendedor()
 
             ' Subtotal
             Dim lblSubt As New Label() With {.Text = "Subtotal:", .Font = UITheme.FontRegular, .Location = New Point(170, 170), .AutoSize = True}
@@ -545,6 +547,21 @@ Namespace Forms
             End If
         End Sub
 
+        Private Function ValidarDescuentoVendedor() As Boolean
+            If AuthService.IsAdmin Then Return True
+            If numDescuentoPorc.Value > 15 AndAlso Not _descuentoAutorizado Then
+                If AuthService.SolicitarAutorizacionAdmin(Me, $"Un descuento del {numDescuentoPorc.Value}% supera el tope de vendedor (15%). Requiere autorización de un Administrador.") Then
+                    _descuentoAutorizado = True
+                    Return True
+                Else
+                    numDescuentoPorc.Value = 15
+                    RecalcularTotales()
+                    Return False
+                End If
+            End If
+            Return True
+        End Function
+
         Private Sub BtnNuevoCliente_Click(sender As Object, e As EventArgs)
             Dim frm As New FrmClientes()
             frm.ShowDialog()
@@ -565,6 +582,10 @@ Namespace Forms
         Private Sub FinalizarVenta()
             If ventaActual.Detalles.Count = 0 Then
                 MessageBox.Show("El carrito de ventas está vacío. Agregue prendas para cobrar.", "Carrito Vacío", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            If Not ValidarDescuentoVendedor() Then
                 Return
             End If
 
@@ -612,6 +633,8 @@ Namespace Forms
 
                 ' Resetear carrito
                 ventaActual = New Venta()
+                _descuentoAutorizado = False
+                numDescuentoPorc.Value = 0
                 RefrescarGrillaCarrito()
                 RecalcularTotales()
                 txtMontoAbonado.Clear()

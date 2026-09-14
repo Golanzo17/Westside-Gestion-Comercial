@@ -101,9 +101,15 @@ Namespace Forms
             Dim btnClientes = CreateNavButton("👥 Clientes", AddressOf Nav_Clientes)
             Dim btnCaja = CreateNavButton("💵 Caja Diaria y Arqueo", AddressOf Nav_Caja)
             Dim btnReportes = CreateNavButton("📈 Reportes y Ventas", AddressOf Nav_Reportes)
+            Dim btnUsuarios = CreateNavButton("👥 Usuarios y Equipo", AddressOf Nav_Usuarios)
             Dim btnConfig = CreateNavButton("⚙ Configuración", AddressOf Nav_Config)
 
-            Dim navButtons As Button() = {btnConfig, btnReportes, btnCaja, btnClientes, btnStock, btnProductos, btnPos, btnHome}
+            ' Restricción de menú para Vendedores (solo visible para Administrador)
+            btnReportes.Visible = AuthService.IsAdmin
+            btnUsuarios.Visible = AuthService.IsAdmin
+            btnConfig.Visible = AuthService.IsAdmin
+
+            Dim navButtons As Button() = {btnConfig, btnUsuarios, btnReportes, btnCaja, btnClientes, btnStock, btnProductos, btnPos, btnHome}
             For Each b In navButtons
                 b.Dock = DockStyle.Top
                 pnlNavMenu.Controls.Add(b)
@@ -140,11 +146,13 @@ Namespace Forms
             }
             pnlTopBar.Controls.Add(pnlBorderBottom)
 
-            ' Usuario Conectado
+            ' Usuario Conectado con Distintivo de Rol
+            Dim rolBadge As String = If(AuthService.IsAdmin, "👑 [ADMINISTRADOR]", "👤 [VENDEDOR]")
+            Dim nombreUser As String = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.NombreCompleto, "Invitado")
             lblUserSession = New Label() With {
-                .Text = "👤 " & If(AuthService.CurrentUser IsNot Nothing, $"{AuthService.CurrentUser.NombreCompleto} ({AuthService.CurrentUser.Rol})", "Usuario: Invitado"),
+                .Text = $"{rolBadge} {nombreUser}",
                 .Font = UITheme.FontBold,
-                .ForeColor = UITheme.ColorTextPrimary,
+                .ForeColor = If(AuthService.IsAdmin, UITheme.ColorPrimaryDark, UITheme.ColorTextPrimary),
                 .Location = New Point(20, 18),
                 .AutoSize = True
             }
@@ -310,19 +318,24 @@ Namespace Forms
             UITheme.StyleButton(btnAccionPOS, "Primary")
             AddHandler btnAccionPOS.Click, AddressOf Nav_POS
 
-            Dim btnAccionPrenda As New Button() With {.Text = "+ Cargar Nueva Prenda", .Location = New Point(255, 40), .Size = New Size(210, 48)}
-            UITheme.StyleButton(btnAccionPrenda, "Success")
-            AddHandler btnAccionPrenda.Click, AddressOf Nav_Productos
-
-            Dim btnAccionStock As New Button() With {.Text = "📦 Ingreso de Mercadería", .Location = New Point(485, 40), .Size = New Size(210, 48)}
-            UITheme.StyleButton(btnAccionStock, "Secondary")
-            AddHandler btnAccionStock.Click, AddressOf Nav_Stock
-
-            Dim btnAccionCaja As New Button() With {.Text = "💵 Arqueo / Cierre de Caja", .Location = New Point(715, 40), .Size = New Size(210, 48)}
+            Dim btnAccionCaja As New Button() With {.Text = "💵 Arqueo / Cierre de Caja", .Location = New Point(If(AuthService.IsAdmin, 715, 255), 40), .Size = New Size(210, 48)}
             UITheme.StyleButton(btnAccionCaja, "Secondary")
             AddHandler btnAccionCaja.Click, AddressOf Nav_Caja
 
-            pnlAcciones.Controls.AddRange({btnAccionPOS, btnAccionPrenda, btnAccionStock, btnAccionCaja})
+            pnlAcciones.Controls.AddRange({btnAccionPOS, btnAccionCaja})
+
+            ' Acciones exclusivas del Administrador
+            If AuthService.IsAdmin Then
+                Dim btnAccionPrenda As New Button() With {.Text = "+ Cargar Nueva Prenda", .Location = New Point(255, 40), .Size = New Size(210, 48)}
+                UITheme.StyleButton(btnAccionPrenda, "Success")
+                AddHandler btnAccionPrenda.Click, AddressOf Nav_Productos
+
+                Dim btnAccionStock As New Button() With {.Text = "📦 Ingreso de Mercadería", .Location = New Point(485, 40), .Size = New Size(210, 48)}
+                UITheme.StyleButton(btnAccionStock, "Secondary")
+                AddHandler btnAccionStock.Click, AddressOf Nav_Stock
+
+                pnlAcciones.Controls.AddRange({btnAccionPrenda, btnAccionStock})
+            End If
             pnlDashboardHome.Controls.Add(pnlAcciones)
         End Sub
 
@@ -347,7 +360,8 @@ Namespace Forms
                     lblCajaStatus.Text = $"🟢 Caja Abierta (Turno #{caja.Id})"
                     lblCajaStatus.ForeColor = UITheme.ColorSuccess
                     Dim esp = caja.MontoInicial + caja.TotalVentasEfectivo + caja.TotalIngresos - caja.TotalEgresos
-                    lblKpiCajaTurno.Text = esp.ToString("C2")
+                    ' El vendedor no ve el monto esperado en tiempo real (evita anticipación del arqueo)
+                    lblKpiCajaTurno.Text = If(AuthService.IsAdmin, esp.ToString("C2"), "Arqueo Ciego")
                 Else
                     lblCajaStatus.Text = "🔴 Caja Cerrada"
                     lblCajaStatus.ForeColor = UITheme.ColorDanger
@@ -413,15 +427,32 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_Reportes(sender As Object, e As EventArgs)
+            If Not AuthService.SolicitarAutorizacionAdmin(Me, "El acceso al módulo de Reportes y Estadísticas requiere permisos de Administrador.") Then
+                Return
+            End If
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmReportes())
         End Sub
 
+        Private Sub Nav_Usuarios(sender As Object, e As EventArgs)
+            If Not AuthService.SolicitarAutorizacionAdmin(Me, "La gestión de usuarios y vendedores requiere permisos de Administrador.") Then
+                Return
+            End If
+            If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
+            OpenChildForm(New FrmUsuarios())
+        End Sub
+
         Private Sub Nav_Sync(sender As Object, e As EventArgs)
+            If Not AuthService.SolicitarAutorizacionAdmin(Me, "La sincronización de catálogo requiere permisos de Administrador.") Then
+                Return
+            End If
             OpenChildForm(New FrmSincronizacionEcommerce())
         End Sub
 
         Private Sub Nav_Config(sender As Object, e As EventArgs)
+            If Not AuthService.SolicitarAutorizacionAdmin(Me, "La configuración general del sistema está reservada para Administradores.") Then
+                Return
+            End If
             Dim frm As New FrmConfiguracion()
             If frm.ShowDialog() = DialogResult.OK Then
                 LoadDashboardData()

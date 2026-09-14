@@ -150,6 +150,30 @@ Namespace Services
             Return list
         End Function
 
+        Public Function GetHistorialCajas(fechaDesde As DateTime, fechaHasta As DateTime) As List(Of Caja)
+            Dim list As New List(Of Caja)()
+            Try
+                Dim query As String = "SELECT c.*, u.nombre_completo AS usuario_nombre " &
+                                     "FROM `cajas` c " &
+                                     "INNER JOIN `usuarios` u ON c.usuario_id = u.id " &
+                                     "WHERE DATE(c.fecha_apertura) >= @desde AND DATE(c.fecha_apertura) <= @hasta " &
+                                     "ORDER BY c.id DESC;"
+
+                Dim params As New Dictionary(Of String, Object) From {
+                    {"@desde", fechaDesde.ToString("yyyy-MM-dd")},
+                    {"@hasta", fechaHasta.ToString("yyyy-MM-dd")}
+                }
+
+                Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, params)
+                For Each row As DataRow In dt.Rows
+                    list.Add(MapCaja(row))
+                Next
+            Catch ex As Exception
+                ' Retorna lista vacía si hay error
+            End Try
+            Return list
+        End Function
+
         Private Function MapCaja(row As DataRow) As Caja
             Return New Caja() With {
                 .Id = Convert.ToInt32(row("id")),

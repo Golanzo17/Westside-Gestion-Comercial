@@ -189,10 +189,21 @@ Namespace Forms
             btnGuardarTodo = New Button() With {
                 .Text = "💾 Guardar Configuración",
                 .Dock = DockStyle.Right,
-                .Width = 220
+                .Width = 200
             }
             UITheme.StyleButton(btnGuardarTodo, "Success")
             AddHandler btnGuardarTodo.Click, AddressOf BtnGuardarTodo_Click
+
+            Dim btnIrUsuarios As New Button() With {
+                .Text = "👥 Usuarios y Empleados",
+                .Dock = DockStyle.Right,
+                .Width = 190
+            }
+            UITheme.StyleButton(btnIrUsuarios, "Primary")
+            AddHandler btnIrUsuarios.Click, Sub()
+                                                Dim frmU As New FrmUsuarios()
+                                                frmU.ShowDialog(Me)
+                                            End Sub
 
             btnCerrar = New Button() With {
                 .Text = "Cerrar",
@@ -202,7 +213,7 @@ Namespace Forms
             UITheme.StyleButton(btnCerrar, "Secondary")
             AddHandler btnCerrar.Click, Sub() Me.Close()
 
-            pnlBottom.Controls.AddRange({btnGuardarTodo, btnCerrar})
+            pnlBottom.Controls.AddRange({btnGuardarTodo, btnIrUsuarios, btnCerrar})
             Me.Controls.Add(pnlBottom)
         End Sub
 

@@ -55,9 +55,10 @@ Namespace Forms
 
             btnIngresoMercaderia = New Button() With {.Text = "+ Ingreso de Mercadería / Ajuste", .Location = New Point(15, 10), .Size = New Size(240, 34)}
             UITheme.StyleButton(btnIngresoMercaderia, "Success")
+            btnIngresoMercaderia.Visible = AuthService.IsAdmin
             AddHandler btnIngresoMercaderia.Click, AddressOf BtnIngresoMercaderia_Click
 
-            btnRefrescar = New Button() With {.Text = "🔄 Actualizar", .Location = New Point(265, 10), .Size = New Size(120, 34)}
+            btnRefrescar = New Button() With {.Text = "🔄 Actualizar", .Location = New Point(If(AuthService.IsAdmin, 265, 15), 10), .Size = New Size(120, 34)}
             UITheme.StyleButton(btnRefrescar, "Secondary")
             AddHandler btnRefrescar.Click, Sub() LoadStockData()
 
@@ -65,7 +66,7 @@ Namespace Forms
                 .Text = "Verificando niveles de inventario...",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorWarning,
-                .Location = New Point(420, 18),
+                .Location = New Point(If(AuthService.IsAdmin, 420, 150), 18),
                 .AutoSize = True
             }
 
@@ -189,6 +190,9 @@ Namespace Forms
         End Sub
 
         Private Sub BtnIngresoMercaderia_Click(sender As Object, e As EventArgs)
+            If Not AuthService.SolicitarAutorizacionAdmin(Me, "Los ingresos de mercadería y ajustes de inventario requieren permisos de Administrador.") Then
+                Return
+            End If
             Dim frmAjuste As New FrmAjusteStock()
             If frmAjuste.ShowDialog() = DialogResult.OK Then
                 LoadStockData()
@@ -283,6 +287,10 @@ Namespace Forms
         End Sub
 
         Private Sub BtnGuardar_Click(sender As Object, e As EventArgs)
+            If Not AuthService.SolicitarAutorizacionAdmin(Me, "Guardar movimientos de stock manuales requiere permisos de Administrador.") Then
+                Return
+            End If
+
             Dim prod = TryCast(cboPrendas.SelectedItem, Producto)
             Dim talle = TryCast(cboTalles.SelectedItem, Talle)
             If prod Is Nothing OrElse talle Is Nothing Then

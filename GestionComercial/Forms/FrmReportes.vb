@@ -72,6 +72,7 @@ Namespace Forms
 
             btnAnularVenta = New Button() With {.Text = "✖ Anular Venta Seleccionada", .Location = New Point(610, 12), .Size = New Size(220, 30)}
             UITheme.StyleButton(btnAnularVenta, "Danger")
+            btnAnularVenta.Visible = AuthService.IsAdmin
             AddHandler btnAnularVenta.Click, AddressOf BtnAnularVenta_Click
 
             pnlFilter.Controls.AddRange({lblD, dtpDesde, lblH, dtpHasta, btnFiltrar, btnAnularVenta})
@@ -140,7 +141,10 @@ Namespace Forms
             dgvVentas.Columns("Ticket").Width = 140
 
             dgvVentas.Columns.Add("Fecha", "Fecha y Hora")
-            dgvVentas.Columns("Fecha").Width = 140
+            dgvVentas.Columns("Fecha").Width = 135
+
+            dgvVentas.Columns.Add("Vendedor", "Vendedor")
+            dgvVentas.Columns("Vendedor").Width = 140
 
             dgvVentas.Columns.Add("Cliente", "Cliente")
             dgvVentas.Columns("Cliente").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
@@ -196,7 +200,7 @@ Namespace Forms
             Dim validTickets As Integer = 0
 
             For Each v In ventas
-                Dim rIdx = dgvVentas.Rows.Add(v.Id, v.NumeroTicket, v.Fecha.ToString("dd/MM/yyyy HH:mm"), v.ClienteNombre, v.MetodoPago, v.Subtotal, v.DescuentoMonto, v.Total, v.Estado)
+                Dim rIdx = dgvVentas.Rows.Add(v.Id, v.NumeroTicket, v.Fecha.ToString("dd/MM/yyyy HH:mm"), v.UsuarioNombre, v.ClienteNombre, v.MetodoPago, v.Subtotal, v.DescuentoMonto, v.Total, v.Estado)
                 If v.Estado = "Completada" Then
                     totalPeriodo += v.Total
                     validTickets += 1
@@ -224,6 +228,10 @@ Namespace Forms
         End Sub
 
         Private Sub BtnAnularVenta_Click(sender As Object, e As EventArgs)
+            If Not AuthService.SolicitarAutorizacionAdmin(Me, "Anular comprobantes de venta emitidos requiere permisos de Administrador.") Then
+                Return
+            End If
+
             If dgvVentas.CurrentRow IsNot Nothing Then
                 Dim ventaId As Integer = Convert.ToInt32(dgvVentas.CurrentRow.Cells("Id").Value)
                 Dim ticket As String = dgvVentas.CurrentRow.Cells("Ticket").Value.ToString()
