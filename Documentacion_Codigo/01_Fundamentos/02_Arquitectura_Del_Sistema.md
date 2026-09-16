@@ -33,7 +33,7 @@ Cuando un usuario interactúa con la aplicación, la información viaja en este 
   * `FrmProductos.vb`: Catálogo y alta de artículos.
   * `FrmStock.vb`: Control de inventario y ajustes manuales.
   * `FrmCaja.vb`: Apertura, arqueo y cierre de caja.
-  * `FrmSincronizacionEcommerce.vb`: Conexión y migración con la tienda web.
+  * `FrmUsuarios.vb`: Gestión de usuarios, vendedores y permisos.
 * **Regla de oro**: Los formularios NO deben escribir consultas SQL directamente. Solo capturan los datos que el usuario escribe, llaman al `Service` correspondiente y muestran los resultados o alertas.
 
 ---
@@ -44,7 +44,7 @@ Cuando un usuario interactúa con la aplicación, la información viaja en este 
   * `CatalogService.vb`: ¿Cómo se guarda un producto y su matriz de talles y colores?
   * `AuthService.vb`: ¿Es correcta la contraseña? ¿Está bloqueado por 5 intentos fallidos?
   * `CajaService.vb`: ¿La caja ya está abierta? ¿Cuánto dinero debería haber en el cajón?
-  * `EcommerceSyncService.vb`: ¿Cómo se leen las categorías y productos de la base MySQL de la web y se insertan localmente?
+  * `UsuarioService.vb` y `ClienteService.vb`: Validación preventiva de unicidad de DNI y gestión de altas y bajas.
 
 ---
 

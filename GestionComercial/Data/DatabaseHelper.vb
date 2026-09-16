@@ -68,6 +68,9 @@ Namespace Data
                         End Using
                     End If
 
+                    ' Asegurar actualizaciones automáticas de esquema para columnas incorporadas
+                    EnsureSchemaUpdates(conn)
+
                     errorMessage = String.Empty
                     Return True
                 End Using
@@ -114,7 +117,20 @@ Namespace Data
                         Next
                     End If
                     Using reader As DbDataReader = cmd.ExecuteReader()
-                        dt.Load(reader)
+                        ' Carga manual sin inferir restricciones en memoria de DataTable (previene ConstraintException en columnas UNIQUE con NULLs)
+                        For i As Integer = 0 To reader.FieldCount - 1
+                            Dim colType = reader.GetFieldType(i)
+                            dt.Columns.Add(reader.GetName(i), If(colType, GetType(Object)))
+                        Next
+                        dt.BeginLoadData()
+                        While reader.Read()
+                            Dim row As DataRow = dt.NewRow()
+                            For i As Integer = 0 To reader.FieldCount - 1
+                                row(i) = reader.GetValue(i)
+                            Next
+                            dt.Rows.Add(row)
+                        End While
+                        dt.EndLoadData()
                     End Using
                 End Using
             End Using
@@ -345,6 +361,97 @@ Namespace Data
                 Return False
             End Try
         End Function
+
+        ''' <summary>
+        ''' Aplica migraciones y ajustes automáticos de esquema para garantizar retrocompatibilidad con bases de datos existentes.
+        ''' </summary>
+        Private Sub EnsureSchemaUpdates(conn As DbConnection)
+            Try
+                If IsSQLite Then
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='usuarios';"
+                        Dim hasTable = Convert.ToInt64(cmd.ExecuteScalar()) > 0
+                        If Not hasTable Then Return
+
+                        ' Columnas a asegurar en usuarios
+                        Dim requiredCols As String() = {
+                            "nombre TEXT NOT NULL DEFAULT ''",
+                            "apellido TEXT NOT NULL DEFAULT ''",
+                            "telefono TEXT NULL",
+                            "email TEXT NULL",
+                            "direccion TEXT NULL",
+                            "ciudad TEXT NULL",
+                            "notas TEXT NULL",
+                            "fecha_nacimiento TEXT NULL",
+                            "dni TEXT NULL"
+                        }
+
+                        For Each colDef In requiredCols
+                            Dim colName = colDef.Split(" "c)(0)
+                            cmd.CommandText = "PRAGMA table_info(usuarios);"
+                            Dim exists As Boolean = False
+                            Using reader = cmd.ExecuteReader()
+                                While reader.Read()
+                                    If reader("name").ToString().Equals(colName, StringComparison.OrdinalIgnoreCase) Then
+                                        exists = True
+                                        Exit While
+                                    End If
+                                End While
+                            End Using
+
+                            If Not exists Then
+                                Using cmdAlter = conn.CreateCommand()
+                                    cmdAlter.CommandText = $"ALTER TABLE usuarios ADD COLUMN {colDef};"
+                                    cmdAlter.ExecuteNonQuery()
+                                End Using
+                            End If
+                        Next
+
+                        ' Migración de datos existentes
+                        cmd.CommandText = "UPDATE usuarios SET nombre = nombre_completo WHERE (nombre = '' OR nombre IS NULL) AND nombre_completo <> '';"
+                        cmd.ExecuteNonQuery()
+
+                        cmd.CommandText = "UPDATE usuarios SET dni = '1000000' || id WHERE dni IS NULL OR dni = '';"
+                        cmd.ExecuteNonQuery()
+
+                        cmd.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS uk_usuarios_dni ON usuarios(dni);"
+                        cmd.ExecuteNonQuery()
+
+                        ' Columna en clientes
+                        cmd.CommandText = "PRAGMA table_info(clientes);"
+                        Dim hasFnacCli As Boolean = False
+                        Using readerCli = cmd.ExecuteReader()
+                            While readerCli.Read()
+                                If readerCli("name").ToString().Equals("fecha_nacimiento", StringComparison.OrdinalIgnoreCase) Then
+                                    hasFnacCli = True
+                                    Exit While
+                                End If
+                            End While
+                        End Using
+
+                        If Not hasFnacCli Then
+                            Using cmdAlter = conn.CreateCommand()
+                                cmdAlter.CommandText = "ALTER TABLE clientes ADD COLUMN fecha_nacimiento TEXT NULL;"
+                                cmdAlter.ExecuteNonQuery()
+                            End Using
+                        End If
+                    End Using
+                Else
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'dni';"
+                        Dim count = Convert.ToInt64(cmd.ExecuteScalar())
+                        If count = 0 Then
+                            Using cmdAlter = conn.CreateCommand()
+                                cmdAlter.CommandText = "ALTER TABLE `usuarios` ADD COLUMN `dni` VARCHAR(20) UNIQUE NULL AFTER `username`;"
+                                cmdAlter.ExecuteNonQuery()
+                            End Using
+                        End If
+                    End Using
+                End If
+            Catch ex As Exception
+                ' Error silencioso en auto-migración para no impedir inicio si ya fue aplicado
+            End Try
+        End Sub
 
     End Module
 End Namespace

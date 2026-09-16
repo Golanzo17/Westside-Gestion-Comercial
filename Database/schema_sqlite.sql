@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS configuracion (
 CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
+    dni TEXT UNIQUE NULL,
     password_hash TEXT NOT NULL,
     nombre TEXT NOT NULL DEFAULT '',
     apellido TEXT NOT NULL DEFAULT '',

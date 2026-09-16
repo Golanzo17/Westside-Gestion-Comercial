@@ -58,11 +58,63 @@ Namespace Services
             }
         End Function
 
+        ''' <summary>
+        ''' Verifica si ya existe otro cliente con el mismo DNI/CUIT.
+        ''' </summary>
+        Public Function ExisteDni(dni As String, Optional excludeId As Integer = 0) As Boolean
+            Dim dummy As Cliente = Nothing
+            Return ExisteDni(dni, excludeId, dummy)
+        End Function
+
+        ''' <summary>
+        ''' Verifica si ya existe otro cliente con el mismo DNI/CUIT y obtiene el cliente existente si coincide.
+        ''' </summary>
+        Public Function ExisteDni(dni As String, excludeId As Integer, ByRef clienteExistente As Cliente) As Boolean
+            clienteExistente = Nothing
+            Dim dniTrimmed = If(dni, "").Trim()
+            If String.IsNullOrWhiteSpace(dniTrimmed) Then Return False
+
+            Dim sqlCheck As String = "SELECT * FROM `clientes` WHERE LOWER(TRIM(`dni_cuit`)) = LOWER(@dni) AND `id` <> @id LIMIT 1;"
+            Dim dtCheck = DatabaseHelper.ExecuteQuery(sqlCheck, New Dictionary(Of String, Object) From {
+                {"@dni", dniTrimmed},
+                {"@id", excludeId}
+            })
+
+            If dtCheck.Rows.Count > 0 Then
+                clienteExistente = MapCliente(dtCheck.Rows(0))
+                Return True
+            End If
+            Return False
+        End Function
+
         Public Function GuardarCliente(cli As Cliente, ByRef errorMessage As String) As Boolean
             Try
+                Dim dniTrimmed = If(cli.DniCuit, "").Trim()
+                If String.IsNullOrWhiteSpace(dniTrimmed) Then
+                    errorMessage = "El DNI/CUIT es obligatorio."
+                    Return False
+                End If
+
+                If String.IsNullOrWhiteSpace(cli.Nombre) Then
+                    errorMessage = "El nombre del cliente es obligatorio."
+                    Return False
+                End If
+
+                ' Control preventivo de unicidad de DNI
+                Dim clienteDuplicado As Cliente = Nothing
+                If ExisteDni(dniTrimmed, cli.Id, clienteDuplicado) Then
+                    Dim estadoDesc = If(clienteDuplicado.Activo, "activo", "dado de baja")
+                    If clienteDuplicado.Activo Then
+                        errorMessage = $"Ya existe un cliente registrado con el DNI/CUIT '{dniTrimmed}': {clienteDuplicado.NombreCompleto}."
+                    Else
+                        errorMessage = $"El DNI/CUIT '{dniTrimmed}' pertenece al cliente {clienteDuplicado.NombreCompleto}, actualmente inactivo. Puede reactivarlo desde el listado."
+                    End If
+                    Return False
+                End If
+
                 Dim query As String
                 Dim params As New Dictionary(Of String, Object) From {
-                    {"@dni",   cli.DniCuit.Trim()},
+                    {"@dni",   dniTrimmed},
                     {"@nom",   cli.Nombre.Trim()},
                     {"@ape",   cli.Apellido.Trim()},
                     {"@tel",   cli.Telefono.Trim()},

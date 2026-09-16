@@ -105,9 +105,15 @@ Namespace Services
                     End If
                 End SyncLock
 
+                Dim dniVal As String = ""
+                If row.Table.Columns.Contains("dni") AndAlso Not IsDBNull(row("dni")) Then
+                    dniVal = row("dni").ToString()
+                End If
+
                 CurrentUser = New Usuario() With {
                     .Id = userId,
                     .Username = row("username").ToString(),
+                    .Dni = dniVal,
                     .Nombre = If(IsDBNull(row("nombre")), "", row("nombre").ToString()),
                     .Apellido = If(IsDBNull(row("apellido")), "", row("apellido").ToString()),
                     .Rol = row("rol").ToString(),

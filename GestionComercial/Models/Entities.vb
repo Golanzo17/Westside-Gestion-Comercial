@@ -3,6 +3,7 @@ Namespace Models
     Public Class Usuario
         Public Property Id As Integer
         Public Property Username As String = String.Empty
+        Public Property Dni As String = String.Empty
         Public Property PasswordHash As String = String.Empty
         Public Property Nombre As String = String.Empty
         Public Property Apellido As String = String.Empty

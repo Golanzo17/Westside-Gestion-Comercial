@@ -12,14 +12,19 @@ Namespace Services
                 If soloActivos Then
                     sql &= "WHERE `activo` = 1 "
                 End If
-                sql &= "ORDER BY `apellido` ASC, `nombre` ASC;"
 
-                Dim dt = DatabaseHelper.ExecuteQuery(sql)
+                Dim dt As DataTable
+                Try
+                    dt = DatabaseHelper.ExecuteQuery(sql & "ORDER BY `apellido` ASC, `nombre` ASC;")
+                Catch
+                    dt = DatabaseHelper.ExecuteQuery(sql & "ORDER BY `id` ASC;")
+                End Try
+
                 For Each row As DataRow In dt.Rows
                     list.Add(MapUsuario(row))
                 Next
             Catch ex As Exception
-                ' Error silencioso en carga
+                System.Diagnostics.Debug.WriteLine("Error al cargar usuarios: " & ex.Message)
             End Try
             Return list
         End Function
@@ -37,9 +42,24 @@ Namespace Services
             Return Nothing
         End Function
 
+        ''' <summary>
+        ''' Verifica si un DNI ya pertenece a otro usuario en el sistema.
+        ''' </summary>
+        Public Function ExisteDni(dni As String, Optional excludeId As Integer = 0) As Boolean
+            Dim dniTrimmed = If(dni, "").Trim()
+            If String.IsNullOrWhiteSpace(dniTrimmed) Then Return False
+            Dim sqlCheck As String = "SELECT COUNT(*) FROM `usuarios` WHERE LOWER(TRIM(`dni`)) = LOWER(@d) AND `id` <> @id;"
+            Dim count = Convert.ToInt32(DatabaseHelper.ExecuteScalar(sqlCheck, New Dictionary(Of String, Object) From {
+                {"@d", dniTrimmed},
+                {"@id", excludeId}
+            }))
+            Return count > 0
+        End Function
+
         Public Function CrearUsuario(username As String, password As String,
                                       nombre As String, apellido As String,
                                       rol As String, ByRef errorMessage As String,
+                                      Optional dni As String = "",
                                       Optional telefono As String = "",
                                       Optional email As String = "",
                                       Optional direccion As String = "",
@@ -63,6 +83,12 @@ Namespace Services
                     rol = "Vendedor"
                 End If
 
+                Dim dniTrimmed = If(dni, "").Trim()
+                If String.IsNullOrWhiteSpace(dniTrimmed) Then
+                    errorMessage = "El DNI del empleado es obligatorio."
+                    Return False
+                End If
+
                 ' Verificar que el username no exista ya
                 Dim sqlCheck As String = "SELECT COUNT(*) FROM `usuarios` WHERE LOWER(`username`) = LOWER(@u);"
                 Dim count = Convert.ToInt32(DatabaseHelper.ExecuteScalar(sqlCheck, New Dictionary(Of String, Object) From {{"@u", username.Trim()}}))
@@ -71,14 +97,21 @@ Namespace Services
                     Return False
                 End If
 
+                ' Verificar que el DNI no exista ya
+                If ExisteDni(dniTrimmed) Then
+                    errorMessage = $"Ya existe otro usuario registrado con el DNI '{dniTrimmed}'."
+                    Return False
+                End If
+
                 Dim hash = DatabaseHelper.HashPasswordSecure(password)
                 Dim nombreCompleto As String = $"{apellido}, {nombre}".Trim(" "c, ","c)
                 Dim sqlInsert As String =
-                    "INSERT INTO `usuarios` (`username`, `password_hash`, `nombre`, `apellido`, `nombre_completo`, `rol`, " &
+                    "INSERT INTO `usuarios` (`username`, `dni`, `password_hash`, `nombre`, `apellido`, `nombre_completo`, `rol`, " &
                     "`telefono`, `email`, `direccion`, `ciudad`, `notas`, `fecha_nacimiento`, `activo`, `created_at`) " &
-                    "VALUES (@u, @p, @nom, @ape, @nomcomp, @rol, @tel, @email, @dir, @ciu, @notas, @fnac, 1, NOW());"
+                    "VALUES (@u, @dni, @p, @nom, @ape, @nomcomp, @rol, @tel, @email, @dir, @ciu, @notas, @fnac, 1, NOW());"
                 Dim prms As New Dictionary(Of String, Object) From {
                     {"@u",       username.Trim().ToLowerInvariant()},
+                    {"@dni",     dniTrimmed},
                     {"@p",       hash},
                     {"@nom",     nombre.Trim()},
                     {"@ape",     apellido.Trim()},
@@ -104,6 +137,7 @@ Namespace Services
         Public Function ActualizarUsuario(usuarioId As Integer,
                                            nombre As String, apellido As String,
                                            rol As String, ByRef errorMessage As String,
+                                           Optional dni As String = "",
                                            Optional telefono As String = "",
                                            Optional email As String = "",
                                            Optional direccion As String = "",
@@ -113,6 +147,18 @@ Namespace Services
             Try
                 If String.IsNullOrWhiteSpace(nombre) Then
                     errorMessage = "El nombre es obligatorio."
+                    Return False
+                End If
+
+                Dim dniTrimmed = If(dni, "").Trim()
+                If String.IsNullOrWhiteSpace(dniTrimmed) Then
+                    errorMessage = "El DNI del empleado es obligatorio."
+                    Return False
+                End If
+
+                ' Verificar que el DNI no pertenezca a otro usuario
+                If ExisteDni(dniTrimmed, usuarioId) Then
+                    errorMessage = $"Ya existe otro usuario registrado con el DNI '{dniTrimmed}'."
                     Return False
                 End If
 
@@ -128,10 +174,11 @@ Namespace Services
 
                 Dim nombreCompleto As String = $"{apellido}, {nombre}".Trim(" "c, ","c)
                 Dim sqlUpdate As String =
-                    "UPDATE `usuarios` SET `nombre` = @nom, `apellido` = @ape, `nombre_completo` = @nomcomp, `rol` = @rol, " &
+                    "UPDATE `usuarios` SET `dni` = @dni, `nombre` = @nom, `apellido` = @ape, `nombre_completo` = @nomcomp, `rol` = @rol, " &
                     "`telefono` = @tel, `email` = @email, `direccion` = @dir, `ciudad` = @ciu, `notas` = @notas, " &
                     "`fecha_nacimiento` = @fnac WHERE `id` = @id;"
                 Dim prms As New Dictionary(Of String, Object) From {
+                    {"@dni",     dniTrimmed},
                     {"@nom",     nombre.Trim()},
                     {"@ape",     apellido.Trim()},
                     {"@nomcomp", nombreCompleto},
@@ -212,27 +259,87 @@ Namespace Services
 
         Private Function MapUsuario(row As DataRow) As Usuario
             Dim fnac As Nullable(Of DateTime) = Nothing
-            If Not IsDBNull(row("fecha_nacimiento")) Then
+            If row.Table.Columns.Contains("fecha_nacimiento") AndAlso Not IsDBNull(row("fecha_nacimiento")) Then
                 Dim parsed As DateTime
                 If DateTime.TryParse(row("fecha_nacimiento").ToString(), parsed) Then
                     fnac = parsed
                 End If
             End If
+
+            Dim dniVal As String = ""
+            If row.Table.Columns.Contains("dni") AndAlso Not IsDBNull(row("dni")) Then
+                dniVal = row("dni").ToString()
+            End If
+
+            Dim nomVal As String = ""
+            If row.Table.Columns.Contains("nombre") AndAlso Not IsDBNull(row("nombre")) Then
+                nomVal = row("nombre").ToString()
+            ElseIf row.Table.Columns.Contains("nombre_completo") AndAlso Not IsDBNull(row("nombre_completo")) Then
+                nomVal = row("nombre_completo").ToString()
+            End If
+
+            Dim apeVal As String = ""
+            If row.Table.Columns.Contains("apellido") AndAlso Not IsDBNull(row("apellido")) Then
+                apeVal = row("apellido").ToString()
+            End If
+
+            Dim telVal As String = ""
+            If row.Table.Columns.Contains("telefono") AndAlso Not IsDBNull(row("telefono")) Then
+                telVal = row("telefono").ToString()
+            End If
+
+            Dim emailVal As String = ""
+            If row.Table.Columns.Contains("email") AndAlso Not IsDBNull(row("email")) Then
+                emailVal = row("email").ToString()
+            End If
+
+            Dim dirVal As String = ""
+            If row.Table.Columns.Contains("direccion") AndAlso Not IsDBNull(row("direccion")) Then
+                dirVal = row("direccion").ToString()
+            End If
+
+            Dim ciuVal As String = ""
+            If row.Table.Columns.Contains("ciudad") AndAlso Not IsDBNull(row("ciudad")) Then
+                ciuVal = row("ciudad").ToString()
+            End If
+
+            Dim notasVal As String = ""
+            If row.Table.Columns.Contains("notas") AndAlso Not IsDBNull(row("notas")) Then
+                notasVal = row("notas").ToString()
+            End If
+
+            Dim ultLogin As Nullable(Of DateTime) = Nothing
+            If row.Table.Columns.Contains("ultimo_login") AndAlso Not IsDBNull(row("ultimo_login")) Then
+                Dim parsedLogin As DateTime
+                If DateTime.TryParse(row("ultimo_login").ToString(), parsedLogin) Then
+                    ultLogin = parsedLogin
+                End If
+            End If
+
+            Dim createdAtVal As DateTime = DateTime.MinValue
+            If row.Table.Columns.Contains("created_at") AndAlso Not IsDBNull(row("created_at")) Then
+                Dim parsedCreated As DateTime
+                If DateTime.TryParse(row("created_at").ToString(), parsedCreated) Then
+                    createdAtVal = parsedCreated
+                End If
+            End If
+
             Return New Usuario() With {
                 .Id = Convert.ToInt32(row("id")),
                 .Username = row("username").ToString(),
-                .Nombre = If(IsDBNull(row("nombre")), "", row("nombre").ToString()),
-                .Apellido = If(IsDBNull(row("apellido")), "", row("apellido").ToString()),
-                .Rol = row("rol").ToString(),
-                .Telefono = If(IsDBNull(row("telefono")), "", row("telefono").ToString()),
-                .Email = If(IsDBNull(row("email")), "", row("email").ToString()),
-                .Direccion = If(IsDBNull(row("direccion")), "", row("direccion").ToString()),
-                .Ciudad = If(IsDBNull(row("ciudad")), "", row("ciudad").ToString()),
-                .Notas = If(IsDBNull(row("notas")), "", row("notas").ToString()),
+                .Dni = dniVal,
+                .Nombre = nomVal,
+                .Apellido = apeVal,
+                .Rol = If(row.Table.Columns.Contains("rol"), row("rol").ToString(), "Vendedor"),
+                .Telefono = telVal,
+                .Email = emailVal,
+                .Direccion = dirVal,
+                .Ciudad = ciuVal,
+                .Notas = notasVal,
                 .FechaNacimiento = fnac,
-                .Activo = Convert.ToBoolean(row("activo")),
-                .UltimoLogin = If(IsDBNull(row("ultimo_login")), Nothing, Convert.ToDateTime(row("ultimo_login"))),
-                .CreatedAt = If(IsDBNull(row("created_at")), DateTime.MinValue, Convert.ToDateTime(row("created_at")))
+                .Activo = If(row.Table.Columns.Contains("activo"), Convert.ToBoolean(row("activo")), True),
+                .UltimoLogin = ultLogin,
+                .CreatedAt = createdAtVal
             }
         End Function
 

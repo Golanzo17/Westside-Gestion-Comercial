@@ -499,12 +499,6 @@ Namespace Forms
             OpenChildForm(New FrmUsuarios())
         End Sub
 
-        Private Sub Nav_Sync(sender As Object, e As EventArgs)
-            If Not AuthService.SolicitarAutorizacionAdmin(Me, "La sincronización de catálogo requiere permisos de Administrador.") Then
-                Return
-            End If
-            OpenChildForm(New FrmSincronizacionEcommerce())
-        End Sub
 
         Private Sub Nav_Config(sender As Object, e As EventArgs)
             If Not AuthService.SolicitarAutorizacionAdmin(Me, "La configuración general del sistema está reservada para Administradores.") Then

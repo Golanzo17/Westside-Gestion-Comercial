@@ -1,6 +1,6 @@
-# 👗 Software de Gestión Comercial para Local de Ropa
+# Software de Gestión Comercial para Local de Ropa
 
-Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en **Visual Basic (.NET WinForms)** con motor de base de datos **MySQL**, diseñado específicamente para locales de indumentaria y preparado para importar/sincronizar los datos del e-commerce web previo.
+Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en **Visual Basic (.NET WinForms)** con motor de base de datos híbrido (**SQLite** local por defecto o **MySQL** en red), diseñado específicamente para locales de indumentaria.
 
 ---
 
@@ -8,14 +8,15 @@ Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en *
 
 ### 1. Requisitos Previos
 - **.NET SDK** (.NET 8 LTS o .NET 10).
-- **Servidor MySQL** (MySQL Community Server, MariaDB, XAMPP, Laragon o Herd).
+- **Servidor MySQL** (Opcional, si se usa MySQL en vez de SQLite: Community Server, MariaDB, XAMPP, Laragon o Herd).
 - **Visual Studio 2022/2026** o **Visual Studio Code**.
 
-### 2. Base de Datos MySQL
-1. En tu gestor MySQL preferido (phpMyAdmin, MySQL Workbench, DBeaver o consola), puedes ejecutar el script:
-   - `Database/schema_mysql.sql`: Crea la base de datos `gestion_comercial_db` y todas sus tablas con índices y relaciones.
-   - `Database/seed_data.sql`: Carga datos iniciales (talles estándar XS a XXL y 36 a 44, categorías de ropa, usuarios y catálogo de muestra).
-2. **Inicialización Automática**: Si prefieres, el propio software cuenta con una herramienta en el menú de **Configuración** (`⚙ Conexión MySQL -> Crear / Inicializar Tablas`) que crea la base de datos y la estructura automáticamente sin necesidad de hacerlo a mano.
+### 2. Base de Datos
+- **SQLite (Por Defecto)**: No requiere ningún servidor ni instalación externa. El sistema gestiona automáticamente el archivo `Database/gestion_comercial.db`.
+- **MySQL (Opcional)**: En tu gestor MySQL preferido (phpMyAdmin, MySQL Workbench, DBeaver o consola), puedes ejecutar el script:
+  - `Database/schema_mysql.sql`: Crea la base de datos `gestion_comercial_db` y todas sus tablas con índices y relaciones.
+  - `Database/seed_data.sql`: Carga datos iniciales (talles estándar XS a XXL y 36 a 44, categorías de ropa, usuarios y catálogo de muestra).
+  - **Inicialización Automática**: El propio software cuenta con una herramienta en el menú de **Configuración** (`⚙ Conexión -> Crear / Inicializar Tablas`) que crea la base de datos y la estructura automáticamente.
 
 ### 3. Ejecutar la Aplicación
 - Desde **Visual Studio**: Abre `GestionComercial.sln` y presiona **F5**.
@@ -54,7 +55,7 @@ Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en *
 - **Auditoría de Movimientos**: Historial detallado de cada entrada, salida, venta o ajuste manual con fecha, usuario y motivo.
 
 ### 👥 4. Directorio de Clientes
-- Registro de clientes con DNI/CUIT, teléfono, WhatsApp, email y notas de preferencias.
+- Registro de clientes con DNI/CUIT (con validación de duplicados en tiempo real), teléfono, WhatsApp, email y notas de preferencias.
 - Cliente predeterminado *"Consumidor Final"* para ventas rápidas de mostrador.
 
 ### 💵 5. Caja Diaria y Arqueo
@@ -68,12 +69,6 @@ Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en *
 - **Ranking de Prendas Más Vendidas** (unidades y facturación).
 - Módulo de **Anulación de Ventas**: reintegra el stock al talle vendido y reversa el monto en caja.
 
-### 🌐 7. Migración y Sincronización con el E-commerce Web
-- Asistente integrado para conectar con la base de datos de tu tienda web (ej. `grupo5`).
-- Diagnóstico automático de prendas, categorías, talles y stock creados en la web.
-- **Botón de Migración en 1 Clic**: importa todo el catálogo existente al nuevo software de gestión sin pérdida de datos.
-- Script SQL alternativo disponible en `Database/migration_from_ecommerce.sql`.
-
 ---
 
 ## 📁 Estructura del Proyecto
@@ -81,30 +76,32 @@ Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en *
 ```
 c:\Users\gonza\Desktop\Proyecto\
 ├── Database/
+│   ├── gestion_comercial.db          # Base de datos SQLite local activa
 │   ├── schema_mysql.sql              # Estructura DDL completa para MySQL
-│   ├── seed_data.sql                 # Datos maestros iniciales y catálogo demo
-│   └── migration_from_ecommerce.sql  # Script de migración desde e-commerce
+│   ├── schema_sqlite.sql             # Estructura DDL completa para SQLite
+│   ├── seed_data.sql                 # Datos iniciales para MySQL
+│   └── seed_sqlite.sql               # Datos iniciales para SQLite
 ├── GestionComercial.sln              # Solución estándar Visual Studio
 ├── GestionComercial.slnx             # Solución formato .NET moderno
 └── GestionComercial/
     ├── GestionComercial.vbproj       # Proyecto WinForms VB.NET (.NET 10 / 8)
     ├── Program.vb                    # Punto de entrada de la aplicación
-    ├── appsettings.json              # Configuración local de conexión MySQL
+    ├── appsettings.json              # Configuración de base de datos
     ├── Config/
     │   └── AppConfig.vb              # Manejador de configuración JSON y connection string
     ├── Data/
-    │   └── DatabaseHelper.vb         # Conexión ADO.NET, MySqlConnector, SHA256 y scripts
+    │   └── DatabaseHelper.vb         # Conexión ADO.NET híbrida SQLite/MySQL
     ├── Models/
     │   └── Entities.vb               # Clases POCO (Producto, Talle, Venta, Cliente, Caja, etc.)
     ├── Services/
     │   ├── AuthService.vb            # Autenticación y roles de usuario
     │   ├── CatalogService.vb         # Lógica de productos, talles y matriz de stock
-    │   ├── ClienteService.vb         # Directorio de clientes
+    │   ├── ClienteService.vb         # Directorio y validación de clientes
     │   ├── CajaService.vb            # Apertura, movimientos y arqueo de caja
     │   ├── VentaService.vb           # Transacciones POS, deducción de stock y tickets
     │   ├── ReporteService.vb         # Métricas de ventas y ranking
-    │   ├── ConfiguracionService.vb   # Datos comerciales y del ticket
-    │   └── EcommerceSyncService.vb   # Asistente de importación desde la web
+    │   ├── UsuarioService.vb         # Gestión y auditoría de usuarios y DNI
+    │   └── ConfiguracionService.vb   # Datos comerciales y del ticket
     ├── Forms/
     │   ├── FrmMain.vb                # Dashboard principal con panel lateral
     │   ├── FrmLogin.vb               # Pantalla de acceso al sistema
@@ -113,9 +110,9 @@ c:\Users\gonza\Desktop\Proyecto\
     │   ├── FrmStock.vb               # Reposición, alertas y auditoría
     │   ├── FrmClientes.vb            # ABM de clientes
     │   ├── FrmCaja.vb                # Control de caja y arqueo
+    │   ├── FrmUsuarios.vb            # Gestión de usuarios del sistema
     │   ├── FrmReportes.vb            # Estadísticas y anulación de ventas
-    │   ├── FrmSincronizacionEcommerce.vb # Asistente de migración web
-    │   └── FrmConfiguracion.vb       # Configuración MySQL y datos del local
+    │   └── FrmConfiguracion.vb       # Configuración de conexión y datos del local
     └── UI/
         └── UITheme.vb                # Sistema de diseño, paleta Slate/Indigo y estilos
 ```

@@ -119,46 +119,53 @@ Namespace Forms
             dgvUsuarios.Columns("Id").Width = 50
 
             dgvUsuarios.Columns.Add("Username", "Usuario")
-            dgvUsuarios.Columns("Username").Width = 120
+            dgvUsuarios.Columns("Username").Width = 110
+
+            dgvUsuarios.Columns.Add("Dni", "DNI")
+            dgvUsuarios.Columns("Dni").Width = 100
 
             dgvUsuarios.Columns.Add("Apellido", "Apellido")
-            dgvUsuarios.Columns("Apellido").Width = 140
+            dgvUsuarios.Columns("Apellido").Width = 130
 
             dgvUsuarios.Columns.Add("Nombre", "Nombre")
-            dgvUsuarios.Columns("Nombre").Width = 140
+            dgvUsuarios.Columns("Nombre").Width = 130
 
             dgvUsuarios.Columns.Add("Rol", "Rol")
-            dgvUsuarios.Columns("Rol").Width = 130
+            dgvUsuarios.Columns("Rol").Width = 120
 
             dgvUsuarios.Columns.Add("Telefono", "Teléfono")
-            dgvUsuarios.Columns("Telefono").Width = 120
+            dgvUsuarios.Columns("Telefono").Width = 110
 
             dgvUsuarios.Columns.Add("Email", "Email")
             dgvUsuarios.Columns("Email").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
 
             dgvUsuarios.Columns.Add("FechaNac", "Fecha Nac.")
-            dgvUsuarios.Columns("FechaNac").Width = 100
+            dgvUsuarios.Columns("FechaNac").Width = 95
 
             dgvUsuarios.Columns.Add("Activo", "Estado")
-            dgvUsuarios.Columns("Activo").Width = 90
+            dgvUsuarios.Columns("Activo").Width = 85
 
             dgvUsuarios.Columns.Add("UltimoLogin", "Último Acceso")
-            dgvUsuarios.Columns("UltimoLogin").Width = 150
+            dgvUsuarios.Columns("UltimoLogin").Width = 140
         End Sub
 
         Public Sub LoadUsuarios()
-            Dim lista = usuarioService.GetUsuarios()
-            dgvUsuarios.Rows.Clear()
+            Try
+                Dim lista = usuarioService.GetUsuarios()
+                dgvUsuarios.Rows.Clear()
 
-            Dim activosCount As Integer = 0
-            For Each u In lista
-                Dim ultAcceso = If(u.UltimoLogin.HasValue, u.UltimoLogin.Value.ToString("dd/MM/yyyy HH:mm"), "Nunca")
-                Dim fnacStr = If(u.FechaNacimiento.HasValue, u.FechaNacimiento.Value.ToString("dd/MM/yyyy"), "-")
-                Dim estadoStr = If(u.Activo, "Activo", "Inactivo")
-                If u.Activo Then activosCount += 1
-                dgvUsuarios.Rows.Add(u.Id, u.Username, u.Apellido, u.Nombre, u.Rol, u.Telefono, u.Email, fnacStr, estadoStr, ultAcceso)
-            Next
-            lblTotalUsuarios.Text = $"Total de usuarios: {lista.Count} ({activosCount} activos, {lista.Count - activosCount} inactivos)"
+                Dim activosCount As Integer = 0
+                For Each u In lista
+                    Dim ultAcceso = If(u.UltimoLogin.HasValue, u.UltimoLogin.Value.ToString("dd/MM/yyyy HH:mm"), "Nunca")
+                    Dim fnacStr = If(u.FechaNacimiento.HasValue, u.FechaNacimiento.Value.ToString("dd/MM/yyyy"), "-")
+                    Dim estadoStr = If(u.Activo, "Activo", "Inactivo")
+                    If u.Activo Then activosCount += 1
+                    dgvUsuarios.Rows.Add(u.Id, u.Username, u.Dni, u.Apellido, u.Nombre, u.Rol, u.Telefono, u.Email, fnacStr, estadoStr, ultAcceso)
+                Next
+                lblTotalUsuarios.Text = $"Total de usuarios: {lista.Count} ({activosCount} activos, {lista.Count - activosCount} inactivos)"
+            Catch ex As Exception
+                lblTotalUsuarios.Text = "Error al cargar usuarios: " & ex.Message
+            End Try
         End Sub
 
         Private Sub DgvUsuarios_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs)
@@ -257,6 +264,7 @@ Namespace Forms
 
         Private txtNombre As TextBox
         Private txtApellido As TextBox
+        Private txtDni As TextBox
         Private txtUsername As TextBox
         Private cboRol As ComboBox
         Private txtPassword As TextBox
@@ -280,7 +288,7 @@ Namespace Forms
 
         Private Sub InitializeUI()
             Me.Text = If(_usuarioId = 0, "Crear Nuevo Usuario / Empleado", "Editar Datos de Usuario / Empleado")
-            Me.Size = New Size(560, If(_usuarioId = 0, 620, 570))
+            Me.Size = New Size(560, If(_usuarioId = 0, 690, 630))
             Me.StartPosition = FormStartPosition.CenterParent
             Me.FormBorderStyle = FormBorderStyle.FixedDialog
             Me.MaximizeBox = False
@@ -297,50 +305,55 @@ Namespace Forms
             txtApellido = New TextBox() With {.Location = New Point(275, 45), .Size = New Size(230, 26)}
             UITheme.StyleTextBox(txtApellido)
 
-            ' --- Fila 2: Username y Rol ---
-            Dim lblUser As New Label() With {.Text = "Usuario (Login):", .Font = UITheme.FontBold, .Location = New Point(25, 90), .AutoSize = True}
-            txtUsername = New TextBox() With {.Location = New Point(25, 115), .Size = New Size(230, 26)}
+            ' --- Fila 2: DNI y Username ---
+            Dim lblDni As New Label() With {.Text = "DNI / Documento:", .Font = UITheme.FontBold, .Location = New Point(25, 90), .AutoSize = True}
+            txtDni = New TextBox() With {.Location = New Point(25, 115), .Size = New Size(230, 26)}
+            UITheme.StyleTextBox(txtDni)
+
+            Dim lblUser As New Label() With {.Text = "Usuario (Login):", .Font = UITheme.FontBold, .Location = New Point(275, 90), .AutoSize = True}
+            txtUsername = New TextBox() With {.Location = New Point(275, 115), .Size = New Size(230, 26)}
             UITheme.StyleTextBox(txtUsername)
 
-            Dim lblRol As New Label() With {.Text = "Rol en el Sistema:", .Font = UITheme.FontBold, .Location = New Point(275, 90), .AutoSize = True}
-            cboRol = New ComboBox() With {.Location = New Point(275, 115), .Size = New Size(230, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            ' --- Fila 3: Rol y Teléfono ---
+            Dim lblRol As New Label() With {.Text = "Rol en el Sistema:", .Font = UITheme.FontBold, .Location = New Point(25, 160), .AutoSize = True}
+            cboRol = New ComboBox() With {.Location = New Point(25, 185), .Size = New Size(230, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
             cboRol.Items.AddRange({"Vendedor", "Administrador"})
             cboRol.SelectedIndex = 0
 
-            ' --- Fila 3: Teléfono y Email ---
-            Dim lblTel As New Label() With {.Text = "Teléfono / WhatsApp:", .Font = UITheme.FontBold, .Location = New Point(25, 160), .AutoSize = True}
-            txtTelefono = New TextBox() With {.Location = New Point(25, 185), .Size = New Size(230, 26)}
+            Dim lblTel As New Label() With {.Text = "Teléfono / WhatsApp:", .Font = UITheme.FontBold, .Location = New Point(275, 160), .AutoSize = True}
+            txtTelefono = New TextBox() With {.Location = New Point(275, 185), .Size = New Size(230, 26)}
             UITheme.StyleTextBox(txtTelefono)
 
-            Dim lblEmail As New Label() With {.Text = "Email:", .Font = UITheme.FontBold, .Location = New Point(275, 160), .AutoSize = True}
-            txtEmail = New TextBox() With {.Location = New Point(275, 185), .Size = New Size(230, 26)}
+            ' --- Fila 4: Email ---
+            Dim lblEmail As New Label() With {.Text = "Email:", .Font = UITheme.FontBold, .Location = New Point(25, 230), .AutoSize = True}
+            txtEmail = New TextBox() With {.Location = New Point(25, 255), .Size = New Size(480, 26)}
             UITheme.StyleTextBox(txtEmail)
 
-            ' --- Fila 4: Dirección y Ciudad ---
-            Dim lblDir As New Label() With {.Text = "Dirección:", .Font = UITheme.FontBold, .Location = New Point(25, 230), .AutoSize = True}
-            txtDireccion = New TextBox() With {.Location = New Point(25, 255), .Size = New Size(300, 26)}
+            ' --- Fila 5: Dirección y Ciudad ---
+            Dim lblDir As New Label() With {.Text = "Dirección:", .Font = UITheme.FontBold, .Location = New Point(25, 300), .AutoSize = True}
+            txtDireccion = New TextBox() With {.Location = New Point(25, 325), .Size = New Size(300, 26)}
             UITheme.StyleTextBox(txtDireccion)
 
-            Dim lblCiu As New Label() With {.Text = "Ciudad:", .Font = UITheme.FontBold, .Location = New Point(340, 230), .AutoSize = True}
-            txtCiudad = New TextBox() With {.Location = New Point(340, 255), .Size = New Size(165, 26)}
+            Dim lblCiu As New Label() With {.Text = "Ciudad:", .Font = UITheme.FontBold, .Location = New Point(340, 300), .AutoSize = True}
+            txtCiudad = New TextBox() With {.Location = New Point(340, 325), .Size = New Size(165, 26)}
             UITheme.StyleTextBox(txtCiudad)
 
-            ' --- Fila 5: Fecha de Nacimiento ---
-            Dim lblFnac As New Label() With {.Text = "Fecha de Nacimiento:", .Font = UITheme.FontBold, .Location = New Point(25, 300), .AutoSize = True}
-            dtpFechaNac = New DateTimePicker() With {.Location = New Point(25, 325), .Size = New Size(200, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddYears(-25)}
-            chkTieneFechaNac = New CheckBox() With {.Text = "Sin fecha", .Location = New Point(240, 328), .AutoSize = True, .Checked = True}
+            ' --- Fila 6: Fecha de Nacimiento ---
+            Dim lblFnac As New Label() With {.Text = "Fecha de Nacimiento:", .Font = UITheme.FontBold, .Location = New Point(25, 370), .AutoSize = True}
+            dtpFechaNac = New DateTimePicker() With {.Location = New Point(25, 395), .Size = New Size(200, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddYears(-25)}
+            chkTieneFechaNac = New CheckBox() With {.Text = "Sin fecha", .Location = New Point(240, 398), .AutoSize = True, .Checked = True}
             dtpFechaNac.Enabled = Not chkTieneFechaNac.Checked
             AddHandler chkTieneFechaNac.CheckedChanged, Sub()
                                                              dtpFechaNac.Enabled = Not chkTieneFechaNac.Checked
                                                          End Sub
 
-            ' --- Fila 6: Notas ---
-            Dim lblNotas As New Label() With {.Text = "Notas / Observaciones:", .Font = UITheme.FontBold, .Location = New Point(25, 370), .AutoSize = True}
-            txtNotas = New TextBox() With {.Location = New Point(25, 395), .Size = New Size(480, 55), .Multiline = True}
+            ' --- Fila 7: Notas ---
+            Dim lblNotas As New Label() With {.Text = "Notas / Observaciones:", .Font = UITheme.FontBold, .Location = New Point(25, 440), .AutoSize = True}
+            txtNotas = New TextBox() With {.Location = New Point(25, 465), .Size = New Size(480, 50), .Multiline = True}
             UITheme.StyleTextBox(txtNotas)
 
             ' --- Contraseña (solo en modo creación) ---
-            Dim nextY As Integer = 465
+            Dim nextY As Integer = 530
             If _usuarioId = 0 Then
                 Dim lblPass As New Label() With {.Text = "Contraseña Inicial (mín. 4 caracteres):", .Font = UITheme.FontBold, .Location = New Point(25, nextY), .AutoSize = True}
                 txtPassword = New TextBox() With {.Location = New Point(25, nextY + 25), .Size = New Size(480, 26), .UseSystemPasswordChar = True}
@@ -362,8 +375,9 @@ Namespace Forms
             pnlBottom.Controls.AddRange({btnGuardar, btnCancelar})
 
             Me.Controls.AddRange({lblNom, txtNombre, lblApe, txtApellido,
-                                   lblUser, txtUsername, lblRol, cboRol,
-                                   lblTel, txtTelefono, lblEmail, txtEmail,
+                                   lblDni, txtDni, lblUser, txtUsername,
+                                   lblRol, cboRol, lblTel, txtTelefono,
+                                   lblEmail, txtEmail,
                                    lblDir, txtDireccion, lblCiu, txtCiudad,
                                    lblFnac, dtpFechaNac, chkTieneFechaNac,
                                    lblNotas, txtNotas, pnlBottom})
@@ -376,6 +390,7 @@ Namespace Forms
             If u IsNot Nothing Then
                 txtNombre.Text = u.Nombre
                 txtApellido.Text = u.Apellido
+                txtDni.Text = u.Dni
                 txtUsername.Text = u.Username
                 txtUsername.ReadOnly = True
                 txtUsername.BackColor = Color.FromArgb(241, 245, 249)
@@ -400,13 +415,20 @@ Namespace Forms
             Dim errMsg As String = ""
             Dim nom = txtNombre.Text.Trim()
             Dim ape = txtApellido.Text.Trim()
+            Dim dni = txtDni.Text.Trim()
             Dim usr = txtUsername.Text.Trim()
             Dim rol = cboRol.SelectedItem.ToString()
             Dim fnac As Nullable(Of DateTime) = If(chkTieneFechaNac.Checked, Nothing, CType(dtpFechaNac.Value.Date, Nullable(Of DateTime)))
 
+            If String.IsNullOrWhiteSpace(dni) Then
+                MessageBox.Show("El DNI es obligatorio.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
             If _usuarioId = 0 Then
                 Dim pass = txtPassword.Text
                 If usuarioService.CrearUsuario(usr, pass, nom, ape, rol, errMsg,
+                                               dni,
                                                txtTelefono.Text.Trim(), txtEmail.Text.Trim(),
                                                txtDireccion.Text.Trim(), txtCiudad.Text.Trim(),
                                                txtNotas.Text.Trim(), fnac) Then
@@ -418,6 +440,7 @@ Namespace Forms
                 End If
             Else
                 If usuarioService.ActualizarUsuario(_usuarioId, nom, ape, rol, errMsg,
+                                                    dni,
                                                     txtTelefono.Text.Trim(), txtEmail.Text.Trim(),
                                                     txtDireccion.Text.Trim(), txtCiudad.Text.Trim(),
                                                     txtNotas.Text.Trim(), fnac) Then
