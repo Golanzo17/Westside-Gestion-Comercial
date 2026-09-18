@@ -46,41 +46,59 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Toolbar
+            ' Toolbar con FlowLayoutPanel para evitar recorte de botones
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 95,
-                .BackColor = UITheme.ColorSurface,
-                .Padding = New Padding(15, 15, 15, 10)
+                .Height = 55,
+                .BackColor = UITheme.ColorSurface
+            }
+            Dim flpToolbar As New FlowLayoutPanel() With {
+                .Dock = DockStyle.Fill,
+                .Padding = New Padding(10, 12, 10, 10),
+                .WrapContents = False
             }
 
+<<<<<<< HEAD
             Dim lblB As New Label() With {.Text = "Buscar por DNI o nombre:", .Font = UITheme.FontBold, .Location = New Point(15, 20), .AutoSize = True}
             txtBuscar = New TextBox() With {.Location = New Point(215, 18), .Size = New Size(260, 26)}
+=======
+            Dim lblB As New Label() With {.Text = "Buscar por DNI o Nombre:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 5, 4, 0)}
+            txtBuscar = New TextBox() With {.Size = New Size(240, 26), .Margin = New Padding(0, 2, 0, 0)}
+>>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
             UITheme.StyleTextBox(txtBuscar)
             AddHandler txtBuscar.KeyDown, Sub(s, e)
                                               If e.KeyCode = Keys.Enter Then LoadClientes()
                                           End Sub
 
-            btnBuscar = New Button() With {.Text = "Buscar", .Location = New Point(485, 16), .Size = New Size(80, 30)}
+            btnBuscar = New Button() With {.Text = "Buscar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
             UITheme.StyleButton(btnBuscar, "Primary")
             AddHandler btnBuscar.Click, Sub() LoadClientes()
 
-            btnNuevo = New Button() With {.Text = "+ Nuevo Cliente", .Location = New Point(575, 16), .Size = New Size(130, 30)}
+            btnNuevo = New Button() With {.Text = "+ Nuevo Cliente", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
             UITheme.StyleButton(btnNuevo, "Success")
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
+<<<<<<< HEAD
             btnEditar = New Button() With {.Text = "Editar", .Location = New Point(715, 16), .Size = New Size(95, 30)}
+=======
+            btnEditar = New Button() With {.Text = "✏ Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
+>>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
             UITheme.StyleButton(btnEditar, "Secondary")
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
-            btnEliminar = New Button() With {.Text = "Eliminar", .Location = New Point(820, 16), .Size = New Size(95, 30)}
+            btnEliminar = New Button() With {.Text = "Eliminar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
             UITheme.StyleButton(btnEliminar, "Danger")
             AddHandler btnEliminar.Click, AddressOf BtnEliminar_Click
 
+<<<<<<< HEAD
             btnEditar.Visible = AuthService.IsAdminOrManager
             btnEliminar.Visible = AuthService.IsAdminOrManager
 
             pnlToolbar.Controls.AddRange({lblB, txtBuscar, btnBuscar, btnNuevo, btnEditar, btnEliminar})
+=======
+            flpToolbar.Controls.AddRange({lblB, txtBuscar, btnBuscar, btnNuevo, btnEditar, btnEliminar})
+            pnlToolbar.Controls.Add(flpToolbar)
+>>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
 
             ' Grilla
             Dim pnlGrid As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(15)}
@@ -112,24 +130,31 @@ Namespace Forms
             dgvClientes.Columns.Add("Dni", "DNI / CUIT")
             dgvClientes.Columns("Dni").Width = 120
 
-            dgvClientes.Columns.Add("NombreCompleto", "Apellido y Nombre")
-            dgvClientes.Columns("NombreCompleto").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvClientes.Columns.Add("Apellido", "Apellido")
+            dgvClientes.Columns("Apellido").Width = 140
 
-            dgvClientes.Columns.Add("Telefono", "Teléfono / WhatsApp")
-            dgvClientes.Columns("Telefono").Width = 140
+            dgvClientes.Columns.Add("NombreCompleto", "Nombre")
+            dgvClientes.Columns("NombreCompleto").Width = 130
+
+            dgvClientes.Columns.Add("Telefono", "Teléfono")
+            dgvClientes.Columns("Telefono").Width = 130
 
             dgvClientes.Columns.Add("Email", "Email")
-            dgvClientes.Columns("Email").Width = 180
+            dgvClientes.Columns("Email").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
 
             dgvClientes.Columns.Add("Ciudad", "Ciudad")
             dgvClientes.Columns("Ciudad").Width = 120
+
+            dgvClientes.Columns.Add("FechaNac", "Fecha Nac.")
+            dgvClientes.Columns("FechaNac").Width = 100
         End Sub
 
         Private Sub LoadClientes()
             Dim lista = clienteService.GetClientes(txtBuscar.Text.Trim(), True)
             dgvClientes.Rows.Clear()
             For Each c In lista
-                dgvClientes.Rows.Add(c.Id, c.DniCuit, c.NombreCompleto, c.Telefono, c.Email, c.Ciudad)
+                Dim fnacStr = If(c.FechaNacimiento.HasValue, c.FechaNacimiento.Value.ToString("dd/MM/yyyy"), "-")
+                dgvClientes.Rows.Add(c.Id, c.DniCuit, c.Apellido, c.Nombre, c.Telefono, c.Email, c.Ciudad, fnacStr)
             Next
             lblTotal.Text = $"Total clientes registrados: {lista.Count}"
         End Sub
@@ -193,6 +218,8 @@ Namespace Forms
         Private txtDireccion As TextBox
         Private txtCiudad As TextBox
         Private txtNotas As TextBox
+        Private dtpFechaNac As DateTimePicker
+        Private chkSinFecha As CheckBox
         Private btnGuardar As Button
         Private btnCancelar As Button
 
@@ -241,10 +268,24 @@ Namespace Forms
             UITheme.StyleTextBox(txtCiudad)
 
             Dim lblNotas As New Label() With {.Text = "Notas / Preferencias (Talles preferidos, etc.):", .Font = UITheme.FontBold, .Location = New Point(30, 320), .AutoSize = True}
-            txtNotas = New TextBox() With {.Location = New Point(30, 350), .Size = New Size(460, 60), .Multiline = True}
+            txtNotas = New TextBox() With {.Location = New Point(30, 350), .Size = New Size(460, 55), .Multiline = True}
             UITheme.StyleTextBox(txtNotas)
 
+<<<<<<< HEAD
             Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = UITheme.ColorSurfaceMuted, .Padding = New Padding(20, 10, 20, 10)}
+=======
+            Dim lblFnac As New Label() With {.Text = "Fecha de Nacimiento:", .Font = UITheme.FontBold, .Location = New Point(30, 422), .AutoSize = True}
+            dtpFechaNac = New DateTimePicker() With {.Location = New Point(30, 447), .Size = New Size(200, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddYears(-25)}
+            chkSinFecha = New CheckBox() With {.Text = "Sin fecha", .Location = New Point(245, 450), .AutoSize = True, .Checked = True}
+            dtpFechaNac.Enabled = Not chkSinFecha.Checked
+            AddHandler chkSinFecha.CheckedChanged, Sub()
+                                                       dtpFechaNac.Enabled = Not chkSinFecha.Checked
+                                                   End Sub
+
+            Me.Size = New Size(540, 590)
+
+            Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = Color.FromArgb(241, 245, 249), .Padding = New Padding(20, 10, 20, 10)}
+>>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
             btnGuardar = New Button() With {.Text = "💾 Guardar Cliente", .Dock = DockStyle.Right, .Width = 160}
             UITheme.StyleButton(btnGuardar, "Success")
             AddHandler btnGuardar.Click, AddressOf BtnGuardar_Click
@@ -255,7 +296,7 @@ Namespace Forms
 
             pnlBottom.Controls.AddRange({btnGuardar, btnCancelar})
 
-            Me.Controls.AddRange({lblDni, txtDni, lblTel, txtTelefono, lblNom, txtNombre, lblApe, txtApellido, lblEmail, txtEmail, lblDir, txtDireccion, lblCiu, txtCiudad, lblNotas, txtNotas, pnlBottom})
+            Me.Controls.AddRange({lblDni, txtDni, lblTel, txtTelefono, lblNom, txtNombre, lblApe, txtApellido, lblEmail, txtEmail, lblDir, txtDireccion, lblCiu, txtCiudad, lblNotas, txtNotas, lblFnac, dtpFechaNac, chkSinFecha, pnlBottom})
         End Sub
 
         Private Sub LoadData()
@@ -272,6 +313,13 @@ Namespace Forms
                     txtDireccion.Text = clienteActual.Direccion
                     txtCiudad.Text = clienteActual.Ciudad
                     txtNotas.Text = clienteActual.Notas
+                    If clienteActual.FechaNacimiento.HasValue Then
+                        dtpFechaNac.Value = clienteActual.FechaNacimiento.Value
+                        dtpFechaNac.Enabled = True
+                        chkSinFecha.Checked = False
+                    Else
+                        chkSinFecha.Checked = True
+                    End If
                 End If
             End If
         End Sub
@@ -290,6 +338,7 @@ Namespace Forms
             clienteActual.Direccion = txtDireccion.Text.Trim()
             clienteActual.Ciudad = txtCiudad.Text.Trim()
             clienteActual.Notas = txtNotas.Text.Trim()
+            clienteActual.FechaNacimiento = If(chkSinFecha.Checked, Nothing, CType(dtpFechaNac.Value.Date, Nullable(Of DateTime)))
             clienteActual.Activo = True
 
             Dim errMsg As String = ""

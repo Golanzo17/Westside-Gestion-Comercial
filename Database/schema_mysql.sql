@@ -48,6 +48,7 @@ CREATE TABLE `configuracion` (
 CREATE TABLE `usuarios` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `username` VARCHAR(50) NOT NULL UNIQUE,
+    `dni` VARCHAR(20) UNIQUE NULL,
     `password_hash` VARCHAR(255) NOT NULL,
     `nombre_completo` VARCHAR(100) NOT NULL,
     `rol` ENUM('Administrador', 'Gerente', 'Vendedor', 'Cajero') NOT NULL DEFAULT 'Vendedor',

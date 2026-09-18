@@ -12,25 +12,37 @@ Namespace Config
         Public Property Password As String = ""
 
         Public Function GetSqlitePath() As String
-            ' Buscar carpeta Database del proyecto o base directory
+            ' Buscar el archivo gestion_comercial.db priorizando la carpeta raíz del proyecto
             Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
             Dim candidates As String() = {
-                Path.Combine(baseDir, "Database"),
-                Path.Combine(baseDir, "..", "..", "..", "..", "Database"),
-                Path.Combine(baseDir, "..", "..", "..", "Database")
+                Path.Combine(baseDir, "..", "..", "..", "..", "Database", SqliteFileName),
+                Path.Combine(baseDir, "..", "..", "..", "Database", SqliteFileName),
+                Path.Combine(baseDir, "Database", SqliteFileName),
+                Path.Combine(baseDir, SqliteFileName)
             }
 
             For Each c In candidates
                 Try
                     Dim full = Path.GetFullPath(c)
-                    If Directory.Exists(full) Then
-                        Return Path.Combine(full, SqliteFileName)
+                    If File.Exists(full) Then
+                        Return full
                     End If
                 Catch
                 End Try
             Next
 
-            ' Fallback al directorio actual
+            ' Si no existe el archivo aún, devolver la ruta en la carpeta Database del proyecto si la carpeta existe
+            For Each c In candidates
+                Try
+                    Dim dir = Path.GetDirectoryName(Path.GetFullPath(c))
+                    If Directory.Exists(dir) Then
+                        Return Path.Combine(dir, SqliteFileName)
+                    End If
+                Catch
+                End Try
+            Next
+
+            ' Fallback al directorio ejecutable
             Return Path.Combine(baseDir, SqliteFileName)
         End Function
 

@@ -39,10 +39,9 @@ Para aprender sin abrumarte, te recomendamos seguir este orden de lectura:
    * Gestión de productos, categorías, talles, matriz de stock y ajustes manuales.
 10. [CajaService.md]:
     * Apertura, ingresos/egresos, arqueo de efectivo y cierre de caja.
-11. [EcommerceSyncService.md]:
-    * Conexión a la tienda web remota y migración masiva del catálogo.
-12. [Otros_Servicios.md]:
+11. [Otros_Servicios.md]:
     * Explicación de `ClienteService.vb`, `UsuarioService.vb`, `ReporteService.vb` y `ConfiguracionService.vb`.
+
 
 ---
 

@@ -52,30 +52,43 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Toolbar de Fechas
+            ' Toolbar de Fechas con FlowLayoutPanel para evitar recorte de botones
             Dim pnlFilter As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 55,
-                .BackColor = UITheme.ColorSurface,
-                .Padding = New Padding(15, 12, 15, 10)
+                .BackColor = UITheme.ColorSurface
+            }
+            Dim flpFilter As New FlowLayoutPanel() With {
+                .Dock = DockStyle.Fill,
+                .Padding = New Padding(10, 12, 10, 10),
+                .WrapContents = False
             }
 
-            Dim lblD As New Label() With {.Text = "Desde:", .Font = UITheme.FontBold, .Location = New Point(15, 16), .AutoSize = True}
-            dtpDesde = New DateTimePicker() With {.Location = New Point(70, 14), .Size = New Size(130, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddDays(-7)}
+            Dim lblD As New Label() With {.Text = "Desde:", .Font = UITheme.FontBold, .AutoSize = True, .Anchor = AnchorStyles.None, .Margin = New Padding(0, 6, 4, 0)}
+            dtpDesde = New DateTimePicker() With {.Size = New Size(130, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddDays(-7), .Margin = New Padding(0, 3, 0, 0)}
 
-            Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .Location = New Point(220, 16), .AutoSize = True}
-            dtpHasta = New DateTimePicker() With {.Location = New Point(275, 14), .Size = New Size(130, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today}
+            Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 4, 0)}
+            dtpHasta = New DateTimePicker() With {.Size = New Size(130, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today, .Margin = New Padding(0, 3, 0, 0)}
 
+<<<<<<< HEAD
             btnFiltrar = New Button() With {.Text = "Generar reporte", .Location = New Point(430, 12), .Size = New Size(160, 30)}
             UITheme.StyleButton(btnFiltrar, "Primary")
             AddHandler btnFiltrar.Click, Sub() LoadReportes()
 
             btnAnularVenta = New Button() With {.Text = "Anular venta seleccionada", .Location = New Point(610, 12), .Size = New Size(220, 30)}
+=======
+            btnFiltrar = New Button() With {.Text = "🔍 Generar Reporte", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(12, 3, 0, 0)}
+            UITheme.StyleButton(btnFiltrar, "Primary")
+            AddHandler btnFiltrar.Click, Sub() LoadReportes()
+
+            btnAnularVenta = New Button() With {.Text = "✖ Anular Venta Seleccionada", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 3, 0, 0)}
+>>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
             UITheme.StyleButton(btnAnularVenta, "Danger")
             btnAnularVenta.Visible = AuthService.IsAdminOrManager
             AddHandler btnAnularVenta.Click, AddressOf BtnAnularVenta_Click
 
-            pnlFilter.Controls.AddRange({lblD, dtpDesde, lblH, dtpHasta, btnFiltrar, btnAnularVenta})
+            flpFilter.Controls.AddRange({lblD, dtpDesde, lblH, dtpHasta, btnFiltrar, btnAnularVenta})
+            pnlFilter.Controls.Add(flpFilter)
 
             ' Tarjetas KPI
             Dim pnlKpis As New Panel() With {

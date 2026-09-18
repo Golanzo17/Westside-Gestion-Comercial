@@ -18,7 +18,10 @@ En esta guía se explican los 4 servicios complementarios del sistema:
   * Devuelve los datos completos de un cliente puntual.
 * **`GuardarCliente(cli, ByRef errorMessage)`**:
   * Da de alta o actualiza un cliente.
-  * Valida que el nombre y apellido no estén vacíos.
+  * Valida que el nombre, apellido y DNI/CUIT no estén vacíos.
+  * **Control preventivo de unicidad**: Comprueba si el DNI ya está registrado por otro cliente (activo o inactivo) y devuelve un mensaje claro identificando al titular previo antes del intento de inserción.
+* **`ExisteDni(dni, excludeId, ByRef clienteExistente)`**:
+  * Consulta si un DNI/CUIT ya existe en el sistema excluyendo un ID opcional.
 * **`EliminarCliente(id, ByRef errorMessage)`**:
   * Aplica borrado lógico (`activo = 0`). Impide eliminar al cliente con `ID = 1` (que es el "Consumidor Final" por defecto).
 
@@ -29,11 +32,14 @@ En esta guía se explican los 4 servicios complementarios del sistema:
 
 ### Métodos:
 * **`GetUsuarios() As List(Of Usuario)`**:
-  * Devuelve la lista de usuarios del sistema con sus roles y estados.
-* **`GuardarUsuario(usuario, passwordPlano, ByRef errorMessage)`**:
-  * Crea o edita un usuario.
-  * Si se proporciona una contraseña, la encripta con `DatabaseHelper.HashPasswordSecure(...)` en formato **PBKDF2** antes de guardarla.
-  * Impide nombres de usuario repetidos.
+  * Devuelve la lista de usuarios del sistema con sus roles, estados y DNI.
+* **`CrearUsuario(username, password, nombre, apellido, rol, ByRef errorMessage, dni, ...)`**:
+  * Crea un usuario encriptando la clave con **PBKDF2**.
+  * Valida unicidad estricta tanto del **nombre de usuario (`username`)** como del **DNI**, impidiendo duplicados.
+* **`ActualizarUsuario(usuarioId, nombre, apellido, rol, ByRef errorMessage, dni, ...)`**:
+  * Actualiza los datos del usuario validando que el DNI no esté utilizado por otro empleado y preservando al menos un administrador activo.
+* **`ExisteDni(dni, excludeId)`**:
+  * Verifica preventivamente la existencia de un DNI en la tabla de usuarios.
 * **`CambiarPassword(usuarioId, nuevaPassword, ByRef errorMessage)`**:
   * Permite al usuario o a un administrador resetear la clave de acceso de forma segura.
 * **`EliminarUsuario(id, ByRef errorMessage)`**:

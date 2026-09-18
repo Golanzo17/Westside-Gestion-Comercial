@@ -19,9 +19,12 @@ Public Property Nombre As String = String.Empty
 
 ### 1. `Usuario`
 Representa a los empleados o administradores que inician sesión:
-* `Id`, `Username`: Nombre de usuario.
-* `PasswordHash`: Contraseña encriptada (nunca en texto plano).
-* `NombreCompleto`, `Rol`: Puede ser `"Administrador"`, `"Vendedor"` o `"Cajero"`.
+* `Id`, `Username`: Nombre de usuario único para acceso al sistema.
+* `Dni`: Documento Nacional de Identidad / Cédula única del empleado o administrador.
+* `PasswordHash`: Contraseña encriptada (PBKDF2/SHA256, nunca en texto plano).
+* `Nombre`, `Apellido`, `NombreCompleto`: Datos del personal.
+* `Rol`: Puede ser `"Administrador"`, `"Vendedor"` o `"Cajero"`.
+* `Telefono`, `Email`, `Direccion`, `Ciudad`, `FechaNacimiento`, `Notas`.
 * `Activo`, `UltimoLogin`, `CreatedAt`.
 
 ---

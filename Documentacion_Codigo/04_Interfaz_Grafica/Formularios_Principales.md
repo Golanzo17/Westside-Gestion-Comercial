@@ -78,7 +78,8 @@ Es la pantalla más utilizada en el mostrador del local:
 
 ---
 
-### 6. [FrmSincronizacionEcommerce.vb](Migración Web)
-* Permite ingresar los datos de conexión a la base MySQL de la página web (Host, Puerto, Usuario, Contraseña y Base de Datos).
-* Botón **"Conectar y Analizar Web"**: Muestra cuántas prendas y stock hay en la nube.
-* Botón **"Iniciar Migración"**: Copia todo el catálogo hacia el software local con un registro en tiempo real de lo que va ocurriendo.
+### 6. [FrmUsuarios.vb] (Gestión de Usuarios y Equipo)
+* Permite dar de alta, modificar y desactivar empleados con sus roles (Administrador, Vendedor, Cajero).
+* Campos de información personal: Nombre, Apellido, DNI (con validación de duplicados), Teléfono, Email, Ciudad, Dirección y Notas.
+* Gestión segura de contraseñas mediante hashing PBKDF2 y control de bloqueo por intentos fallidos.
+
