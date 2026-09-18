@@ -13,10 +13,12 @@ ON DUPLICATE KEY UPDATE `nombre_comercio` = VALUES(`nombre_comercio`);
 -- 2. USUARIOS INICIALES (Contraseñas con hash SHA256)
 -- admin / admin123  -> 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
 -- vendedor / 1234   -> 03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4
+-- gerente / gerente123 -> ecfba551324356e5bd27b548adf36b728783f60d9b573d142caac7baad62be49
 INSERT INTO `usuarios` (`id`, `username`, `password_hash`, `nombre_completo`, `rol`, `activo`)
 VALUES 
 (1, 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Administrador General', 'Administrador', 1),
-(2, 'vendedor', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', 'Vendedor de Turno', 'Vendedor', 1)
+(2, 'vendedor', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', 'Vendedor de Turno', 'Vendedor', 1),
+(3, 'gerente', 'ecfba551324356e5bd27b548adf36b728783f60d9b573d142caac7baad62be49', 'Gerente General', 'Gerente', 1)
 ON DUPLICATE KEY UPDATE `nombre_completo` = VALUES(`nombre_completo`);
 
 -- 3. TALLES DE ROPA

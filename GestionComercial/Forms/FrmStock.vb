@@ -37,7 +37,7 @@ Namespace Forms
                 .Padding = New Padding(20, 15, 20, 15)
             }
             Dim lblTitle As New Label() With {
-                .Text = "📦 CONTROL DE STOCK Y ALERTAS DE REPOSICIÓN",
+                .Text = "Control de stock y alertas de reposición",
                 .Font = UITheme.FontHeading,
                 .ForeColor = Color.White,
                 .AutoSize = True,
@@ -55,10 +55,10 @@ Namespace Forms
 
             btnIngresoMercaderia = New Button() With {.Text = "+ Ingreso de Mercadería / Ajuste", .Location = New Point(15, 10), .Size = New Size(240, 34)}
             UITheme.StyleButton(btnIngresoMercaderia, "Success")
-            btnIngresoMercaderia.Visible = AuthService.IsAdmin
+            btnIngresoMercaderia.Visible = AuthService.IsAdminOrManager
             AddHandler btnIngresoMercaderia.Click, AddressOf BtnIngresoMercaderia_Click
 
-            btnRefrescar = New Button() With {.Text = "🔄 Actualizar", .Location = New Point(If(AuthService.IsAdmin, 265, 15), 10), .Size = New Size(120, 34)}
+            btnRefrescar = New Button() With {.Text = "Actualizar", .Location = New Point(If(AuthService.IsAdminOrManager, 265, 15), 10), .Size = New Size(120, 34)}
             UITheme.StyleButton(btnRefrescar, "Secondary")
             AddHandler btnRefrescar.Click, Sub() LoadStockData()
 
@@ -66,7 +66,7 @@ Namespace Forms
                 .Text = "Verificando niveles de inventario...",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorWarning,
-                .Location = New Point(If(AuthService.IsAdmin, 420, 150), 18),
+                .Location = New Point(If(AuthService.IsAdminOrManager, 420, 150), 18),
                 .AutoSize = True
             }
 
@@ -79,7 +79,7 @@ Namespace Forms
             }
 
             ' Tab 1: Alertas
-            Dim tabAlertas As New TabPage("⚠ Prendas con Stock Crítico / Reposición") With {.BackColor = UITheme.ColorBackground}
+            Dim tabAlertas As New TabPage("Prendas con stock crítico / reposición") With {.BackColor = UITheme.ColorBackground}
             dgvAlertas = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvAlertas)
             ConfigurarColumnasAlertas()
@@ -87,7 +87,7 @@ Namespace Forms
             tabControl.TabPages.Add(tabAlertas)
 
             ' Tab 2: Movimientos Audit
-            Dim tabMovs As New TabPage("📋 Historial de Movimientos de Inventario") With {.BackColor = UITheme.ColorBackground}
+            Dim tabMovs As New TabPage("Historial de movimientos de inventario") With {.BackColor = UITheme.ColorBackground}
             dgvMovimientos = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvMovimientos)
             ConfigurarColumnasMovimientos()
@@ -190,7 +190,7 @@ Namespace Forms
         End Sub
 
         Private Sub BtnIngresoMercaderia_Click(sender As Object, e As EventArgs)
-            If Not AuthService.SolicitarAutorizacionAdmin(Me, "Los ingresos de mercadería y ajustes de inventario requieren permisos de Administrador.") Then
+            If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Los ingresos de mercadería y ajustes de inventario requieren permisos de Administrador o Gerente.") Then
                 Return
             End If
             Dim frmAjuste As New FrmAjusteStock()
@@ -233,10 +233,12 @@ Namespace Forms
 
             Dim lblP As New Label() With {.Text = "Prenda / Artículo:", .Font = UITheme.FontBold, .Location = New Point(30, 20), .AutoSize = True}
             cboPrendas = New ComboBox() With {.Location = New Point(30, 50), .Size = New Size(420, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboPrendas)
             AddHandler cboPrendas.SelectedIndexChanged, AddressOf CboPrendas_SelectedIndexChanged
 
             Dim lblT As New Label() With {.Text = "Talle:", .Font = UITheme.FontBold, .Location = New Point(30, 95), .AutoSize = True}
             cboTalles = New ComboBox() With {.Location = New Point(30, 120), .Size = New Size(190, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboTalles)
 
             Dim lblC As New Label() With {.Text = "Color:", .Font = UITheme.FontBold, .Location = New Point(250, 95), .AutoSize = True}
             txtColor = New TextBox() With {.Location = New Point(250, 120), .Size = New Size(200, 26), .Text = "Único"}
@@ -249,7 +251,7 @@ Namespace Forms
             txtMotivo = New TextBox() With {.Location = New Point(30, 260), .Size = New Size(420, 26), .Text = "Ingreso de mercadería"}
             UITheme.StyleTextBox(txtMotivo)
 
-            Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = Color.FromArgb(241, 245, 249), .Padding = New Padding(20, 10, 20, 10)}
+            Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = UITheme.ColorSurfaceMuted, .Padding = New Padding(20, 10, 20, 10)}
             btnGuardar = New Button() With {.Text = "✔ Registrar Ajuste", .Dock = DockStyle.Right, .Width = 160}
             UITheme.StyleButton(btnGuardar, "Success")
             AddHandler btnGuardar.Click, AddressOf BtnGuardar_Click
@@ -287,7 +289,7 @@ Namespace Forms
         End Sub
 
         Private Sub BtnGuardar_Click(sender As Object, e As EventArgs)
-            If Not AuthService.SolicitarAutorizacionAdmin(Me, "Guardar movimientos de stock manuales requiere permisos de Administrador.") Then
+            If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Guardar movimientos de stock manuales requiere permisos de Administrador o Gerente.") Then
                 Return
             End If
 

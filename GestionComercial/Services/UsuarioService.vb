@@ -54,6 +54,10 @@ Namespace Services
                 If String.IsNullOrWhiteSpace(rol) Then
                     rol = "Vendedor"
                 End If
+                If Not EsRolValido(rol) Then
+                    errorMessage = "El rol seleccionado no es válido."
+                    Return False
+                End If
 
                 ' Verificar que el username no exista ya
                 Dim sqlCheck As String = "SELECT COUNT(*) FROM `usuarios` WHERE LOWER(`username`) = LOWER(@u);"
@@ -86,6 +90,10 @@ Namespace Services
             Try
                 If String.IsNullOrWhiteSpace(nombreCompleto) Then
                     errorMessage = "El nombre completo es obligatorio."
+                    Return False
+                End If
+                If Not EsRolValido(rol) Then
+                    errorMessage = "El rol seleccionado no es válido."
                     Return False
                 End If
 
@@ -169,6 +177,13 @@ Namespace Services
                 errorMessage = "Error al modificar estado: " & ex.Message
                 Return False
             End Try
+        End Function
+
+        Private Function EsRolValido(rol As String) As Boolean
+            Return rol.Equals("Administrador", StringComparison.OrdinalIgnoreCase) OrElse
+                   rol.Equals("Gerente", StringComparison.OrdinalIgnoreCase) OrElse
+                   rol.Equals("Vendedor", StringComparison.OrdinalIgnoreCase) OrElse
+                   rol.Equals("Cajero", StringComparison.OrdinalIgnoreCase)
         End Function
 
         Private Function MapUsuario(row As DataRow) As Usuario

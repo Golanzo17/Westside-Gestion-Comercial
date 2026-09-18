@@ -38,7 +38,7 @@ Namespace Forms
                 .Padding = New Padding(20, 15, 20, 15)
             }
             Dim lblTitle As New Label() With {
-                .Text = "👥 GESTIÓN DE USUARIOS Y VENDEDORES",
+                .Text = "Gestión de usuarios y vendedores",
                 .Font = UITheme.FontHeading,
                 .ForeColor = Color.White,
                 .AutoSize = True,
@@ -58,21 +58,27 @@ Namespace Forms
             UITheme.StyleButton(btnNuevo, "Success")
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-            btnEditar = New Button() With {.Text = "✏ Editar Datos", .Location = New Point(175, 12), .Size = New Size(130, 34)}
+            btnEditar = New Button() With {.Text = "Editar datos", .Location = New Point(175, 12), .Size = New Size(130, 34)}
             UITheme.StyleButton(btnEditar, "Secondary")
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
-            btnCambiarPass = New Button() With {.Text = "🔑 Cambiar Clave", .Location = New Point(315, 12), .Size = New Size(150, 34)}
+            btnCambiarPass = New Button() With {.Text = "Cambiar clave", .Location = New Point(315, 12), .Size = New Size(150, 34)}
             UITheme.StyleButton(btnCambiarPass, "Secondary")
             AddHandler btnCambiarPass.Click, AddressOf BtnCambiarPass_Click
 
-            btnToggleActivo = New Button() With {.Text = "🚫 Activar / Desactivar", .Location = New Point(475, 12), .Size = New Size(180, 34)}
+            btnToggleActivo = New Button() With {.Text = "Activar / desactivar", .Location = New Point(475, 12), .Size = New Size(180, 34)}
             UITheme.StyleButton(btnToggleActivo, "Danger")
             AddHandler btnToggleActivo.Click, AddressOf BtnToggleActivo_Click
 
-            btnRefrescar = New Button() With {.Text = "🔄 Actualizar", .Location = New Point(665, 12), .Size = New Size(120, 34)}
+            btnRefrescar = New Button() With {.Text = "Actualizar", .Location = New Point(665, 12), .Size = New Size(120, 34)}
             UITheme.StyleButton(btnRefrescar, "Secondary")
             AddHandler btnRefrescar.Click, Sub() LoadUsuarios()
+
+            Dim puedeModificar As Boolean = AuthService.IsAdmin
+            btnNuevo.Visible = puedeModificar
+            btnEditar.Visible = puedeModificar
+            btnCambiarPass.Visible = puedeModificar
+            btnToggleActivo.Visible = puedeModificar
 
             pnlToolbar.Controls.AddRange({btnNuevo, btnEditar, btnCambiarPass, btnToggleActivo, btnRefrescar})
 
@@ -89,7 +95,7 @@ Namespace Forms
             Dim pnlFooter As New Panel() With {
                 .Dock = DockStyle.Bottom,
                 .Height = 40,
-                .BackColor = Color.FromArgb(241, 245, 249),
+                .BackColor = UITheme.ColorSurfaceMuted,
                 .Padding = New Padding(15, 10, 15, 10)
             }
             lblTotalUsuarios = New Label() With {
@@ -171,7 +177,7 @@ Namespace Forms
         End Sub
 
         Private Sub DgvUsuarios_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
-            If e.RowIndex >= 0 Then
+            If AuthService.IsAdmin AndAlso e.RowIndex >= 0 Then
                 EditarSeleccionado()
             End If
         End Sub
@@ -279,7 +285,8 @@ Namespace Forms
 
             Dim lblRol As New Label() With {.Text = "Rol en el Sistema:", .Font = UITheme.FontBold, .Location = New Point(25, 150), .AutoSize = True}
             cboRol = New ComboBox() With {.Location = New Point(25, 175), .Size = New Size(375, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
-            cboRol.Items.AddRange({"Vendedor", "Administrador"})
+            UITheme.StyleComboBox(cboRol)
+            cboRol.Items.AddRange({"Vendedor", "Gerente", "Administrador"})
             cboRol.SelectedIndex = 0
 
             Dim nextY As Integer = 215
@@ -310,7 +317,7 @@ Namespace Forms
                 txtNombreCompleto.Text = u.NombreCompleto
                 txtUsername.Text = u.Username
                 txtUsername.ReadOnly = True
-                txtUsername.BackColor = Color.FromArgb(241, 245, 249)
+                txtUsername.BackColor = UITheme.ColorSurfaceMuted
                 Dim idx = cboRol.FindStringExact(u.Rol)
                 If idx >= 0 Then cboRol.SelectedIndex = idx
             End If

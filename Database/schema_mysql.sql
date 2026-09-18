@@ -50,7 +50,7 @@ CREATE TABLE `usuarios` (
     `username` VARCHAR(50) NOT NULL UNIQUE,
     `password_hash` VARCHAR(255) NOT NULL,
     `nombre_completo` VARCHAR(100) NOT NULL,
-    `rol` ENUM('Administrador', 'Vendedor', 'Cajero') NOT NULL DEFAULT 'Vendedor',
+    `rol` ENUM('Administrador', 'Gerente', 'Vendedor', 'Cajero') NOT NULL DEFAULT 'Vendedor',
     `activo` TINYINT(1) NOT NULL DEFAULT 1,
     `ultimo_login` DATETIME NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP

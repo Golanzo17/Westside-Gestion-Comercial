@@ -10,7 +10,8 @@ VALUES (1, 'Boutique Urbana - Local de Ropa', '20-38491234-9', 'Av. Santa Fe 154
 INSERT OR REPLACE INTO usuarios (id, username, password_hash, nombre_completo, rol, activo)
 VALUES 
 (1, 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Administrador General', 'Administrador', 1),
-(2, 'vendedor', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', 'Vendedor de Turno', 'Vendedor', 1);
+(2, 'vendedor', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', 'Vendedor de Turno', 'Vendedor', 1),
+(3, 'gerente', 'ecfba551324356e5bd27b548adf36b728783f60d9b573d142caac7baad62be49', 'Gerente General', 'Gerente', 1);
 
 -- 3. TALLES
 INSERT OR REPLACE INTO talles (id, nombre, orden) VALUES

@@ -322,6 +322,11 @@ Namespace Data
                                 cmd.ExecuteNonQuery()
                             End Using
 
+                            Dim roleMigrationSql As String = "ALTER TABLE `usuarios` MODIFY COLUMN `rol` ENUM('Administrador', 'Gerente', 'Vendedor', 'Cajero') NOT NULL DEFAULT 'Vendedor';"
+                            Using roleMigrationCmd As New MySqlCommand(roleMigrationSql, dbConn)
+                                roleMigrationCmd.ExecuteNonQuery()
+                            End Using
+
                             Dim countCmd As New MySqlCommand("SELECT COUNT(*) FROM `usuarios`;", dbConn)
                             Dim userCount As Long = Convert.ToInt64(countCmd.ExecuteScalar())
                             If userCount = 0 Then

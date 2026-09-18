@@ -41,7 +41,7 @@ Namespace Forms
                 .Padding = New Padding(20, 15, 20, 15)
             }
             Dim lblTitle As New Label() With {
-                .Text = "👕 CATÁLOGO DE PRODUCTOS E INDUMENTARIA",
+                .Text = "Catálogo de productos e indumentaria",
                 .Font = UITheme.FontHeading,
                 .ForeColor = Color.White,
                 .AutoSize = True,
@@ -66,6 +66,7 @@ Namespace Forms
 
             Dim lblC As New Label() With {.Text = "Categoría:", .Font = UITheme.FontBold, .Location = New Point(305, 20), .AutoSize = True}
             cboFiltroCategoria = New ComboBox() With {.Location = New Point(380, 18), .Size = New Size(180, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboFiltroCategoria)
             AddHandler cboFiltroCategoria.SelectedIndexChanged, Sub() LoadProductos()
 
             btnBuscar = New Button() With {.Text = "Filtrar", .Location = Point.Add(New Point(570, 16), New Size(0, 0)), .Size = New Size(80, 30)}
@@ -74,17 +75,17 @@ Namespace Forms
 
             btnNuevo = New Button() With {.Text = "+ Nueva Prenda", .Location = New Point(680, 16), .Size = New Size(130, 30)}
             UITheme.StyleButton(btnNuevo, "Success")
-            btnNuevo.Visible = AuthService.IsAdmin
+            btnNuevo.Visible = AuthService.IsAdminOrManager
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-            btnEditar = New Button() With {.Text = "✏ Editar", .Location = New Point(820, 16), .Size = New Size(95, 30)}
+            btnEditar = New Button() With {.Text = "Editar", .Location = New Point(820, 16), .Size = New Size(95, 30)}
             UITheme.StyleButton(btnEditar, "Secondary")
-            btnEditar.Visible = AuthService.IsAdmin
+            btnEditar.Visible = AuthService.IsAdminOrManager
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
             btnEliminar = New Button() With {.Text = "Desactivar", .Location = New Point(925, 16), .Size = New Size(95, 30)}
             UITheme.StyleButton(btnEliminar, "Danger")
-            btnEliminar.Visible = AuthService.IsAdmin
+            btnEliminar.Visible = AuthService.IsAdminOrManager
             AddHandler btnEliminar.Click, AddressOf BtnEliminar_Click
 
             pnlToolbar.Controls.AddRange({lblB, txtBuscar, lblC, cboFiltroCategoria, btnBuscar, btnNuevo, btnEditar, btnEliminar})
@@ -108,7 +109,7 @@ Namespace Forms
             Dim pnlFooter As New Panel() With {
                 .Dock = DockStyle.Bottom,
                 .Height = 40,
-                .BackColor = Color.FromArgb(241, 245, 249),
+                .BackColor = UITheme.ColorSurfaceMuted,
                 .Padding = New Padding(15, 10, 15, 10)
             }
             lblTotalArticulos = New Label() With {
@@ -144,7 +145,7 @@ Namespace Forms
             dgvProductos.Columns.Add("PrecioCosto", "Costo")
             dgvProductos.Columns("PrecioCosto").Width = 110
             dgvProductos.Columns("PrecioCosto").DefaultCellStyle.Format = "C2"
-            dgvProductos.Columns("PrecioCosto").Visible = AuthService.IsAdmin
+            dgvProductos.Columns("PrecioCosto").Visible = AuthService.IsAdminOrManager
 
             dgvProductos.Columns.Add("PrecioVenta", "Precio Venta")
             dgvProductos.Columns("PrecioVenta").Width = 120
@@ -153,7 +154,7 @@ Namespace Forms
             dgvProductos.Columns.Add("Margen", "Margen %")
             dgvProductos.Columns("Margen").Width = 90
             dgvProductos.Columns("Margen").DefaultCellStyle.Format = "0.0'%'"
-            dgvProductos.Columns("Margen").Visible = AuthService.IsAdmin
+            dgvProductos.Columns("Margen").Visible = AuthService.IsAdminOrManager
 
             dgvProductos.Columns.Add("TotalStock", "Stock Total")
             dgvProductos.Columns("TotalStock").Width = 100
@@ -186,7 +187,7 @@ Namespace Forms
         End Sub
 
         Private Sub BtnNuevo_Click(sender As Object, e As EventArgs)
-            If Not AuthService.SolicitarAutorizacionAdmin(Me, "Dar de alta prendas en el catálogo requiere permisos de Administrador.") Then Return
+            If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Dar de alta prendas en el catálogo requiere permisos de Administrador o Gerente.") Then Return
             Dim frmEditor As New FrmProductoEditor(0)
             If frmEditor.ShowDialog() = DialogResult.OK Then
                 LoadProductos()
@@ -198,14 +199,14 @@ Namespace Forms
         End Sub
 
         Private Sub DgvProductos_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
-            If e.RowIndex >= 0 Then
+            If AuthService.IsAdminOrManager AndAlso e.RowIndex >= 0 Then
                 EditarSeleccionado()
             End If
         End Sub
 
         Private Sub EditarSeleccionado()
             If dgvProductos.CurrentRow IsNot Nothing Then
-                If Not AuthService.SolicitarAutorizacionAdmin(Me, "Modificar artículos o precios requiere permisos de Administrador.") Then Return
+                If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Modificar artículos o precios requiere permisos de Administrador o Gerente.") Then Return
                 Dim prodId As Integer = Convert.ToInt32(dgvProductos.CurrentRow.Cells("Id").Value)
                 Dim frmEditor As New FrmProductoEditor(prodId)
                 If frmEditor.ShowDialog() = DialogResult.OK Then
@@ -217,7 +218,7 @@ Namespace Forms
         End Sub
 
         Private Sub BtnEliminar_Click(sender As Object, e As EventArgs)
-            If Not AuthService.SolicitarAutorizacionAdmin(Me, "Desactivar prendas del catálogo requiere permisos de Administrador.") Then Return
+            If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Desactivar prendas del catálogo requiere permisos de Administrador o Gerente.") Then Return
             If dgvProductos.CurrentRow IsNot Nothing Then
                 Dim prodId As Integer = Convert.ToInt32(dgvProductos.CurrentRow.Cells("Id").Value)
                 Dim nombre As String = dgvProductos.CurrentRow.Cells("Nombre").Value.ToString()
@@ -300,16 +301,16 @@ Namespace Forms
             UITheme.StyleTextBox(txtDescripcion)
 
             ' Precios (solo visibles y editables por Administrador)
-            Dim lblCos As New Label() With {.Text = "Precio Costo ($):", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(20, 140), .AutoSize = True, .Visible = AuthService.IsAdmin}
-            numCosto = New NumericUpDown() With {.Location = New Point(20, 160), .Size = New Size(140, 26), .Maximum = 10000000, .DecimalPlaces = 2, .Visible = AuthService.IsAdmin}
+            Dim lblCos As New Label() With {.Text = "Precio Costo ($):", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(20, 140), .AutoSize = True, .Visible = AuthService.IsAdminOrManager}
+            numCosto = New NumericUpDown() With {.Location = New Point(20, 160), .Size = New Size(140, 26), .Maximum = 10000000, .DecimalPlaces = 2, .Visible = AuthService.IsAdminOrManager}
             AddHandler numCosto.ValueChanged, AddressOf CalcularPrecios
 
-            Dim lblGan As New Label() With {.Text = "Ganancia (%):", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(180, 140), .AutoSize = True, .Visible = AuthService.IsAdmin}
-            numGanancia = New NumericUpDown() With {.Location = New Point(180, 160), .Size = New Size(110, 26), .Maximum = 1000, .DecimalPlaces = 2, .Value = 50, .Visible = AuthService.IsAdmin}
+            Dim lblGan As New Label() With {.Text = "Ganancia (%):", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(180, 140), .AutoSize = True, .Visible = AuthService.IsAdminOrManager}
+            numGanancia = New NumericUpDown() With {.Location = New Point(180, 160), .Size = New Size(110, 26), .Maximum = 1000, .DecimalPlaces = 2, .Value = 50, .Visible = AuthService.IsAdminOrManager}
             AddHandler numGanancia.ValueChanged, AddressOf CalcularPrecios
 
-            Dim lblVen As New Label() With {.Text = "Precio Venta Final ($):", .Font = UITheme.FontBold, .ForeColor = UITheme.ColorSuccess, .Location = New Point(If(AuthService.IsAdmin, 310, 20), 140), .AutoSize = True}
-            numVenta = New NumericUpDown() With {.Location = New Point(If(AuthService.IsAdmin, 310, 20), 160), .Size = New Size(150, 26), .Maximum = 10000000, .DecimalPlaces = 2}
+            Dim lblVen As New Label() With {.Text = "Precio Venta Final ($):", .Font = UITheme.FontBold, .ForeColor = UITheme.ColorSuccess, .Location = New Point(If(AuthService.IsAdminOrManager, 310, 20), 140), .AutoSize = True}
+            numVenta = New NumericUpDown() With {.Location = New Point(If(AuthService.IsAdminOrManager, 310, 20), 160), .Size = New Size(150, 26), .Maximum = 10000000, .DecimalPlaces = 2}
 
             grpGeneral.Controls.AddRange({lblCod, txtCodigo, lblNom, txtNombre, lblCat, cboCategoria, lblDesc, txtDescripcion, lblCos, numCosto, lblGan, numGanancia, lblVen, numVenta})
             Me.Controls.Add(grpGeneral)
@@ -339,7 +340,7 @@ Namespace Forms
             Dim pnlBottom As New Panel() With {
                 .Dock = DockStyle.Bottom,
                 .Height = 60,
-                .BackColor = Color.FromArgb(241, 245, 249),
+                .BackColor = UITheme.ColorSurfaceMuted,
                 .Padding = New Padding(20, 12, 20, 12)
             }
 
@@ -435,7 +436,7 @@ Namespace Forms
         End Sub
 
         Private Sub BtnGuardar_Click(sender As Object, e As EventArgs)
-            If Not AuthService.SolicitarAutorizacionAdmin(Me, "Guardar cambios en prendas o precios requiere permisos de Administrador.") Then
+            If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Guardar cambios en prendas o precios requiere permisos de Administrador o Gerente.") Then
                 Return
             End If
 

@@ -42,7 +42,7 @@ Namespace Forms
                 .Padding = New Padding(20, 15, 20, 15)
             }
             Dim lblTitle As New Label() With {
-                .Text = "🌐 MIGRACIÓN Y VINCULACIÓN CON LA TIENDA WEB (E-COMMERCE)",
+                .Text = "Migración y vinculación con la tienda web",
                 .Font = UITheme.FontHeading,
                 .ForeColor = Color.White,
                 .AutoSize = True,
@@ -51,7 +51,7 @@ Namespace Forms
             Dim lblSub As New Label() With {
                 .Text = "Importe el catálogo, categorías, talles y stock creados previamente en su página web",
                 .Font = UITheme.FontSmall,
-                .ForeColor = Color.FromArgb(148, 163, 184),
+                .ForeColor = UITheme.ColorTextMuted,
                 .AutoSize = True,
                 .Location = New Point(17, 38)
             }
@@ -87,7 +87,7 @@ Namespace Forms
             txtPassword = New TextBox() With {.Location = New Point(215, 108), .Size = New Size(180, 26), .PasswordChar = "*"c}
             UITheme.StyleTextBox(txtPassword)
 
-            btnProbar = New Button() With {.Text = "🔍 Conectar y Analizar Web", .Location = New Point(420, 95), .Size = New Size(280, 42)}
+            btnProbar = New Button() With {.Text = "Conectar y analizar web", .Location = New Point(420, 95), .Size = New Size(280, 42)}
             UITheme.StyleButton(btnProbar, "Primary")
             AddHandler btnProbar.Click, AddressOf BtnProbar_Click
 
@@ -114,7 +114,7 @@ Namespace Forms
 
             ' Botón de acción principal
             btnImportar = New Button() With {
-                .Text = "🚀 IMPORTAR Y MUDAR CATÁLOGO COMPLETO AL SOFTWARE",
+                .Text = "IMPORTAR CATÁLOGO AL SOFTWARE",
                 .Location = New Point(20, 360),
                 .Size = New Size(725, 45),
                 .Font = New Font("Segoe UI", 11.0F, FontStyle.Bold)
@@ -133,8 +133,8 @@ Namespace Forms
                 .ReadOnly = True,
                 .ScrollBars = ScrollBars.Vertical,
                 .Font = New Font("Consolas", 9.0F, FontStyle.Regular),
-                .BackColor = Color.FromArgb(15, 23, 42),
-                .ForeColor = Color.FromArgb(226, 232, 240),
+                .BackColor = UITheme.ColorSecondary,
+                .ForeColor = UITheme.ColorTextOnDark,
                 .Text = "Presione 'Conectar y Analizar Web' para detectar las tablas y prendas de su tienda web."
             }
             Me.Controls.AddRange({lblLogTitle, txtLog})

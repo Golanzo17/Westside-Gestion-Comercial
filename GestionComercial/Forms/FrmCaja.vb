@@ -55,7 +55,7 @@ Namespace Forms
                 .Padding = New Padding(20, 15, 20, 15)
             }
             Dim lblTitle As New Label() With {
-                .Text = "💵 CAJA DIARIA, MOVIMIENTOS Y ARQUEO",
+                .Text = "Caja diaria, movimientos y arqueo",
                 .Font = UITheme.FontHeading,
                 .ForeColor = Color.White,
                 .AutoSize = True,
@@ -99,23 +99,23 @@ Namespace Forms
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 55,
-                .BackColor = Color.FromArgb(241, 245, 249),
+                .BackColor = UITheme.ColorSurfaceMuted,
                 .Padding = New Padding(15, 10, 15, 10)
             }
 
-            btnAbrirCaja = New Button() With {.Text = "🔓 Abrir Caja de Turno", .Location = New Point(15, 10), .Size = New Size(180, 34)}
+            btnAbrirCaja = New Button() With {.Text = "Abrir caja de turno", .Location = New Point(15, 10), .Size = New Size(180, 34)}
             UITheme.StyleButton(btnAbrirCaja, "Primary")
             AddHandler btnAbrirCaja.Click, AddressOf BtnAbrirCaja_Click
 
-            btnNuevoMovimiento = New Button() With {.Text = "💰 Ingreso / Retiro de Efectivo", .Location = New Point(205, 10), .Size = New Size(230, 34)}
+            btnNuevoMovimiento = New Button() With {.Text = "Ingreso / retiro de efectivo", .Location = New Point(205, 10), .Size = New Size(230, 34)}
             UITheme.StyleButton(btnNuevoMovimiento, "Secondary")
             AddHandler btnNuevoMovimiento.Click, AddressOf BtnNuevoMovimiento_Click
 
-            btnCerrarCaja = New Button() With {.Text = "🔒 Arqueo y Cierre de Caja", .Location = New Point(445, 10), .Size = New Size(210, 34)}
+            btnCerrarCaja = New Button() With {.Text = "Arqueo y cierre de caja", .Location = New Point(445, 10), .Size = New Size(210, 34)}
             UITheme.StyleButton(btnCerrarCaja, "Danger")
             AddHandler btnCerrarCaja.Click, AddressOf BtnCerrarCaja_Click
 
-            btnRefrescar = New Button() With {.Text = "🔄 Actualizar", .Location = New Point(665, 10), .Size = New Size(120, 34)}
+            btnRefrescar = New Button() With {.Text = "Actualizar", .Location = New Point(665, 10), .Size = New Size(120, 34)}
             UITheme.StyleButton(btnRefrescar, "Secondary")
             AddHandler btnRefrescar.Click, Sub() LoadCajaData()
 
@@ -135,14 +135,14 @@ Namespace Forms
             }
 
             ' Pestaña 1: Turno Actual
-            Dim tabTurnoActual As New TabPage("💵 Caja Diaria / Turno en Curso") With {.BackColor = UITheme.ColorBackground}
+            Dim tabTurnoActual As New TabPage("Caja diaria / Turno en curso") With {.BackColor = UITheme.ColorBackground}
             tabTurnoActual.Controls.Add(pnlGrid)
             tabTurnoActual.Controls.Add(pnlToolbar)
             tabTurnoActual.Controls.Add(pnlKpis)
             tabControlCaja.TabPages.Add(tabTurnoActual)
 
             ' Pestaña 2: Historial de Cajas Cerradas
-            Dim tabHistorial As New TabPage("📋 Historial de Cajas Cerradas y Arqueos") With {.BackColor = UITheme.ColorBackground}
+            Dim tabHistorial As New TabPage("Historial de cajas cerradas y arqueos") With {.BackColor = UITheme.ColorBackground}
 
             Dim pnlFilterHistorial As New Panel() With {
                 .Dock = DockStyle.Top,
@@ -157,11 +157,11 @@ Namespace Forms
             Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .Location = New Point(210, 16), .AutoSize = True}
             dtpHastaHistorial = New DateTimePicker() With {.Location = New Point(265, 14), .Size = New Size(125, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today}
 
-            btnFiltrarHistorial = New Button() With {.Text = "🔍 Filtrar Cajas", .Location = New Point(410, 12), .Size = New Size(130, 30)}
+            btnFiltrarHistorial = New Button() With {.Text = "Filtrar cajas", .Location = New Point(410, 12), .Size = New Size(130, 30)}
             UITheme.StyleButton(btnFiltrarHistorial, "Primary")
             AddHandler btnFiltrarHistorial.Click, Sub() LoadHistorialData()
 
-            btnVerDetalleCaja = New Button() With {.Text = "👁 Ver Movimientos del Turno", .Location = New Point(555, 12), .Size = New Size(220, 30)}
+            btnVerDetalleCaja = New Button() With {.Text = "Ver movimientos del turno", .Location = New Point(555, 12), .Size = New Size(220, 30)}
             UITheme.StyleButton(btnVerDetalleCaja, "Secondary")
             AddHandler btnVerDetalleCaja.Click, AddressOf BtnVerDetalleCaja_Click
 
@@ -178,7 +178,7 @@ Namespace Forms
             Dim pnlFooterHistorial As New Panel() With {
                 .Dock = DockStyle.Bottom,
                 .Height = 35,
-                .BackColor = Color.FromArgb(241, 245, 249),
+                .BackColor = UITheme.ColorSurfaceMuted,
                 .Padding = New Padding(15, 8, 15, 8)
             }
             lblResumenHistorial = New Label() With {
@@ -194,6 +194,9 @@ Namespace Forms
             tabHistorial.Controls.Add(pnlFooterHistorial)
             tabHistorial.Controls.Add(pnlFilterHistorial)
             tabControlCaja.TabPages.Add(tabHistorial)
+            If AuthService.IsVendor Then
+                tabControlCaja.TabPages.Remove(tabHistorial)
+            End If
 
             ' Orden exacto de Docking en FrmCaja: TabControl primero, Header último
             Me.Controls.Add(tabControlCaja)
@@ -237,7 +240,7 @@ Namespace Forms
                 lblVentasDigital.Text = cajaActual.TotalVentasDigital.ToString("C2")
 
                 Dim esperado As Decimal = cajaActual.MontoInicial + cajaActual.TotalVentasEfectivo + cajaActual.TotalIngresos - cajaActual.TotalEgresos
-                lblEfectivoEsperado.Text = If(AuthService.IsAdmin, esperado.ToString("C2"), "Oculto (Arqueo Ciego)")
+                lblEfectivoEsperado.Text = If(AuthService.IsAdminOrManager, esperado.ToString("C2"), "Oculto (Arqueo Ciego)")
 
                 ' Cargar movimientos
                 Dim movs = cajaService.GetMovimientosCaja(cajaActual.Id)
@@ -309,6 +312,7 @@ Namespace Forms
 
             Dim lblT As New Label() With {.Text = "Tipo de Movimiento:", .Font = UITheme.FontBold, .Location = New Point(30, 20), .AutoSize = True}
             Dim cboTipo As New ComboBox() With {.Location = New Point(30, 45), .Size = New Size(370, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboTipo)
             cboTipo.Items.AddRange({"Egreso", "Ingreso"})
             cboTipo.SelectedIndex = 0
 
@@ -336,7 +340,7 @@ Namespace Forms
                 Dim tipoMov As String = cboTipo.SelectedItem.ToString()
                 ' Los egresos / retiros de dinero requieren autorización si el usuario es Vendedor
                 If tipoMov.Equals("Egreso", StringComparison.OrdinalIgnoreCase) Then
-                    If Not AuthService.SolicitarAutorizacionAdmin(Me, "Los retiros o egresos de efectivo de caja requieren autorización de un Administrador.") Then
+                    If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Los retiros o egresos de efectivo de caja requieren autorización de un Administrador o Gerente.") Then
                         Return
                     End If
                 End If
@@ -356,7 +360,7 @@ Namespace Forms
             If cajaActual Is Nothing Then Return
 
             Dim esperado As Decimal = cajaActual.MontoInicial + cajaActual.TotalVentasEfectivo + cajaActual.TotalIngresos - cajaActual.TotalEgresos
-            Dim esAdmin As Boolean = AuthService.IsAdmin
+            Dim esAdmin As Boolean = AuthService.IsAdminOrManager
 
             Dim frmCierre As New Form() With {
                 .Text = If(esAdmin, "Arqueo y Cierre de Caja (Auditoría)", "Cierre de Turno y Arqueo Ciego de Caja"),
@@ -430,7 +434,7 @@ Namespace Forms
             Dim txtObs As New TextBox() With {.Location = New Point(30, If(esAdmin, 160, 150)), .Size = New Size(420, 60), .Multiline = True}
             UITheme.StyleTextBox(txtObs)
 
-            Dim btnConfirmar As New Button() With {.Text = "🔒 Confirmar Cierre Definitivo", .Location = New Point(30, If(esAdmin, 245, 230)), .Size = New Size(420, 42)}
+            Dim btnConfirmar As New Button() With {.Text = "Confirmar cierre definitivo", .Location = New Point(30, If(esAdmin, 245, 230)), .Size = New Size(420, 42)}
             UITheme.StyleButton(btnConfirmar, "Danger")
 
             AddHandler btnConfirmar.Click, Sub()
@@ -489,7 +493,7 @@ Namespace Forms
             dgvHistorial.Columns.Add("Esperado", "Monto Esperado")
             dgvHistorial.Columns("Esperado").Width = 120
             dgvHistorial.Columns("Esperado").DefaultCellStyle.Format = "C2"
-            dgvHistorial.Columns("Esperado").Visible = AuthService.IsAdmin
+            dgvHistorial.Columns("Esperado").Visible = AuthService.IsAdminOrManager
 
             dgvHistorial.Columns.Add("Real", "Efectivo Real")
             dgvHistorial.Columns("Real").Width = 110
@@ -499,7 +503,7 @@ Namespace Forms
             dgvHistorial.Columns.Add("Diferencia", "Diferencia Arqueo")
             dgvHistorial.Columns("Diferencia").Width = 120
             dgvHistorial.Columns("Diferencia").DefaultCellStyle.Format = "C2"
-            dgvHistorial.Columns("Diferencia").Visible = AuthService.IsAdmin
+            dgvHistorial.Columns("Diferencia").Visible = AuthService.IsAdminOrManager
 
             dgvHistorial.Columns.Add("Observaciones", "Observaciones")
             dgvHistorial.Columns("Observaciones").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
@@ -620,7 +624,7 @@ Namespace Forms
                         dgvDet.Rows.Add(m.Fecha.ToString("dd/MM/yyyy HH:mm"), m.Tipo, m.Concepto, m.Monto, m.UsuarioNombre)
                     Next
 
-                    Dim pnlBot As New Panel() With {.Dock = DockStyle.Bottom, .Height = 50, .BackColor = Color.FromArgb(241, 245, 249)}
+                    Dim pnlBot As New Panel() With {.Dock = DockStyle.Bottom, .Height = 50, .BackColor = UITheme.ColorSurfaceMuted}
                     Dim btnCerrar As New Button() With {.Text = "Cerrar", .Location = New Point(620, 10), .Size = New Size(100, 32)}
                     UITheme.StyleButton(btnCerrar, "Secondary")
                     AddHandler btnCerrar.Click, Sub() dlg.Close()

@@ -48,7 +48,7 @@ Namespace Forms
             ' ==================== SIDEBAR (IZQUIERDA) ====================
             pnlSidebar = New Panel() With {
                 .Dock = DockStyle.Left,
-                .Width = 320,
+                .Width = 260,
                 .BackColor = UITheme.ColorSidebar,
                 .Padding = New Padding(0, 0, 0, 10)
             }
@@ -57,31 +57,33 @@ Namespace Forms
             Dim pnlBrand As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 120,
-                .BackColor = Color.FromArgb(15, 23, 42),
+                .BackColor = UITheme.ColorSecondary,
                 .Padding = New Padding(15, 18, 15, 10)
             }
 
             Dim lblBrandIcon As New Label() With {
-                .Text = "👕",
-                .Font = New Font("Segoe UI Emoji", 20.0F),
+                .Text = "GC",
+                .Font = New Font("Segoe UI", 16.0F, FontStyle.Bold),
                 .ForeColor = Color.White,
                 .Location = New Point(15, 22),
-                .AutoSize = True
+                .Size = New Size(58, 36),
+                .TextAlign = ContentAlignment.MiddleCenter,
+                .BackColor = UITheme.ColorPrimaryDark
             }
 
             Dim lblBrandTitle As New Label() With {
                 .Text = "GESTIÓN RETAIL",
                 .Font = New Font("Segoe UI", 12.0F, FontStyle.Bold),
                 .ForeColor = Color.White,
-                .Location = New Point(120, 22),
+                .Location = New Point(88, 22),
                 .AutoSize = True
             }
 
             Dim lblBrandSubtitle As New Label() With {
                 .Text = "Local de Indumentaria",
                 .Font = New Font("Segoe UI", 9.0F, FontStyle.Regular),
-                .ForeColor = Color.FromArgb(148, 163, 184),
-                .Location = New Point(122, 55),
+                .ForeColor = UITheme.ColorTextMuted,
+                .Location = New Point(90, 55),
                 .AutoSize = True
             }
 
@@ -94,19 +96,22 @@ Namespace Forms
                 .AutoScroll = True
             }
 
-            Dim btnHome = CreateNavButton("📊 Panel Principal", AddressOf Nav_Home)
-            Dim btnPos = CreateNavButton("🛒 Punto de Venta (POS)", AddressOf Nav_POS)
-            Dim btnProductos = CreateNavButton("👕 Catálogo y Talles", AddressOf Nav_Productos)
-            Dim btnStock = CreateNavButton("📦 Stock y Reposición", AddressOf Nav_Stock)
-            Dim btnClientes = CreateNavButton("👥 Clientes", AddressOf Nav_Clientes)
-            Dim btnCaja = CreateNavButton("💵 Caja Diaria y Arqueo", AddressOf Nav_Caja)
-            Dim btnReportes = CreateNavButton("📈 Reportes y Ventas", AddressOf Nav_Reportes)
-            Dim btnUsuarios = CreateNavButton("👥 Usuarios y Equipo", AddressOf Nav_Usuarios)
-            Dim btnConfig = CreateNavButton("⚙ Configuración", AddressOf Nav_Config)
+            Dim btnHome = CreateNavButton("Panel principal", AddressOf Nav_Home)
+            Dim btnPos = CreateNavButton("Punto de venta (POS)", AddressOf Nav_POS)
+            Dim btnProductos = CreateNavButton("Catálogo y talles", AddressOf Nav_Productos)
+            Dim btnStock = CreateNavButton("Stock y reposición", AddressOf Nav_Stock)
+            Dim btnClientes = CreateNavButton("Clientes", AddressOf Nav_Clientes)
+            Dim btnCaja = CreateNavButton("Caja diaria y arqueo", AddressOf Nav_Caja)
+            Dim btnReportes = CreateNavButton("Reportes y ventas", AddressOf Nav_Reportes)
+            Dim btnUsuarios = CreateNavButton("Usuarios y equipo", AddressOf Nav_Usuarios)
+            Dim btnConfig = CreateNavButton("Configuración", AddressOf Nav_Config)
 
-            ' Restricción de menú para Vendedores (solo visible para Administrador)
-            btnReportes.Visible = AuthService.IsAdmin
-            btnUsuarios.Visible = AuthService.IsAdmin
+            ' Reportes y usuarios son visibles para Administradores y Gerentes.
+            btnPos.Visible = Not AuthService.IsAdmin
+            btnStock.Visible = AuthService.IsManager
+            btnCaja.Visible = Not AuthService.IsAdmin
+            btnReportes.Visible = AuthService.IsAdminOrManager OrElse AuthService.IsVendor
+            btnUsuarios.Visible = AuthService.IsAdminOrManager
             btnConfig.Visible = AuthService.IsAdmin
 
             Dim navButtons As Button() = {btnConfig, btnUsuarios, btnReportes, btnCaja, btnClientes, btnStock, btnProductos, btnPos, btnHome}
@@ -117,7 +122,7 @@ Namespace Forms
 
             ' Botón Cerrar Sesión abajo
             Dim btnLogout = New Button() With {
-                .Text = "🚪 Cerrar Sesión",
+                .Text = "Cerrar sesión",
                 .Dock = DockStyle.Bottom,
                 .Height = 45
             }
@@ -147,12 +152,12 @@ Namespace Forms
             pnlTopBar.Controls.Add(pnlBorderBottom)
 
             ' Usuario Conectado con Distintivo de Rol
-            Dim rolBadge As String = If(AuthService.IsAdmin, "👑 [ADMINISTRADOR]", "👤 [VENDEDOR]")
+            Dim rolBadge As String = If(AuthService.IsAdmin, "ADMINISTRADOR", If(AuthService.IsManager, "GERENTE", "VENDEDOR"))
             Dim nombreUser As String = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.NombreCompleto, "Invitado")
             lblUserSession = New Label() With {
                 .Text = $"{rolBadge} {nombreUser}",
                 .Font = UITheme.FontBold,
-                .ForeColor = If(AuthService.IsAdmin, UITheme.ColorPrimaryDark, UITheme.ColorTextPrimary),
+                .ForeColor = If(AuthService.IsAdminOrManager, UITheme.ColorPrimaryDark, UITheme.ColorTextPrimary),
                 .Location = New Point(20, 18),
                 .AutoSize = True
             }
@@ -175,6 +180,7 @@ Namespace Forms
                 .Size = New Size(160, 36)
             }
             UITheme.StyleButton(btnQuickPOS, "Primary")
+            btnQuickPOS.Visible = Not AuthService.IsAdmin
             AddHandler btnQuickPOS.Click, AddressOf Nav_POS
             pnlTopBar.Controls.Add(btnQuickPOS)
 
@@ -234,7 +240,7 @@ Namespace Forms
                                           b.ForeColor = Color.White
                                           b.BackColor = UITheme.ColorSidebarActive
                                       Else
-                                          b.ForeColor = Color.FromArgb(203, 213, 225)
+                                           b.ForeColor = UITheme.ColorTextOnDark
                                           b.BackColor = Color.Transparent
                                       End If
                                   End Sub
@@ -314,24 +320,26 @@ Namespace Forms
                 .Padding = New Padding(20)
             }
 
-            Dim btnAccionPOS As New Button() With {.Text = "🛒 Realizar Nueva Venta", .Location = New Point(25, 40), .Size = New Size(210, 48)}
+            Dim btnAccionPOS As New Button() With {.Text = "Realizar nueva venta", .Location = New Point(25, 40), .Size = New Size(210, 48)}
             UITheme.StyleButton(btnAccionPOS, "Primary")
             AddHandler btnAccionPOS.Click, AddressOf Nav_POS
 
-            Dim btnAccionCaja As New Button() With {.Text = "💵 Arqueo / Cierre de Caja", .Location = New Point(If(AuthService.IsAdmin, 715, 255), 40), .Size = New Size(210, 48)}
+            Dim btnAccionCaja As New Button() With {.Text = "Arqueo / cierre de caja", .Location = New Point(If(AuthService.IsAdminOrManager, 715, 255), 40), .Size = New Size(210, 48)}
             UITheme.StyleButton(btnAccionCaja, "Secondary")
+            btnAccionCaja.Visible = Not AuthService.IsAdmin
             AddHandler btnAccionCaja.Click, AddressOf Nav_Caja
 
             pnlAcciones.Controls.AddRange({btnAccionPOS, btnAccionCaja})
 
-            ' Acciones exclusivas del Administrador
-            If AuthService.IsAdmin Then
+            ' Acciones operativas de Administradores y Gerentes
+            If AuthService.IsAdminOrManager Then
                 Dim btnAccionPrenda As New Button() With {.Text = "+ Cargar Nueva Prenda", .Location = New Point(255, 40), .Size = New Size(210, 48)}
                 UITheme.StyleButton(btnAccionPrenda, "Success")
                 AddHandler btnAccionPrenda.Click, AddressOf Nav_Productos
 
-                Dim btnAccionStock As New Button() With {.Text = "📦 Ingreso de Mercadería", .Location = New Point(485, 40), .Size = New Size(210, 48)}
+                Dim btnAccionStock As New Button() With {.Text = "Ingreso de mercadería", .Location = New Point(485, 40), .Size = New Size(210, 48)}
                 UITheme.StyleButton(btnAccionStock, "Secondary")
+                btnAccionStock.Visible = AuthService.IsManager
                 AddHandler btnAccionStock.Click, AddressOf Nav_Stock
 
                 pnlAcciones.Controls.AddRange({btnAccionPrenda, btnAccionStock})
@@ -361,7 +369,7 @@ Namespace Forms
                     lblCajaStatus.ForeColor = UITheme.ColorSuccess
                     Dim esp = caja.MontoInicial + caja.TotalVentasEfectivo + caja.TotalIngresos - caja.TotalEgresos
                     ' El vendedor no ve el monto esperado en tiempo real (evita anticipación del arqueo)
-                    lblKpiCajaTurno.Text = If(AuthService.IsAdmin, esp.ToString("C2"), "Arqueo Ciego")
+                    lblKpiCajaTurno.Text = If(AuthService.IsAdminOrManager, esp.ToString("C2"), "Arqueo Ciego")
                 Else
                     lblCajaStatus.Text = "🔴 Caja Cerrada"
                     lblCajaStatus.ForeColor = UITheme.ColorDanger
@@ -402,6 +410,7 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_POS(sender As Object, e As EventArgs)
+            If AuthService.IsAdmin Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmVentasPOS())
         End Sub
@@ -412,6 +421,7 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_Stock(sender As Object, e As EventArgs)
+            If Not AuthService.IsManager Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmStock())
         End Sub
@@ -422,12 +432,13 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_Caja(sender As Object, e As EventArgs)
+            If AuthService.IsAdmin Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmCaja())
         End Sub
 
         Private Sub Nav_Reportes(sender As Object, e As EventArgs)
-            If Not AuthService.SolicitarAutorizacionAdmin(Me, "El acceso al módulo de Reportes y Estadísticas requiere permisos de Administrador.") Then
+            If Not (AuthService.IsAdminOrManager OrElse AuthService.IsVendor) Then
                 Return
             End If
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
@@ -435,7 +446,7 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_Usuarios(sender As Object, e As EventArgs)
-            If Not AuthService.SolicitarAutorizacionAdmin(Me, "La gestión de usuarios y vendedores requiere permisos de Administrador.") Then
+            If Not AuthService.IsAdminOrManager Then
                 Return
             End If
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))

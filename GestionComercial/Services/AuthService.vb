@@ -38,6 +38,29 @@ Namespace Services
             End Get
         End Property
 
+        Public ReadOnly Property IsManager As Boolean
+            Get
+                Return _currentUser IsNot Nothing AndAlso _currentUser.Rol.Equals("Gerente", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsVendor As Boolean
+            Get
+                Return _currentUser IsNot Nothing AndAlso _currentUser.Rol.Equals("Vendedor", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsAdminOrManager As Boolean
+            Get
+                Return IsAdmin OrElse IsManager
+            End Get
+        End Property
+
+        Public Function SolicitarAutorizacionAdminOManager(owner As Form, motivo As String) As Boolean
+            If IsAdminOrManager Then Return True
+            Return SolicitarAutorizacionAdmin(owner, motivo)
+        End Function
+
         Public Function Login(username As String, password As String, ByRef errorMessage As String) As Boolean
             Try
                 If String.IsNullOrWhiteSpace(username) OrElse String.IsNullOrWhiteSpace(password) Then
@@ -179,6 +202,82 @@ Namespace Services
             Catch ex As Exception
                 Return False
             End Try
+        End Function
+
+        Public Function ValidarCredencialesManager(password As String) As Boolean
+            Return ValidarCredencialesPorRol(password, "Gerente")
+        End Function
+
+        Private Function ValidarCredencialesPorRol(password As String, rol As String) As Boolean
+            Try
+                If String.IsNullOrWhiteSpace(password) Then Return False
+
+                Dim sql As String = "SELECT password_hash FROM `usuarios` WHERE `rol` = @rol AND `activo` = 1;"
+                Dim dt = DatabaseHelper.ExecuteQuery(sql, New Dictionary(Of String, Object) From {{"@rol", rol}})
+                For Each row As DataRow In dt.Rows
+                    Dim dummyRehash As Boolean = False
+                    If DatabaseHelper.VerifyPassword(password, row("password_hash").ToString(), dummyRehash) Then Return True
+                Next
+                Return False
+            Catch
+                Return False
+            End Try
+        End Function
+
+        Public Function SolicitarAutorizacionManager(owner As Form, motivo As String) As Boolean
+            If IsManager Then Return True
+
+            Using dlg As New Form()
+                dlg.Text = "Autorización de Gerente"
+                dlg.Size = New Size(430, 270)
+                dlg.StartPosition = FormStartPosition.CenterParent
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog
+                dlg.MaximizeBox = False
+                dlg.MinimizeBox = False
+                dlg.BackColor = Color.White
+
+                Dim lblMotivo As New Label() With {
+                    .Text = motivo,
+                    .Font = UITheme.FontRegular,
+                    .ForeColor = UITheme.ColorDanger,
+                    .Location = New Point(20, 25),
+                    .Size = New Size(375, 55)
+                }
+                Dim lblPass As New Label() With {
+                    .Text = "Contraseña de Gerente:",
+                    .Font = UITheme.FontBold,
+                    .Location = New Point(20, 95),
+                    .AutoSize = True
+                }
+                Dim txtPass As New TextBox() With {
+                    .Location = New Point(20, 120),
+                    .Size = New Size(375, 26),
+                    .UseSystemPasswordChar = True
+                }
+                UITheme.StyleTextBox(txtPass)
+                Dim btnConfirmar As New Button() With {.Text = "Autorizar", .Location = New Point(185, 170), .Size = New Size(100, 34)}
+                UITheme.StyleButton(btnConfirmar, "Primary")
+                Dim btnCancelar As New Button() With {.Text = "Cancelar", .Location = New Point(295, 170), .Size = New Size(100, 34)}
+                UITheme.StyleButton(btnCancelar, "Secondary")
+                Dim autorizado As Boolean = False
+
+                AddHandler btnConfirmar.Click, Sub()
+                                                    If ValidarCredencialesManager(txtPass.Text) Then
+                                                        autorizado = True
+                                                        dlg.Close()
+                                                    Else
+                                                        MessageBox.Show("Contraseña de Gerente incorrecta.", "Acceso Denegado", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                                                        txtPass.Clear()
+                                                        txtPass.Focus()
+                                                    End If
+                                                End Sub
+                AddHandler btnCancelar.Click, Sub() dlg.Close()
+                dlg.Controls.AddRange({lblMotivo, lblPass, txtPass, btnConfirmar, btnCancelar})
+                dlg.AcceptButton = btnConfirmar
+                dlg.CancelButton = btnCancelar
+                dlg.ShowDialog(owner)
+                Return autorizado
+            End Using
         End Function
 
         ''' <summary>

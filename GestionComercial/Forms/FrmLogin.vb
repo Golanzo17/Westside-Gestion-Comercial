@@ -41,26 +41,28 @@ Namespace Forms
             }
 
             Dim lblIcon As New Label() With {
-                .Text = "👕",
-                .Font = New Font("Segoe UI Emoji", 26.0F),
+                .Text = "GC",
+                .Font = New Font("Segoe UI", 20.0F, FontStyle.Bold),
                 .ForeColor = Color.White,
                 .Location = New Point(25, 20),
-                .AutoSize = True
+                .Size = New Size(78, 42),
+                .TextAlign = ContentAlignment.MiddleCenter,
+                .BackColor = UITheme.ColorPrimaryDark
             }
 
             Dim lblAppName As New Label() With {
                 .Text = "SISTEMA DE GESTIÓN",
                 .Font = New Font("Segoe UI", 14.0F, FontStyle.Bold),
                 .ForeColor = Color.White,
-                .Location = New Point(140, 25),
+                .Location = New Point(125, 25),
                 .AutoSize = True
             }
 
             Dim lblAppSub As New Label() With {
                 .Text = "Local de Ropa & Punto de Venta",
                 .Font = New Font("Segoe UI", 9.5F, FontStyle.Regular),
-                .ForeColor = Color.FromArgb(148, 163, 184),
-                .Location = New Point(142, 55),
+                .ForeColor = UITheme.ColorTextMuted,
+                .Location = New Point(127, 55),
                 .AutoSize = True
             }
 
@@ -74,6 +76,7 @@ Namespace Forms
                 .BackColor = UITheme.ColorSurface,
                 .Padding = New Padding(20)
             }
+            UITheme.ApplyRoundedRegion(pnlCard, 10)
 
             Dim lblUser As New Label() With {
                 .Text = "Usuario:",
@@ -122,7 +125,7 @@ Namespace Forms
             }
 
             lblInfoCuentas = New Label() With {
-                .Text = "Accesos por defecto: admin / admin123 | vendedor / 1234",
+                .Text = "Ingrese sus credenciales para continuar",
                 .Font = UITheme.FontSmall,
                 .ForeColor = UITheme.ColorTextSecondary,
                 .Location = New Point(20, 230),
@@ -131,7 +134,7 @@ Namespace Forms
             }
 
             btnConfig = New Button() With {
-                .Text = "⚙ Configuración de Base de Datos",
+                .Text = "Configuración de base de datos",
                 .Location = New Point(20, 265),
                 .Size = New Size(325, 26)
             }

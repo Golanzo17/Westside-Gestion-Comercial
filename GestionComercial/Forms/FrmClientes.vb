@@ -38,7 +38,7 @@ Namespace Forms
                 .Padding = New Padding(20, 15, 20, 15)
             }
             Dim lblTitle As New Label() With {
-                .Text = "👥 GESTIÓN DE CLIENTES",
+                .Text = "Gestión de clientes",
                 .Font = UITheme.FontHeading,
                 .ForeColor = Color.White,
                 .AutoSize = True,
@@ -54,7 +54,7 @@ Namespace Forms
                 .Padding = New Padding(15, 15, 15, 10)
             }
 
-            Dim lblB As New Label() With {.Text = "Buscar por DNI o Nombre:", .Font = UITheme.FontBold, .Location = New Point(15, 20), .AutoSize = True}
+            Dim lblB As New Label() With {.Text = "Buscar por DNI o nombre:", .Font = UITheme.FontBold, .Location = New Point(15, 20), .AutoSize = True}
             txtBuscar = New TextBox() With {.Location = New Point(215, 18), .Size = New Size(260, 26)}
             UITheme.StyleTextBox(txtBuscar)
             AddHandler txtBuscar.KeyDown, Sub(s, e)
@@ -69,13 +69,16 @@ Namespace Forms
             UITheme.StyleButton(btnNuevo, "Success")
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-            btnEditar = New Button() With {.Text = "✏ Editar", .Location = New Point(715, 16), .Size = New Size(95, 30)}
+            btnEditar = New Button() With {.Text = "Editar", .Location = New Point(715, 16), .Size = New Size(95, 30)}
             UITheme.StyleButton(btnEditar, "Secondary")
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
             btnEliminar = New Button() With {.Text = "Eliminar", .Location = New Point(820, 16), .Size = New Size(95, 30)}
             UITheme.StyleButton(btnEliminar, "Danger")
             AddHandler btnEliminar.Click, AddressOf BtnEliminar_Click
+
+            btnEditar.Visible = AuthService.IsAdminOrManager
+            btnEliminar.Visible = AuthService.IsAdminOrManager
 
             pnlToolbar.Controls.AddRange({lblB, txtBuscar, btnBuscar, btnNuevo, btnEditar, btnEliminar})
 
@@ -84,11 +87,13 @@ Namespace Forms
             dgvClientes = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvClientes)
             ConfigurarColumnas()
-            AddHandler dgvClientes.CellDoubleClick, Sub() EditarSeleccionado()
+            AddHandler dgvClientes.CellDoubleClick, Sub()
+                                                    If AuthService.IsAdminOrManager Then EditarSeleccionado()
+                                                End Sub
             pnlGrid.Controls.Add(dgvClientes)
 
             ' Footer
-            Dim pnlFooter As New Panel() With {.Dock = DockStyle.Bottom, .Height = 35, .BackColor = Color.FromArgb(241, 245, 249), .Padding = New Padding(15, 8, 15, 8)}
+            Dim pnlFooter As New Panel() With {.Dock = DockStyle.Bottom, .Height = 35, .BackColor = UITheme.ColorSurfaceMuted, .Padding = New Padding(15, 8, 15, 8)}
             lblTotal = New Label() With {.Text = "Clientes: 0", .Font = UITheme.FontBold, .ForeColor = UITheme.ColorTextSecondary, .AutoSize = True}
             pnlFooter.Controls.Add(lblTotal)
 
@@ -239,7 +244,7 @@ Namespace Forms
             txtNotas = New TextBox() With {.Location = New Point(30, 350), .Size = New Size(460, 60), .Multiline = True}
             UITheme.StyleTextBox(txtNotas)
 
-            Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = Color.FromArgb(241, 245, 249), .Padding = New Padding(20, 10, 20, 10)}
+            Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = UITheme.ColorSurfaceMuted, .Padding = New Padding(20, 10, 20, 10)}
             btnGuardar = New Button() With {.Text = "💾 Guardar Cliente", .Dock = DockStyle.Right, .Width = 160}
             UITheme.StyleButton(btnGuardar, "Success")
             AddHandler btnGuardar.Click, AddressOf BtnGuardar_Click

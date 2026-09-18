@@ -70,7 +70,7 @@ Namespace Forms
                 .Padding = New Padding(15, 10, 15, 10)
             }
             Dim lblTitle As New Label() With {
-                .Text = "🛒 PUNTO DE VENTA Y FACTURACIÓN",
+                .Text = "Punto de venta y facturación",
                 .Font = UITheme.FontHeading,
                 .ForeColor = Color.White,
                 .AutoSize = True,
@@ -93,7 +93,7 @@ Namespace Forms
             }
 
             Dim lblCobroHeader As New Label() With {
-                .Text = "DATOS DE COBRO",
+                .Text = "Datos de cobro",
                 .Font = UITheme.FontSubheading,
                 .ForeColor = UITheme.ColorPrimaryDark,
                 .Location = New Point(15, 15),
@@ -103,6 +103,7 @@ Namespace Forms
             ' Selección de Cliente
             Dim lblCli As New Label() With {.Text = "Cliente:", .Font = UITheme.FontBold, .Location = New Point(15, 50), .AutoSize = True}
             cboClientes = New ComboBox() With {.Location = New Point(15, 70), .Size = New Size(260, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboClientes)
             btnNuevoCliente = New Button() With {.Text = "+", .Location = New Point(280, 69), .Size = New Size(35, 27)}
             UITheme.StyleButton(btnNuevoCliente, "Secondary")
             AddHandler btnNuevoCliente.Click, AddressOf BtnNuevoCliente_Click
@@ -110,6 +111,7 @@ Namespace Forms
             ' Medio de Pago
             Dim lblMetodo As New Label() With {.Text = "Medio de Pago:", .Font = UITheme.FontBold, .Location = New Point(15, 110), .AutoSize = True}
             cboMetodoPago = New ComboBox() With {.Location = New Point(15, 130), .Size = New Size(300, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboMetodoPago)
             cboMetodoPago.Items.AddRange({"Efectivo", "Tarjeta Débito", "Tarjeta Crédito", "Transferencia / QR", "Múltiple"})
             cboMetodoPago.SelectedIndex = 0
             AddHandler cboMetodoPago.SelectedIndexChanged, AddressOf RecalcularTotales
@@ -128,10 +130,11 @@ Namespace Forms
             Dim pnlTotalCard As New Panel() With {
                 .Location = New Point(15, 235),
                 .Size = New Size(300, 90),
-                .BackColor = Color.FromArgb(238, 242, 255),
+                .BackColor = UITheme.ColorSurfaceAccent,
                 .Padding = New Padding(12)
             }
-            Dim lblTotalTitle As New Label() With {.Text = "TOTAL A PAGAR", .Font = UITheme.FontSmall, .ForeColor = UITheme.ColorPrimaryDark, .Location = New Point(10, 8), .AutoSize = True}
+            UITheme.ApplyRoundedRegion(pnlTotalCard, 10)
+            Dim lblTotalTitle As New Label() With {.Text = "Total a pagar", .Font = UITheme.FontSmall, .ForeColor = UITheme.ColorPrimaryDark, .Location = New Point(10, 8), .AutoSize = True}
             lblTotalPagar = New Label() With {.Text = "$ 0,00", .Font = UITheme.FontPriceBig, .ForeColor = UITheme.ColorPrimary, .Location = New Point(10, 30), .AutoSize = True}
             pnlTotalCard.Controls.AddRange({lblTotalTitle, lblTotalPagar})
 
@@ -146,7 +149,7 @@ Namespace Forms
 
             ' Botón Finalizar Venta
             btnFinalizarVenta = New Button() With {
-                .Text = "✔ COBRAR / REGISTRAR VENTA (F5)",
+                .Text = "COBRAR VENTA  (F5)",
                 .Location = New Point(15, 415),
                 .Size = New Size(300, 50),
                 .Font = New Font("Segoe UI", 11.0F, FontStyle.Bold)
@@ -218,6 +221,7 @@ Namespace Forms
             ' Fila 4: Color, Cantidad y Botón Agregar al Carrito (bien espaciado, sin cortes)
             Dim lblCol As New Label() With {.Text = "Color:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextSecondary, .Location = New Point(15, 203), .AutoSize = True}
             cboColor = New ComboBox() With {.Location = New Point(60, 200), .Size = New Size(110, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboColor)
 
             Dim lblCant As New Label() With {.Text = "Cant:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextSecondary, .Location = New Point(185, 203), .AutoSize = True}
             numCantidad = New NumericUpDown() With {.Location = New Point(225, 200), .Size = New Size(65, 26), .Minimum = 1, .Maximum = 999, .Value = 1}
@@ -388,8 +392,8 @@ Namespace Forms
                         UITheme.StyleButton(btnTalle, "Secondary")
                     Else
                         btnTalle.FlatStyle = FlatStyle.Flat
-                        btnTalle.BackColor = Color.FromArgb(241, 245, 249)
-                        btnTalle.ForeColor = Color.FromArgb(148, 163, 184)
+                        btnTalle.BackColor = UITheme.ColorSurfaceMuted
+                        btnTalle.ForeColor = UITheme.ColorTextMuted
                         btnTalle.Enabled = False
                     End If
 
@@ -430,7 +434,7 @@ Namespace Forms
                         b.BackColor = UITheme.ColorPrimary
                         b.ForeColor = Color.White
                     ElseIf tagPt IsNot Nothing AndAlso tagPt.StockActual > 0 Then
-                        b.BackColor = Color.FromArgb(241, 245, 249)
+                        b.BackColor = UITheme.ColorSurfaceMuted
                         b.ForeColor = UITheme.ColorTextPrimary
                     End If
                 End If
@@ -548,7 +552,7 @@ Namespace Forms
         End Sub
 
         Private Function ValidarDescuentoVendedor() As Boolean
-            If AuthService.IsAdmin Then Return True
+            If AuthService.IsAdminOrManager Then Return True
             If numDescuentoPorc.Value > 15 AndAlso Not _descuentoAutorizado Then
                 If AuthService.SolicitarAutorizacionAdmin(Me, $"Un descuento del {numDescuentoPorc.Value}% supera el tope de vendedor (15%). Requiere autorización de un Administrador.") Then
                     _descuentoAutorizado = True

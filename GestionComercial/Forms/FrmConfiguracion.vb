@@ -57,7 +57,7 @@ Namespace Forms
                 .Padding = New Padding(20, 15, 20, 15)
             }
             Dim lblTitle As New Label() With {
-                .Text = "⚙ Configuración General y Base de Datos",
+                .Text = "Configuración general y base de datos",
                 .Font = UITheme.FontHeading,
                 .ForeColor = Color.White,
                 .AutoSize = True,
@@ -66,7 +66,7 @@ Namespace Forms
             Dim lblSub As New Label() With {
                 .Text = "Motor de persistencia (SQLite / MySQL) y datos comerciales para tickets",
                 .Font = UITheme.FontSmall,
-                .ForeColor = Color.FromArgb(148, 163, 184),
+                .ForeColor = UITheme.ColorTextMuted,
                 .AutoSize = True,
                 .Location = New Point(22, 45)
             }
@@ -85,6 +85,7 @@ Namespace Forms
 
             Dim lblProv As New Label() With {.Text = "Motor de Base de Datos:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(20, 26), .AutoSize = True}
             cboProvider = New ComboBox() With {.Location = New Point(20, 48), .Size = New Size(320, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboProvider)
             cboProvider.Items.AddRange({"SQLite (Local sin servidor - Recomendado)", "MySQL (Servidor externo)"})
             AddHandler cboProvider.SelectedIndexChanged, AddressOf CboProvider_SelectedIndexChanged
 
@@ -117,11 +118,11 @@ Namespace Forms
             UITheme.StyleTextBox(txtPassword)
 
             ' Botones de prueba y creación
-            btnProbar = New Button() With {.Text = "🔍 Probar Conexión", .Location = New Point(20, 200), .Size = New Size(170, 34)}
+            btnProbar = New Button() With {.Text = "Probar conexión", .Location = New Point(20, 200), .Size = New Size(170, 34)}
             UITheme.StyleButton(btnProbar, "Secondary")
             AddHandler btnProbar.Click, AddressOf BtnProbar_Click
 
-            btnInicializarDb = New Button() With {.Text = "🛠 Inicializar Tablas y Datos", .Location = New Point(200, 200), .Size = New Size(220, 34)}
+            btnInicializarDb = New Button() With {.Text = "Inicializar tablas y datos", .Location = New Point(200, 200), .Size = New Size(220, 34)}
             UITheme.StyleButton(btnInicializarDb, "Primary")
             AddHandler btnInicializarDb.Click, AddressOf BtnInicializarDb_Click
 
@@ -156,6 +157,7 @@ Namespace Forms
 
             Dim lblIva As New Label() With {.Text = "Condición IVA:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(535, 30), .AutoSize = True}
             cboIva = New ComboBox() With {.Location = New Point(535, 52), .Size = New Size(150, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboIva)
             cboIva.Items.AddRange({"Responsable Inscripto", "Monotributo", "Exento", "Consumidor Final"})
             cboIva.SelectedIndex = 0
 
@@ -182,12 +184,12 @@ Namespace Forms
             Dim pnlBottom As New Panel() With {
                 .Dock = DockStyle.Bottom,
                 .Height = 65,
-                .BackColor = Color.FromArgb(241, 245, 249),
+                .BackColor = UITheme.ColorSurfaceMuted,
                 .Padding = New Padding(20, 12, 20, 12)
             }
 
             btnGuardarTodo = New Button() With {
-                .Text = "💾 Guardar Configuración",
+                .Text = "Guardar configuración",
                 .Dock = DockStyle.Right,
                 .Width = 200
             }
@@ -195,7 +197,7 @@ Namespace Forms
             AddHandler btnGuardarTodo.Click, AddressOf BtnGuardarTodo_Click
 
             Dim btnIrUsuarios As New Button() With {
-                .Text = "👥 Usuarios y Empleados",
+                .Text = "Usuarios y empleados",
                 .Dock = DockStyle.Right,
                 .Width = 190
             }

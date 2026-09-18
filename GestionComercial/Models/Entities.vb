@@ -5,7 +5,7 @@ Namespace Models
         Public Property Username As String = String.Empty
         Public Property PasswordHash As String = String.Empty
         Public Property NombreCompleto As String = String.Empty
-        Public Property Rol As String = "Vendedor" ' Administrador, Vendedor, Cajero
+        Public Property Rol As String = "Vendedor" ' Administrador, Gerente, Vendedor, Cajero
         Public Property Activo As Boolean = True
         Public Property UltimoLogin As Nullable(Of DateTime)
         Public Property CreatedAt As DateTime = DateTime.Now

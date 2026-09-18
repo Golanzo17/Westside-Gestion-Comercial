@@ -16,9 +16,14 @@ Namespace UI
         Public ReadOnly ColorSidebarActive As Color = Color.FromArgb(49, 46, 129)   ' Indigo 900
         Public ReadOnly ColorBackground As Color = Color.FromArgb(248, 250, 252)    ' Slate 50
         Public ReadOnly ColorSurface As Color = Color.White
+        Public ReadOnly ColorSurfaceMuted As Color = Color.FromArgb(241, 245, 249) ' Slate 100
+        Public ReadOnly ColorSurfaceAccent As Color = Color.FromArgb(238, 242, 255) ' Indigo 50
         Public ReadOnly ColorBorder As Color = Color.FromArgb(226, 232, 240)        ' Slate 200
+        Public ReadOnly ColorBorderStrong As Color = Color.FromArgb(203, 213, 225) ' Slate 300
         Public ReadOnly ColorTextPrimary As Color = Color.FromArgb(15, 23, 42)      ' Slate 900
         Public ReadOnly ColorTextSecondary As Color = Color.FromArgb(100, 116, 139) ' Slate 500
+        Public ReadOnly ColorTextMuted As Color = Color.FromArgb(148, 163, 184)     ' Slate 400
+        Public ReadOnly ColorTextOnDark As Color = Color.FromArgb(203, 213, 225)    ' Slate 300
         Public ReadOnly ColorSuccess As Color = Color.FromArgb(16, 185, 129)        ' Emerald 500
         Public ReadOnly ColorSuccessDark As Color = Color.FromArgb(5, 150, 105)     ' Emerald 600
         Public ReadOnly ColorDanger As Color = Color.FromArgb(239, 68, 68)          ' Rose 500
@@ -34,6 +39,8 @@ Namespace UI
         Public ReadOnly FontBold As New Font("Segoe UI", 9.5F, FontStyle.Bold)
         Public ReadOnly FontSmall As New Font("Segoe UI", 8.5F, FontStyle.Regular)
         Public ReadOnly FontPriceBig As New Font("Segoe UI", 22.0F, FontStyle.Bold)
+        Public ReadOnly FontKpiValue As New Font("Segoe UI", 16.0F, FontStyle.Bold)
+        Public ReadOnly FontButton As New Font("Segoe UI", 9.5F, FontStyle.Bold)
 
         ' ═══════════════════════════════════════════════════════════
         ' BOTONES – Estilo plano con bordes redondeados
@@ -42,7 +49,7 @@ Namespace UI
             btn.FlatStyle = FlatStyle.Flat
             btn.FlatAppearance.BorderSize = 0
             btn.Cursor = Cursors.Hand
-            btn.Font = FontBold
+            btn.Font = FontButton
             btn.Height = Math.Max(btn.Height, 38)
             btn.TextAlign = ContentAlignment.MiddleCenter
 
@@ -64,15 +71,15 @@ Namespace UI
                     btn.ForeColor = Color.White
                     btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(217, 119, 6)
                 Case "SECONDARY"
-                    btn.BackColor = Color.FromArgb(241, 245, 249)
+                    btn.BackColor = ColorSurfaceMuted
                     btn.ForeColor = ColorTextPrimary
                     btn.FlatAppearance.BorderSize = 1
                     btn.FlatAppearance.BorderColor = ColorBorder
-                    btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(226, 232, 240)
+                    btn.FlatAppearance.MouseOverBackColor = ColorBorder
                     rounded = False
                 Case "SIDEBAR"
                     btn.BackColor = Color.Transparent
-                    btn.ForeColor = Color.FromArgb(203, 213, 225)
+                    btn.ForeColor = ColorTextOnDark
                     btn.TextAlign = ContentAlignment.MiddleLeft
                     btn.Padding = New Padding(20, 0, 0, 0)
                     btn.Font = New Font("Segoe UI", 10.0F, FontStyle.Regular)
@@ -176,6 +183,13 @@ Namespace UI
             txt.ForeColor = ColorTextPrimary
         End Sub
 
+        Public Sub StyleComboBox(cbo As ComboBox)
+            cbo.Font = FontRegular
+            cbo.BackColor = Color.White
+            cbo.ForeColor = ColorTextPrimary
+            cbo.FlatStyle = FlatStyle.Flat
+        End Sub
+
         ' ═══════════════════════════════════════════════════════════
         ' TOAST / NOTIFICACIÓN INLINE – Aparece arriba y se va solo
         ' ═══════════════════════════════════════════════════════════
@@ -255,6 +269,7 @@ Namespace UI
                 .Margin = New Padding(8),
                 .Padding = New Padding(12)
             }
+            ApplyRoundedRegion(pnl, 10)
 
             ' Borde izquierdo de acento
             Dim strip As New Panel() With {
@@ -265,7 +280,7 @@ Namespace UI
             pnl.Controls.Add(strip)
 
             Dim lblTitle As New Label() With {
-                .Text = title.ToUpper(),
+                .Text = title,
                 .Font = FontSmall,
                 .ForeColor = ColorTextSecondary,
                 .Location = New Point(15, 10),
@@ -275,7 +290,7 @@ Namespace UI
 
             Dim lblValue As New Label() With {
                 .Text = value,
-                .Font = New Font("Segoe UI", 16.0F, FontStyle.Bold),
+                .Font = FontKpiValue,
                 .ForeColor = ColorTextPrimary,
                 .Location = New Point(15, 30),
                 .AutoSize = True

@@ -44,7 +44,7 @@ Namespace Forms
                 .Padding = New Padding(20, 15, 20, 15)
             }
             Dim lblTitle As New Label() With {
-                .Text = "📊 REPORTES DE VENTAS Y RENDIMIENTO COMERCIAL",
+                .Text = "Reportes de ventas y rendimiento comercial",
                 .Font = UITheme.FontHeading,
                 .ForeColor = Color.White,
                 .AutoSize = True,
@@ -66,13 +66,13 @@ Namespace Forms
             Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .Location = New Point(220, 16), .AutoSize = True}
             dtpHasta = New DateTimePicker() With {.Location = New Point(275, 14), .Size = New Size(130, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today}
 
-            btnFiltrar = New Button() With {.Text = "🔍 Generar Reporte", .Location = New Point(430, 12), .Size = New Size(160, 30)}
+            btnFiltrar = New Button() With {.Text = "Generar reporte", .Location = New Point(430, 12), .Size = New Size(160, 30)}
             UITheme.StyleButton(btnFiltrar, "Primary")
             AddHandler btnFiltrar.Click, Sub() LoadReportes()
 
-            btnAnularVenta = New Button() With {.Text = "✖ Anular Venta Seleccionada", .Location = New Point(610, 12), .Size = New Size(220, 30)}
+            btnAnularVenta = New Button() With {.Text = "Anular venta seleccionada", .Location = New Point(610, 12), .Size = New Size(220, 30)}
             UITheme.StyleButton(btnAnularVenta, "Danger")
-            btnAnularVenta.Visible = AuthService.IsAdmin
+            btnAnularVenta.Visible = AuthService.IsAdminOrManager
             AddHandler btnAnularVenta.Click, AddressOf BtnAnularVenta_Click
 
             pnlFilter.Controls.AddRange({lblD, dtpDesde, lblH, dtpHasta, btnFiltrar, btnAnularVenta})
@@ -81,7 +81,7 @@ Namespace Forms
             Dim pnlKpis As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 105,
-                .BackColor = Color.FromArgb(241, 245, 249),
+                .BackColor = UITheme.ColorSurfaceMuted,
                 .Padding = New Padding(15, 5, 15, 5)
             }
 
@@ -110,7 +110,7 @@ Namespace Forms
             }
 
             ' Tab 1: Ventas
-            Dim tabVentas As New TabPage("🧾 Listado de Ventas y Tickets Emitidos") With {.BackColor = UITheme.ColorBackground}
+            Dim tabVentas As New TabPage("Listado de ventas y tickets emitidos") With {.BackColor = UITheme.ColorBackground}
             dgvVentas = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvVentas)
             ConfigurarColumnasVentas()
@@ -118,12 +118,18 @@ Namespace Forms
             tabs.TabPages.Add(tabVentas)
 
             ' Tab 2: Ranking Prendas
-            Dim tabRanking As New TabPage("🏆 Ranking de Prendas Más Vendidas") With {.BackColor = UITheme.ColorBackground}
+            Dim tabRanking As New TabPage("Ranking de prendas más vendidas") With {.BackColor = UITheme.ColorBackground}
             dgvRanking = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvRanking)
             ConfigurarColumnasRanking()
             tabRanking.Controls.Add(dgvRanking)
             tabs.TabPages.Add(tabRanking)
+
+            If AuthService.IsVendor Then
+                tabs.TabPages.Remove(tabVentas)
+                pnlKpis.Visible = False
+                btnAnularVenta.Visible = False
+            End If
 
             ' Orden exacto de Docking: Fill primero, KPIs segundo, Filter tercero, Header último
             Me.Controls.Add(tabs)
@@ -210,7 +216,7 @@ Namespace Forms
                         totalDig += v.Total
                     End If
                 Else
-                    dgvVentas.Rows(rIdx).DefaultCellStyle.ForeColor = Color.FromArgb(148, 163, 184)
+                    dgvVentas.Rows(rIdx).DefaultCellStyle.ForeColor = UITheme.ColorTextMuted
                 End If
             Next
 
@@ -228,7 +234,10 @@ Namespace Forms
         End Sub
 
         Private Sub BtnAnularVenta_Click(sender As Object, e As EventArgs)
-            If Not AuthService.SolicitarAutorizacionAdmin(Me, "Anular comprobantes de venta emitidos requiere permisos de Administrador.") Then
+            If AuthService.IsAdmin AndAlso Not AuthService.SolicitarAutorizacionManager(Me, "Anular comprobantes de venta emitidos requiere autorización de un Gerente.") Then
+                Return
+            End If
+            If Not AuthService.IsAdminOrManager Then
                 Return
             End If
 
