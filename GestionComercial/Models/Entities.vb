@@ -5,10 +5,6 @@ Namespace Models
         Public Property Username As String = String.Empty
         Public Property Dni As String = String.Empty
         Public Property PasswordHash As String = String.Empty
-<<<<<<< HEAD
-        Public Property NombreCompleto As String = String.Empty
-        Public Property Rol As String = "Vendedor" ' Administrador, Gerente, Vendedor, Cajero
-=======
         Public Property Nombre As String = String.Empty
         Public Property Apellido As String = String.Empty
         Public Property Rol As String = "Vendedor" ' Administrador, Vendedor
@@ -18,7 +14,6 @@ Namespace Models
         Public Property Ciudad As String = String.Empty
         Public Property Notas As String = String.Empty
         Public Property FechaNacimiento As Nullable(Of DateTime)
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
         Public Property Activo As Boolean = True
         Public Property UltimoLogin As Nullable(Of DateTime)
         Public Property CreatedAt As DateTime = DateTime.Now

@@ -70,19 +70,11 @@ Namespace Forms
             Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 4, 0)}
             dtpHasta = New DateTimePicker() With {.Size = New Size(130, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today, .Margin = New Padding(0, 3, 0, 0)}
 
-<<<<<<< HEAD
-            btnFiltrar = New Button() With {.Text = "Generar reporte", .Location = New Point(430, 12), .Size = New Size(160, 30)}
+            btnFiltrar = New Button() With {.Text = "Generar Reporte", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(12, 3, 0, 0)}
             UITheme.StyleButton(btnFiltrar, "Primary")
             AddHandler btnFiltrar.Click, Sub() LoadReportes()
 
-            btnAnularVenta = New Button() With {.Text = "Anular venta seleccionada", .Location = New Point(610, 12), .Size = New Size(220, 30)}
-=======
-            btnFiltrar = New Button() With {.Text = "🔍 Generar Reporte", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(12, 3, 0, 0)}
-            UITheme.StyleButton(btnFiltrar, "Primary")
-            AddHandler btnFiltrar.Click, Sub() LoadReportes()
-
-            btnAnularVenta = New Button() With {.Text = "✖ Anular Venta Seleccionada", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 3, 0, 0)}
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
+            btnAnularVenta = New Button() With {.Text = "Anular Venta Seleccionada", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 3, 0, 0)}
             UITheme.StyleButton(btnAnularVenta, "Danger")
             btnAnularVenta.Visible = AuthService.IsAdminOrManager
             AddHandler btnAnularVenta.Click, AddressOf BtnAnularVenta_Click

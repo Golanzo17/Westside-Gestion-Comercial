@@ -58,13 +58,8 @@ Namespace Forms
                 .WrapContents = False
             }
 
-<<<<<<< HEAD
-            Dim lblB As New Label() With {.Text = "Buscar por DNI o nombre:", .Font = UITheme.FontBold, .Location = New Point(15, 20), .AutoSize = True}
-            txtBuscar = New TextBox() With {.Location = New Point(215, 18), .Size = New Size(260, 26)}
-=======
             Dim lblB As New Label() With {.Text = "Buscar por DNI o Nombre:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 5, 4, 0)}
             txtBuscar = New TextBox() With {.Size = New Size(240, 26), .Margin = New Padding(0, 2, 0, 0)}
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
             UITheme.StyleTextBox(txtBuscar)
             AddHandler txtBuscar.KeyDown, Sub(s, e)
                                               If e.KeyCode = Keys.Enter Then LoadClientes()
@@ -78,11 +73,7 @@ Namespace Forms
             UITheme.StyleButton(btnNuevo, "Success")
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-<<<<<<< HEAD
-            btnEditar = New Button() With {.Text = "Editar", .Location = New Point(715, 16), .Size = New Size(95, 30)}
-=======
-            btnEditar = New Button() With {.Text = "✏ Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
+            btnEditar = New Button() With {.Text = "Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
             UITheme.StyleButton(btnEditar, "Secondary")
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
@@ -90,15 +81,8 @@ Namespace Forms
             UITheme.StyleButton(btnEliminar, "Danger")
             AddHandler btnEliminar.Click, AddressOf BtnEliminar_Click
 
-<<<<<<< HEAD
-            btnEditar.Visible = AuthService.IsAdminOrManager
-            btnEliminar.Visible = AuthService.IsAdminOrManager
-
-            pnlToolbar.Controls.AddRange({lblB, txtBuscar, btnBuscar, btnNuevo, btnEditar, btnEliminar})
-=======
             flpToolbar.Controls.AddRange({lblB, txtBuscar, btnBuscar, btnNuevo, btnEditar, btnEliminar})
             pnlToolbar.Controls.Add(flpToolbar)
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
 
             ' Grilla
             Dim pnlGrid As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(15)}
@@ -271,9 +255,6 @@ Namespace Forms
             txtNotas = New TextBox() With {.Location = New Point(30, 350), .Size = New Size(460, 55), .Multiline = True}
             UITheme.StyleTextBox(txtNotas)
 
-<<<<<<< HEAD
-            Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = UITheme.ColorSurfaceMuted, .Padding = New Padding(20, 10, 20, 10)}
-=======
             Dim lblFnac As New Label() With {.Text = "Fecha de Nacimiento:", .Font = UITheme.FontBold, .Location = New Point(30, 422), .AutoSize = True}
             dtpFechaNac = New DateTimePicker() With {.Location = New Point(30, 447), .Size = New Size(200, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddYears(-25)}
             chkSinFecha = New CheckBox() With {.Text = "Sin fecha", .Location = New Point(245, 450), .AutoSize = True, .Checked = True}
@@ -285,7 +266,6 @@ Namespace Forms
             Me.Size = New Size(540, 590)
 
             Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = Color.FromArgb(241, 245, 249), .Padding = New Padding(20, 10, 20, 10)}
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
             btnGuardar = New Button() With {.Text = "💾 Guardar Cliente", .Dock = DockStyle.Right, .Width = 160}
             UITheme.StyleButton(btnGuardar, "Success")
             AddHandler btnGuardar.Click, AddressOf BtnGuardar_Click

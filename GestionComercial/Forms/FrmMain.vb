@@ -171,16 +171,10 @@ Namespace Forms
             lblUserSession = New Label() With {
                 .Text = $"{rolBadge} {nombreUser}",
                 .Font = UITheme.FontBold,
-<<<<<<< HEAD
                 .ForeColor = If(AuthService.IsAdminOrManager, UITheme.ColorPrimaryDark, UITheme.ColorTextPrimary),
-                .Location = New Point(20, 18),
-                .AutoSize = True
-=======
-                .ForeColor = If(AuthService.IsAdmin, UITheme.ColorPrimaryDark, UITheme.ColorTextPrimary),
                 .Dock = DockStyle.Fill,
                 .TextAlign = ContentAlignment.MiddleLeft,
                 .AutoEllipsis = True
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
             }
 
             ' Estado de Caja en TopBar
@@ -345,22 +339,6 @@ Namespace Forms
                 .Padding = New Padding(15, 8, 15, 8)
             }
 
-<<<<<<< HEAD
-            Dim btnAccionPOS As New Button() With {.Text = "Realizar nueva venta", .Location = New Point(25, 40), .Size = New Size(210, 48)}
-            UITheme.StyleButton(btnAccionPOS, "Primary")
-            AddHandler btnAccionPOS.Click, AddressOf Nav_POS
-
-            Dim btnAccionCaja As New Button() With {.Text = "Arqueo / cierre de caja", .Location = New Point(If(AuthService.IsAdminOrManager, 715, 255), 40), .Size = New Size(210, 48)}
-            UITheme.StyleButton(btnAccionCaja, "Secondary")
-            btnAccionCaja.Visible = Not AuthService.IsAdmin
-            AddHandler btnAccionCaja.Click, AddressOf Nav_Caja
-
-            pnlAcciones.Controls.AddRange({btnAccionPOS, btnAccionCaja})
-
-            ' Acciones operativas de Administradores y Gerentes
-            If AuthService.IsAdminOrManager Then
-                Dim btnAccionPrenda As New Button() With {.Text = "+ Cargar Nueva Prenda", .Location = New Point(255, 40), .Size = New Size(210, 48)}
-=======
             Dim flpAcciones As New FlowLayoutPanel() With {
                 .Dock = DockStyle.Fill,
                 .Padding = New Padding(5, 10, 5, 5),
@@ -381,8 +359,8 @@ Namespace Forms
             AddHandler btnAccionPOS.Click, AddressOf Nav_POS
             flpAcciones.Controls.Add(btnAccionPOS)
 
-            ' Acciones exclusivas del Administrador
-            If AuthService.IsAdmin Then
+            ' Acciones operativas de Administradores y Gerentes
+            If AuthService.IsAdminOrManager Then
                 Dim btnAccionPrenda As New Button() With {
                     .Text = "+ Cargar Nueva Prenda",
                     .Height = 48,
@@ -391,14 +369,10 @@ Namespace Forms
                     .Padding = New Padding(14, 0, 14, 0),
                     .Margin = New Padding(0, 0, 10, 0)
                 }
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
                 UITheme.StyleButton(btnAccionPrenda, "Success")
                 AddHandler btnAccionPrenda.Click, AddressOf Nav_Productos
                 flpAcciones.Controls.Add(btnAccionPrenda)
 
-<<<<<<< HEAD
-                Dim btnAccionStock As New Button() With {.Text = "Ingreso de mercadería", .Location = New Point(485, 40), .Size = New Size(210, 48)}
-=======
                 Dim btnAccionStock As New Button() With {
                     .Text = "📦 Ingreso de Mercadería",
                     .Height = 48,
@@ -407,7 +381,6 @@ Namespace Forms
                     .Padding = New Padding(14, 0, 14, 0),
                     .Margin = New Padding(0, 0, 10, 0)
                 }
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
                 UITheme.StyleButton(btnAccionStock, "Secondary")
                 btnAccionStock.Visible = AuthService.IsManager
                 AddHandler btnAccionStock.Click, AddressOf Nav_Stock

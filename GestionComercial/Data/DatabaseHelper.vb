@@ -440,6 +440,13 @@ Namespace Data
                                 cmdAlter.ExecuteNonQuery()
                             End Using
                         End If
+
+                        ' Agregar el gerente inicial a bases creadas con una semilla anterior.
+                        cmd.CommandText = "INSERT INTO usuarios (username, dni, password_hash, nombre, apellido, nombre_completo, rol, activo) " &
+                                           "SELECT 'gerente', NULL, 'ecfba551324356e5bd27b548adf36b728783f60d9b573d142caac7baad62be49', " &
+                                           "'Gerente', 'General', 'Gerente General', 'Gerente', 1 " &
+                                           "WHERE NOT EXISTS (SELECT 1 FROM usuarios WHERE username = 'gerente');"
+                        cmd.ExecuteNonQuery()
                     End Using
                 Else
                     Using cmd = conn.CreateCommand()

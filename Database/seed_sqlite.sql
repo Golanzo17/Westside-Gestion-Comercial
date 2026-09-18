@@ -6,17 +6,12 @@
 INSERT OR REPLACE INTO configuracion (id, nombre_comercio, cuit, direccion, telefono, email, condicion_iva, mensaje_ticket, moneda_simbolo)
 VALUES (1, 'Boutique Urbana - Local de Ropa', '20-38491234-9', 'Av. Santa Fe 1540, CABA', '11-4567-8901', 'ventas@boutiqueurbana.com', 'Responsable Inscripto', '¡Gracias por elegirnos! Cambios dentro de los 30 días presentando este ticket.', '$');
 
--- 2. USUARIOS (admin / admin123 y vendedor / 1234)
+-- 2. USUARIOS (admin / admin123, vendedor / 1234 y gerente / gerente123)
 INSERT OR REPLACE INTO usuarios (id, username, dni, password_hash, nombre, apellido, nombre_completo, rol, activo)
 VALUES 
-<<<<<<< HEAD
-(1, 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Administrador General', 'Administrador', 1),
-(2, 'vendedor', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', 'Vendedor de Turno', 'Vendedor', 1),
-(3, 'gerente', 'ecfba551324356e5bd27b548adf36b728783f60d9b573d142caac7baad62be49', 'Gerente General', 'Gerente', 1);
-=======
 (1, 'admin', '10000001', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Administrador', 'General', 'Administrador General', 'Administrador', 1),
-(2, 'vendedor', '10000002', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', 'Vendedor', 'De Turno', 'Vendedor de Turno', 'Vendedor', 1);
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
+(2, 'vendedor', '10000002', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', 'Vendedor', 'De Turno', 'Vendedor de Turno', 'Vendedor', 1),
+(3, 'gerente', '10000003', 'ecfba551324356e5bd27b548adf36b728783f60d9b573d142caac7baad62be49', 'Gerente', 'General', 'Gerente General', 'Gerente', 1);
 
 -- 3. TALLES
 INSERT OR REPLACE INTO talles (id, nombre, orden) VALUES

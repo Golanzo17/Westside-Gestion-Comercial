@@ -62,11 +62,7 @@ Namespace Forms
             btnIngresoMercaderia.Visible = AuthService.IsAdminOrManager
             AddHandler btnIngresoMercaderia.Click, AddressOf BtnIngresoMercaderia_Click
 
-<<<<<<< HEAD
-            btnRefrescar = New Button() With {.Text = "Actualizar", .Location = New Point(If(AuthService.IsAdminOrManager, 265, 15), 10), .Size = New Size(120, 34)}
-=======
-            btnRefrescar = New Button() With {.Text = "🔄 Actualizar", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 0, 0, 0)}
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
+            btnRefrescar = New Button() With {.Text = "Actualizar", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 0, 0, 0)}
             UITheme.StyleButton(btnRefrescar, "Secondary")
             AddHandler btnRefrescar.Click, Sub() LoadStockData()
 
@@ -74,13 +70,8 @@ Namespace Forms
                 .Text = "Verificando niveles de inventario...",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorWarning,
-<<<<<<< HEAD
-                .Location = New Point(If(AuthService.IsAdminOrManager, 420, 150), 18),
-                .AutoSize = True
-=======
                 .AutoSize = True,
                 .Margin = New Padding(20, 8, 0, 0)
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
             }
 
             flpToolbar.Controls.AddRange({btnIngresoMercaderia, btnRefrescar, lblResumenAlertas})

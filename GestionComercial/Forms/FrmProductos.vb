@@ -68,14 +68,9 @@ Namespace Forms
                                               If e.KeyCode = Keys.Enter Then LoadProductos()
                                           End Sub
 
-<<<<<<< HEAD
-            Dim lblC As New Label() With {.Text = "Categoría:", .Font = UITheme.FontBold, .Location = New Point(305, 20), .AutoSize = True}
-            cboFiltroCategoria = New ComboBox() With {.Location = New Point(380, 18), .Size = New Size(180, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
-            UITheme.StyleComboBox(cboFiltroCategoria)
-=======
             Dim lblC As New Label() With {.Text = "Categoría:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(12, 5, 4, 0)}
             cboFiltroCategoria = New ComboBox() With {.Size = New Size(180, 26), .DropDownStyle = ComboBoxStyle.DropDownList, .Margin = New Padding(0, 2, 0, 0)}
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
+            UITheme.StyleComboBox(cboFiltroCategoria)
             AddHandler cboFiltroCategoria.SelectedIndexChanged, Sub() LoadProductos()
 
             btnBuscar = New Button() With {.Text = "Filtrar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
@@ -87,11 +82,7 @@ Namespace Forms
             btnNuevo.Visible = AuthService.IsAdminOrManager
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-<<<<<<< HEAD
-            btnEditar = New Button() With {.Text = "Editar", .Location = New Point(820, 16), .Size = New Size(95, 30)}
-=======
-            btnEditar = New Button() With {.Text = "✏ Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
+            btnEditar = New Button() With {.Text = "Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
             UITheme.StyleButton(btnEditar, "Secondary")
             btnEditar.Visible = AuthService.IsAdminOrManager
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click

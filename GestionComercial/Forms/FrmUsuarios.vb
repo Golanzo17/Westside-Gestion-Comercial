@@ -62,31 +62,6 @@ Namespace Forms
             UITheme.StyleButton(btnNuevo, "Success")
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-<<<<<<< HEAD
-            btnEditar = New Button() With {.Text = "Editar datos", .Location = New Point(175, 12), .Size = New Size(130, 34)}
-            UITheme.StyleButton(btnEditar, "Secondary")
-            AddHandler btnEditar.Click, AddressOf BtnEditar_Click
-
-            btnCambiarPass = New Button() With {.Text = "Cambiar clave", .Location = New Point(315, 12), .Size = New Size(150, 34)}
-            UITheme.StyleButton(btnCambiarPass, "Secondary")
-            AddHandler btnCambiarPass.Click, AddressOf BtnCambiarPass_Click
-
-            btnToggleActivo = New Button() With {.Text = "Activar / desactivar", .Location = New Point(475, 12), .Size = New Size(180, 34)}
-            UITheme.StyleButton(btnToggleActivo, "Danger")
-            AddHandler btnToggleActivo.Click, AddressOf BtnToggleActivo_Click
-
-            btnRefrescar = New Button() With {.Text = "Actualizar", .Location = New Point(665, 12), .Size = New Size(120, 34)}
-            UITheme.StyleButton(btnRefrescar, "Secondary")
-            AddHandler btnRefrescar.Click, Sub() LoadUsuarios()
-
-            Dim puedeModificar As Boolean = AuthService.IsAdmin
-            btnNuevo.Visible = puedeModificar
-            btnEditar.Visible = puedeModificar
-            btnCambiarPass.Visible = puedeModificar
-            btnToggleActivo.Visible = puedeModificar
-
-            pnlToolbar.Controls.AddRange({btnNuevo, btnEditar, btnCambiarPass, btnToggleActivo, btnRefrescar})
-=======
             btnEditar = New Button() With {.Text = "✏ Editar Datos", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 0, 0, 0)}
             UITheme.StyleButton(btnEditar, "Secondary")
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
@@ -105,7 +80,6 @@ Namespace Forms
 
             flpToolbar.Controls.AddRange({btnNuevo, btnEditar, btnCambiarPass, btnToggleActivo, btnRefrescar})
             pnlToolbar.Controls.Add(flpToolbar)
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
 
             ' Grilla
             Dim pnlGrid As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(15)}
@@ -340,17 +314,11 @@ Namespace Forms
             txtUsername = New TextBox() With {.Location = New Point(275, 115), .Size = New Size(230, 26)}
             UITheme.StyleTextBox(txtUsername)
 
-<<<<<<< HEAD
-            Dim lblRol As New Label() With {.Text = "Rol en el Sistema:", .Font = UITheme.FontBold, .Location = New Point(25, 150), .AutoSize = True}
-            cboRol = New ComboBox() With {.Location = New Point(25, 175), .Size = New Size(375, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
-            UITheme.StyleComboBox(cboRol)
-            cboRol.Items.AddRange({"Vendedor", "Gerente", "Administrador"})
-=======
             ' --- Fila 3: Rol y Teléfono ---
             Dim lblRol As New Label() With {.Text = "Rol en el Sistema:", .Font = UITheme.FontBold, .Location = New Point(25, 160), .AutoSize = True}
             cboRol = New ComboBox() With {.Location = New Point(25, 185), .Size = New Size(230, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboRol)
             cboRol.Items.AddRange({"Vendedor", "Administrador"})
->>>>>>> dc9fe54b331d3c9b325bd01d1ab739b33e7028de
             cboRol.SelectedIndex = 0
 
             Dim lblTel As New Label() With {.Text = "Teléfono / WhatsApp:", .Font = UITheme.FontBold, .Location = New Point(275, 160), .AutoSize = True}
