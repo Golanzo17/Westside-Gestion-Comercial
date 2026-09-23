@@ -23,7 +23,7 @@ Representa a los empleados o administradores que inician sesión:
 * `Dni`: Documento Nacional de Identidad / Cédula única del empleado o administrador.
 * `PasswordHash`: Contraseña encriptada (PBKDF2/SHA256, nunca en texto plano).
 * `Nombre`, `Apellido`, `NombreCompleto`: Datos del personal.
-* `Rol`: Puede ser `"Administrador"`, `"Vendedor"` o `"Cajero"`.
+* `Rol`: Puede ser `"Administrador"`, `"Gerente"` o `"Vendedor"`.
 * `Telefono`, `Email`, `Direccion`, `Ciudad`, `FechaNacimiento`, `Notas`.
 * `Activo`, `UltimoLogin`, `CreatedAt`.
 

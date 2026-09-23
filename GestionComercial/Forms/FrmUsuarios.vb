@@ -4,6 +4,19 @@ Imports GestionComercial.Models
 Imports GestionComercial.Services
 Imports GestionComercial.UI
 
+' ARCHIVO: FrmUsuarios.vb
+' PROPÓSITO: Administración de Empleados, Usuarios, Roles y Seguridad de Acceso
+' - Control de Acceso Basado en Roles (RBAC):
+'   En este módulo se gestionan los operadores del sistema (Administrador, Gerente, Vendedor).
+' - Borrado Lógico (Soft Delete):
+'   Nunca ejecutamos un 'DELETE FROM usuarios' en la base de datos. Si un empleado
+'   se desvincula, su cuenta se desactiva (Activo = False). Esto preserva la integridad
+'   referencial y auditoría histórica: los tickets fiscales y aperturas de caja
+'   que registró en el pasado conservan su autor original.
+' - Seguridad en Contraseñas:
+'   Las claves se hashean con PBKDF2 y Salt criptográfico en la capa de datos.
+
+
 Namespace Forms
     Public Class FrmUsuarios
         Inherits Form
@@ -30,7 +43,7 @@ Namespace Forms
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
 
-            ' Header
+            ' Header superior institucional
             Dim pnlHeader As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 60,
@@ -46,7 +59,7 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Toolbar con FlowLayoutPanel para evitar recorte de texto en botones
+            ' Toolbar con FlowLayoutPanel para garantizar adaptabilidad
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 60,
@@ -81,7 +94,7 @@ Namespace Forms
             flpToolbar.Controls.AddRange({btnNuevo, btnEditar, btnCambiarPass, btnToggleActivo, btnRefrescar})
             pnlToolbar.Controls.Add(flpToolbar)
 
-            ' Grilla
+            ' Grilla principal de cuentas de usuario
             Dim pnlGrid As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(15)}
             dgvUsuarios = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvUsuarios)
@@ -90,7 +103,7 @@ Namespace Forms
             AddHandler dgvUsuarios.CellFormatting, AddressOf DgvUsuarios_CellFormatting
             pnlGrid.Controls.Add(dgvUsuarios)
 
-            ' Footer
+            ' Footer con totalizador de usuarios activos e inactivos
             Dim pnlFooter As New Panel() With {
                 .Dock = DockStyle.Bottom,
                 .Height = 40,
@@ -149,6 +162,9 @@ Namespace Forms
             dgvUsuarios.Columns("UltimoLogin").Width = 140
         End Sub
 
+        ''' <summary>
+        ''' Recupera la nómina de usuarios desde la base de datos y calcula métricas en tiempo real.
+        ''' </summary>
         Public Sub LoadUsuarios()
             Try
                 Dim lista = usuarioService.GetUsuarios()
@@ -168,6 +184,9 @@ Namespace Forms
             End Try
         End Sub
 
+        ''' <summary>
+        ''' Formato visual condicional para resaltar rápidamente el rol y estado de la cuenta.
+        ''' </summary>
         Private Sub DgvUsuarios_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs)
             If e.RowIndex >= 0 Then
                 If dgvUsuarios.Columns(e.ColumnIndex).Name = "Activo" Then
@@ -181,8 +200,11 @@ Namespace Forms
                     End If
                 ElseIf dgvUsuarios.Columns(e.ColumnIndex).Name = "Rol" Then
                     Dim val = e.Value?.ToString()
-                    If val = "Administrador" Then
+                    If String.Equals(val, "Administrador", StringComparison.OrdinalIgnoreCase) Then
                         e.CellStyle.ForeColor = UITheme.ColorPrimaryDark
+                        e.CellStyle.Font = UITheme.FontBold
+                    ElseIf String.Equals(val, "Gerente", StringComparison.OrdinalIgnoreCase) Then
+                        e.CellStyle.ForeColor = UITheme.ColorPrimary
                         e.CellStyle.Font = UITheme.FontBold
                     End If
                 End If
@@ -190,7 +212,7 @@ Namespace Forms
         End Sub
 
         Private Sub DgvUsuarios_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
-            If AuthService.IsAdmin AndAlso e.RowIndex >= 0 Then
+            If AuthService.IsAdminOrManager AndAlso e.RowIndex >= 0 Then
                 EditarSeleccionado()
             End If
         End Sub
@@ -231,6 +253,10 @@ Namespace Forms
             End If
         End Sub
 
+        ''' <summary>
+        ''' Activa o desactiva lógicamente el usuario.
+        ''' Protegemos al usuario 'admin' para impedir que el sistema quede sin administradores activos.
+        ''' </summary>
         Private Sub BtnToggleActivo_Click(sender As Object, e As EventArgs)
             If dgvUsuarios.CurrentRow IsNot Nothing Then
                 Dim uId As Integer = Convert.ToInt32(dgvUsuarios.CurrentRow.Cells("Id").Value)
@@ -254,7 +280,12 @@ Namespace Forms
     End Class
 
     ''' <summary>
-    ''' Modal para Crear o Editar Datos de Usuario
+    ''' Diálogo modal para registrar un nuevo colaborador o actualizar sus datos personales y laborales.
+    ''' 
+    ''' DECISIONES DE DISEÑO:
+    ''' - Distinción de modo: Si `_usuarioId == 0`, solicita contraseña inicial. Si está editando,
+    '''   oculta el campo de contraseña y bloquea la edición del username para mantener consistencia.
+    ''' - Restricciones de DNI y Username: Ambos campos deben ser únicos en el sistema.
     ''' </summary>
     Public Class FrmUsuarioEditor
         Inherits Form
@@ -318,7 +349,7 @@ Namespace Forms
             Dim lblRol As New Label() With {.Text = "Rol en el Sistema:", .Font = UITheme.FontBold, .Location = New Point(25, 160), .AutoSize = True}
             cboRol = New ComboBox() With {.Location = New Point(25, 185), .Size = New Size(230, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
             UITheme.StyleComboBox(cboRol)
-            cboRol.Items.AddRange({"Vendedor", "Administrador"})
+            cboRol.Items.AddRange(UsuarioService.RolesDisponibles)
             cboRol.SelectedIndex = 0
 
             Dim lblTel As New Label() With {.Text = "Teléfono / WhatsApp:", .Font = UITheme.FontBold, .Location = New Point(275, 160), .AutoSize = True}
@@ -363,7 +394,7 @@ Namespace Forms
                 nextY += 65
             End If
 
-            ' --- Botones ---
+            ' --- Botones de confirmación ---
             Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = Color.FromArgb(241, 245, 249), .Padding = New Padding(20, 10, 20, 10)}
             btnGuardar = New Button() With {.Text = "💾 Guardar Empleado", .Dock = DockStyle.Right, .Width = 170}
             UITheme.StyleButton(btnGuardar, "Success")
@@ -396,7 +427,12 @@ Namespace Forms
                 txtUsername.ReadOnly = True
                 txtUsername.BackColor = UITheme.ColorSurfaceMuted
                 Dim idx = cboRol.FindStringExact(u.Rol)
-                If idx >= 0 Then cboRol.SelectedIndex = idx
+                If idx >= 0 Then
+                    cboRol.SelectedIndex = idx
+                ElseIf Not String.IsNullOrWhiteSpace(u.Rol) Then
+                    cboRol.Items.Add(u.Rol)
+                    cboRol.SelectedItem = u.Rol
+                End If
                 txtTelefono.Text = u.Telefono
                 txtEmail.Text = u.Email
                 txtDireccion.Text = u.Direccion
@@ -412,12 +448,19 @@ Namespace Forms
             End If
         End Sub
 
+        ''' <summary>
+        ''' Valida integridad de campos obligatorios y delega en UsuarioService la inserción o actualización.
+        ''' </summary>
         Private Sub BtnGuardar_Click(sender As Object, e As EventArgs)
             Dim errMsg As String = ""
             Dim nom = txtNombre.Text.Trim()
             Dim ape = txtApellido.Text.Trim()
             Dim dni = txtDni.Text.Trim()
             Dim usr = txtUsername.Text.Trim()
+            If cboRol.SelectedItem Is Nothing Then
+                MessageBox.Show("Por favor seleccione un rol para el usuario.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
             Dim rol = cboRol.SelectedItem.ToString()
             Dim fnac As Nullable(Of DateTime) = If(chkTieneFechaNac.Checked, Nothing, CType(dtpFechaNac.Value.Date, Nullable(Of DateTime)))
 
@@ -457,7 +500,7 @@ Namespace Forms
     End Class
 
     ''' <summary>
-    ''' Modal para Restablecer Contraseña de un Usuario
+    ''' Diálogo modal para que el Administrador o Gerente pueda restablecer la clave de acceso de un empleado.
     ''' </summary>
     Public Class FrmCambiarPassword
         Inherits Form

@@ -1,3 +1,14 @@
+' ARCHIVO: FrmProductos.vb
+' PROPÓSITO: Catálogo de prendas, cálculo de márgenes y asignación de talles/colores.
+' En este formulario los administradores y gerentes administran el inventario:
+' 1. Alta y Edición con Matriz de Talles: Permite configurar el costo, el margen deseado
+'    (ej: 50%) y calcula automáticamente el precio de venta al público (PVP).
+' 2. Asignación de Variantes: Permite tildar qué talles (S, M, L, etc.) y qué colores
+'    están disponibles para esa prenda, inicializando su stock correspondiente.
+' 3. Protección por Roles: Si un vendedor intenta crear o modificar prendas o precios,
+'    el sistema le solicita la autorización de un Administrador o Gerente.
+
+
 Imports System.Drawing
 Imports System.Windows.Forms
 Imports GestionComercial.Models

@@ -1,7 +1,19 @@
+' ARCHIVO: ReporteService.vb
+' PROPÓSITO: Cálculo de métricas comerciales, KPIs de ventas y alertas de stock crítico.
+' Este servicio alimenta el Dashboard del formulario principal (FrmMain) y la pantalla de reportes analíticos:
+' 1. KPIs en Tiempo Real: Suma ventas del día de hoy, cuenta tickets emitidos y discrimina
+'    cuánto dinero entró en efectivo y cuánto por canales digitales (tarjetas / transferencias).
+' 2. Ranking de Prendas más Vendidas: Agrupa por producto, talle y monto recaudado
+'    para que el encargado sepa qué artículos son los más rentables del local.
+' 3. Alertas de Reposición: Identifica automáticamente las prendas cuyo stock actual
+'    es menor o igual a su stock mínimo para emitir pedidos a proveedores a tiempo.
+
+
 Imports System.Data
 Imports GestionComercial.Data
 
 Namespace Services
+    ' DTO para las tarjetas superiores (KPI Cards) del Panel Principal
     Public Class ResumenVentasHoy
         Public Property TotalVendido As Decimal = 0D
         Public Property CantidadTickets As Integer = 0
@@ -10,6 +22,7 @@ Namespace Services
         Public Property ArticulosStockBajo As Integer = 0
     End Class
 
+    ' DTO para el ranking de artículos estrella
     Public Class TopProductoVendido
         Public Property ProductoId As Integer
         Public Property Nombre As String = String.Empty
@@ -18,17 +31,20 @@ Namespace Services
         Public Property TotalRecaudado As Decimal = 0D
     End Class
 
+    ' DTO para alertar prendas por agotarse
     Public Class AlertaStock
         Public Property ProductoId As Integer
         Public Property CodigoBarra As String = String.Empty
         Public Property Nombre As String = String.Empty
         Public Property Talle As String = String.Empty
-        Public Property Color As String = String.Empty
+        Public Property Color As String = "Único"
         Public Property StockActual As Integer = 0
         Public Property StockMinimo As Integer = 0
     End Class
 
     Public Class ReporteService
+
+        ' Consulta agregada de KPIs para el Dashboard del día de hoy (ventas, tickets y medios de pago).
 
         Public Function GetResumenHoy() As ResumenVentasHoy
             Dim resumen As New ResumenVentasHoy()
@@ -74,8 +90,8 @@ Namespace Services
                                      "ORDER BY total_cantidad DESC LIMIT @limite;"
 
                 Dim params As New Dictionary(Of String, Object) From {
-                    {"@desde", fechaDesde.Date},
-                    {"@hasta", fechaHasta.Date},
+                    {"@desde", fechaDesde.ToString("yyyy-MM-dd")},
+                    {"@hasta", fechaHasta.ToString("yyyy-MM-dd")},
                     {"@limite", limite}
                 }
 

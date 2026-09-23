@@ -1,5 +1,18 @@
+' ARCHIVO: Entities.vb
+' PROPÓSITO: Modelos de dominio y DTOs (Data Transfer Objects) del sistema.
+' En este archivo definimos las clases que representan la información de nuestro local
+' en memoria. Cada clase se corresponde con una tabla de la base de datos:
+' - Usuario: Empleados, roles y permisos de acceso.
+' - Producto y ProductoTalle: Catálogo y la matriz de stock por talle y color.
+' - Venta y DetalleVenta: Encabezado y renglones de los tickets de venta.
+' - Caja y MovimientoCaja: Control de turnos, efectivo inicial, ingresos y arqueo.
+' - MovimientoStock: Registro histórico (Kardex) para auditoría de inventario.
+' - Cliente: Directorio comercial de compradores.
+' - ConfiguracionComercio: Datos institucionales impresos en el ticket.
+
 Namespace Models
 
+    ' Modela los empleados del local con su rol asignado (Administrador, Gerente o Vendedor) y datos de contacto.
     Public Class Usuario
         Public Property Id As Integer
         Public Property Username As String = String.Empty
@@ -7,7 +20,7 @@ Namespace Models
         Public Property PasswordHash As String = String.Empty
         Public Property Nombre As String = String.Empty
         Public Property Apellido As String = String.Empty
-        Public Property Rol As String = "Vendedor" ' Administrador, Vendedor
+        Public Property Rol As String = "Vendedor" ' Administrador, Gerente, Vendedor
         Public Property Telefono As String = String.Empty
         Public Property Email As String = String.Empty
         Public Property Direccion As String = String.Empty
@@ -18,7 +31,7 @@ Namespace Models
         Public Property UltimoLogin As Nullable(Of DateTime)
         Public Property CreatedAt As DateTime = DateTime.Now
 
-        ''' <summary>Propiedad calculada para compatibilidad con el resto del sistema.</summary>
+        ' Propiedad calculada para mostrar "Apellido, Nombre" en grillas y formularios
         Public ReadOnly Property NombreCompleto As String
             Get
                 Dim s = $"{Apellido}, {Nombre}".Trim(" "c, ","c)
@@ -27,6 +40,7 @@ Namespace Models
         End Property
     End Class
 
+    ' Clasifica las prendas del local (Remeras, Pantalones, Camperas, etc.).
     Public Class Categoria
         Public Property Id As Integer
         Public Property Nombre As String = String.Empty
@@ -38,6 +52,7 @@ Namespace Models
         End Function
     End Class
 
+    ' Talles universales de indumentaria (XS, S, M, L, XL, XXL, 38, 40, etc.).
     Public Class Talle
         Public Property Id As Integer
         Public Property Nombre As String = String.Empty
@@ -48,6 +63,8 @@ Namespace Models
         End Function
     End Class
 
+    ' Representa el artículo genérico del catálogo con sus precios y categoría.
+    ' Un producto contiene una lista de ProductoTalle para discriminar cantidades por cada variante de talle y color.
     Public Class Producto
         Public Property Id As Integer
         Public Property CodigoBarra As String = String.Empty
@@ -64,6 +81,7 @@ Namespace Models
         Public Property TallesStock As List(Of ProductoTalle) = New List(Of ProductoTalle)()
     End Class
 
+    ' Matriz de stock por prenda: define las unidades disponibles por talle y color, con su umbral mínimo de alerta.
     Public Class ProductoTalle
         Public Property Id As Integer
         Public Property ProductoId As Integer
@@ -74,13 +92,12 @@ Namespace Models
         Public Property StockMinimo As Integer = 2
         Public Property SkuEspecifico As String = String.Empty
 
-        Public ReadOnly Property DescripcionDisplay As String
-            Get
-                Return $"{TalleNombre} ({Color}) - Stock: {StockActual}"
-            End Get
-        End Property
+        Public Overrides Function ToString() As String
+            Return $"{TalleNombre} - {Color} (Stock: {StockActual})"
+        End Function
     End Class
 
+    ' Clientes registrados en el sistema para asignación de tickets y cuenta corriente.
     Public Class Cliente
         Public Property Id As Integer
         Public Property DniCuit As String = String.Empty
@@ -105,6 +122,8 @@ Namespace Models
         End Function
     End Class
 
+    ' Control de turnos y arqueo diario de caja:
+    ' Registra monto inicial, cobros por medio de pago, movimientos manuales y cálculo de diferencia de cierre.
     Public Class Caja
         Public Property Id As Integer
         Public Property UsuarioId As Integer
@@ -123,6 +142,7 @@ Namespace Models
         Public Property Observaciones As String = String.Empty
     End Class
 
+    ' Movimiento manual de caja (ingresos o egresos extraordinarios como retiros o gastos operativos).
     Public Class MovimientoCaja
         Public Property Id As Integer
         Public Property CajaId As Integer
@@ -135,6 +155,7 @@ Namespace Models
         Public Property Referencia As String = String.Empty
     End Class
 
+    ' Encabezado de la venta (ticket o comprobante emitido en el POS).
     Public Class Venta
         Public Property Id As Integer
         Public Property NumeroTicket As String = String.Empty
@@ -158,6 +179,7 @@ Namespace Models
         Public Property Detalles As List(Of DetalleVenta) = New List(Of DetalleVenta)()
     End Class
 
+    ' Renglón de detalle de una venta con los datos puntuales de la prenda al momento de la transacción.
     Public Class DetalleVenta
         Public Property Id As Integer
         Public Property VentaId As Integer
@@ -173,6 +195,7 @@ Namespace Models
         Public Property Subtotal As Decimal = 0D
     End Class
 
+    ' Registro de auditoría de inventario (Kardex) para trazabilidad de variaciones de stock.
     Public Class MovimientoStock
         Public Property Id As Integer
         Public Property ProductoId As Integer
@@ -190,6 +213,7 @@ Namespace Models
         Public Property Fecha As DateTime = DateTime.Now
     End Class
 
+    ' Parámetros de identidad del local comercial para la cabecera y pie de tickets.
     Public Class ConfiguracionComercio
         Public Property Id As Integer = 1
         Public Property NombreComercio As String = "Mi Local de Ropa"

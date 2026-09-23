@@ -1,3 +1,19 @@
+' ARCHIVO: AuthService.vb
+' PROPÓSITO: Autenticación, control de sesiones, protección anti fuerza bruta y permisos por rol.
+' En este servicio resolvemos la seguridad de acceso al sistema:
+' 1. Matriz de Roles (RBAC):
+'    Diferenciamos 3 perfiles: Vendedor, Gerente y Administrador.
+'    Para aplicar el Principio de Menor Privilegio (Least Privilege), el Administrador
+'    no tiene acceso a cobrar en el POS ni a la Caja física para no mezclar funciones de auditoría con la manipulación material del dinero.
+' 2. Seguridad en Contraseñas:
+'    Verifica credenciales mediante PBKDF2 con Salt usando comparación en tiempo constante (FixedTimeEquals)
+'    para evitar vulnerabilidades de análisis de tiempo de respuesta (Timing Attacks).
+' 3. Protección contra Ataques de Fuerza Bruta:
+'    Si una cuenta acumula 5 intentos fallidos consecutivos, queda bloqueada temporalmente por 60 segundos.
+' 4. Autorizaciones en Punto de Venta:
+'    Permite que un Gerente o Administrador autorice descuentos mayores al 15% o egresos de caja
+'    ingresando sus credenciales en un diálogo modal sin tener que cerrar la sesión del vendedor.
+
 Imports System.Data
 Imports System.Drawing
 Imports System.Windows.Forms
@@ -9,6 +25,7 @@ Namespace Services
     Public Module AuthService
         Private _currentUser As Usuario = Nothing
 
+        ' Estructura para registrar los intentos fallidos de cada cuenta
         Private Structure LoginAttemptInfo
             Public FailedCount As Integer
             Public LockoutUntil As DateTime
@@ -16,6 +33,8 @@ Namespace Services
 
         Private ReadOnly _attempts As New Dictionary(Of String, LoginAttemptInfo)(StringComparer.OrdinalIgnoreCase)
         Private ReadOnly _lockObj As New Object()
+
+        ' Usuario actualmente autenticado en la sesión
 
         Public Property CurrentUser As Usuario
             Get
@@ -31,6 +50,10 @@ Namespace Services
                 Return _currentUser IsNot Nothing
             End Get
         End Property
+
+        ' Consultas de Roles para Segregación de Funciones:
+        ' Estas propiedades las usamos en los formularios para mostrar u ocultar botones
+        ' según los privilegios del perfil activo.
 
         Public ReadOnly Property IsAdmin As Boolean
             Get
@@ -56,10 +79,12 @@ Namespace Services
             End Get
         End Property
 
-        Public Function SolicitarAutorizacionAdminOManager(owner As Form, motivo As String) As Boolean
-            If IsAdminOrManager Then Return True
-            Return SolicitarAutorizacionAdmin(owner, motivo)
-        End Function
+        ' MÉTODO PRINCIPAL DE INICIO DE SESIÓN
+        ' Flujo de ejecución:
+        ' 1. Revisa si el usuario está bloqueado por demasiados intentos fallidos.
+        ' 2. Busca al usuario en la BD de forma segura con parámetros.
+        ' 3. Valida la contraseña con PBKDF2 en tiempo constante.
+        ' 4. Guarda la sesión en _currentUser y actualiza la fecha de último login.
 
         Public Function Login(username As String, password As String, ByRef errorMessage As String) As Boolean
             Try
@@ -95,33 +120,18 @@ Namespace Services
                 End If
 
                 Dim row As DataRow = dt.Rows(0)
+                Dim userId As Integer = Convert.ToInt32(row("id"))
                 Dim storedHash As String = row("password_hash").ToString()
-                Dim needsRehash As Boolean = False
 
-                ' 2. Validación de contraseña con PBKDF2 / SHA-256 legado y protección contra timing attacks
-                Dim passwordValid As Boolean = DatabaseHelper.VerifyPassword(password, storedHash, needsRehash)
+                ' Validación de credenciales con PBKDF2
+                Dim passwordValid As Boolean = DatabaseHelper.VerifyPassword(password, storedHash)
 
                 If Not passwordValid Then
                     RegistrarFalloLogin(userKey, errorMessage)
                     Return False
                 End If
 
-                ' 3. Auto-migración transparente: si la clave era SHA-256 legacy, actualizarla a PBKDF2 salado
-                Dim userId As Integer = Convert.ToInt32(row("id"))
-                If needsRehash Then
-                    Try
-                        Dim newSecureHash = DatabaseHelper.HashPasswordSecure(password)
-                        Dim updateHashSql = "UPDATE `usuarios` SET `password_hash` = @newHash WHERE `id` = @id;"
-                        DatabaseHelper.ExecuteNonQuery(updateHashSql, New Dictionary(Of String, Object) From {
-                            {"@newHash", newSecureHash},
-                            {"@id", userId}
-                        })
-                    Catch
-                        ' Si falla la actualización en BD no se interrumpe la sesión del usuario
-                    End Try
-                End If
-
-                ' 4. Login exitoso: limpiar historial de intentos fallidos
+                ' Login exitoso: reiniciar contador de intentos fallidos
                 SyncLock _lockObj
                     If _attempts.ContainsKey(userKey) Then
                         _attempts.Remove(userKey)
@@ -156,6 +166,11 @@ Namespace Services
             End Try
         End Function
 
+        ' Protección Anti Fuerza Bruta (Brute-Force Lockout):
+        ' Llevamos la cuenta de intentos fallidos en un diccionario en memoria protegido
+        ' con SyncLock para seguridad multihilo (Thread-Safe). Si el usuario acumula
+        ' 5 fallos, congelamos la cuenta por 60 segundos y le avisamos en pantalla.
+
         Private Sub RegistrarFalloLogin(userKey As String, ByRef errorMessage As String)
             SyncLock _lockObj
                 Dim info As LoginAttemptInfo = If(_attempts.ContainsKey(userKey), _attempts(userKey), New LoginAttemptInfo())
@@ -176,14 +191,15 @@ Namespace Services
             End SyncLock
         End Sub
 
+        ' Cierra la sesión activa liberando el objeto de usuario en memoria
+
         Public Sub Logout()
             CurrentUser = Nothing
         End Sub
 
-        ''' <summary>
-        ''' Valida una contraseña contra los administradores activos del sistema.
-        ''' Si se especifica un username, valida contra ese administrador específico.
-        ''' </summary>
+        ' Valida si una contraseña ingresada coincide con algún Administrador activo.
+        ' Sirve para autorizaciones rápidas de supervisor sin tener que cerrar sesión.
+
         Public Function ValidarCredencialesAdmin(password As String, Optional username As String = "") As Boolean
             Try
                 If String.IsNullOrWhiteSpace(password) Then Return False
@@ -200,8 +216,7 @@ Namespace Services
                 Dim dt = DatabaseHelper.ExecuteQuery(sql, prms)
                 For Each row As DataRow In dt.Rows
                     Dim storedHash = row("password_hash").ToString()
-                    Dim dummyRehash As Boolean = False
-                    If DatabaseHelper.VerifyPassword(password, storedHash, dummyRehash) Then
+                    If DatabaseHelper.VerifyPassword(password, storedHash) Then
                         Return True
                     End If
                 Next
@@ -211,10 +226,17 @@ Namespace Services
             End Try
         End Function
 
+        ' Valida si la contraseña pertenece a un Gerente activo
         Public Function ValidarCredencialesManager(password As String) As Boolean
             Return ValidarCredencialesPorRol(password, "Gerente")
         End Function
 
+        ' Valida si la contraseña pertenece indistintamente a un Administrador o Gerente
+        Public Function ValidarCredencialesAdminOManager(password As String) As Boolean
+            Return ValidarCredencialesAdmin(password) OrElse ValidarCredencialesManager(password)
+        End Function
+
+        ' Helper interno que consulta contraseñas filtrando por rol específico
         Private Function ValidarCredencialesPorRol(password As String, rol As String) As Boolean
             Try
                 If String.IsNullOrWhiteSpace(password) Then Return False
@@ -222,8 +244,7 @@ Namespace Services
                 Dim sql As String = "SELECT password_hash FROM `usuarios` WHERE `rol` = @rol AND `activo` = 1;"
                 Dim dt = DatabaseHelper.ExecuteQuery(sql, New Dictionary(Of String, Object) From {{"@rol", rol}})
                 For Each row As DataRow In dt.Rows
-                    Dim dummyRehash As Boolean = False
-                    If DatabaseHelper.VerifyPassword(password, row("password_hash").ToString(), dummyRehash) Then Return True
+                    If DatabaseHelper.VerifyPassword(password, row("password_hash").ToString()) Then Return True
                 Next
                 Return False
             Catch
@@ -282,6 +303,112 @@ Namespace Services
                 dlg.Controls.AddRange({lblMotivo, lblPass, txtPass, btnConfirmar, btnCancelar})
                 dlg.AcceptButton = btnConfirmar
                 dlg.CancelButton = btnCancelar
+                dlg.ShowDialog(owner)
+                Return autorizado
+            End Using
+        End Function
+
+        ''' <summary>
+        ''' Solicita autorización de un Administrador o Gerente mediante diálogo modal si el usuario actual es Vendedor.
+        ''' Si el usuario actual ya es Administrador o Gerente, retorna True directamente.
+        ''' </summary>
+        Public Function SolicitarAutorizacionAdminOManager(owner As Form, motivo As String) As Boolean
+            If IsAdminOrManager Then Return True
+
+            Using dlg As New Form()
+                dlg.Text = "Autorización de Supervisor"
+                dlg.Size = New Size(430, 270)
+                dlg.StartPosition = FormStartPosition.CenterParent
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog
+                dlg.MaximizeBox = False
+                dlg.MinimizeBox = False
+                dlg.BackColor = Color.White
+
+                Dim pnlTop As New Panel() With {
+                    .Dock = DockStyle.Top,
+                    .Height = 55,
+                    .BackColor = UITheme.ColorSecondary,
+                    .Padding = New Padding(15, 12, 15, 10)
+                }
+                Dim lblTitle As New Label() With {
+                    .Text = "🔒 AUTORIZACIÓN DE SUPERVISOR",
+                    .Font = UITheme.FontSubheading,
+                    .ForeColor = Color.White,
+                    .AutoSize = True,
+                    .Location = New Point(12, 15)
+                }
+                pnlTop.Controls.Add(lblTitle)
+
+                Dim lblMotivo As New Label() With {
+                    .Text = motivo,
+                    .Font = UITheme.FontRegular,
+                    .ForeColor = UITheme.ColorDanger,
+                    .Location = New Point(20, 68),
+                    .Size = New Size(375, 40)
+                }
+
+                Dim lblPass As New Label() With {
+                    .Text = "Contraseña de Administrador o Gerente:",
+                    .Font = UITheme.FontBold,
+                    .Location = New Point(20, 115),
+                    .AutoSize = True
+                }
+
+                Dim txtPass As New TextBox() With {
+                    .Location = New Point(20, 138),
+                    .Size = New Size(375, 26),
+                    .UseSystemPasswordChar = True
+                }
+                UITheme.StyleTextBox(txtPass)
+
+                Dim btnConfirmar As New Button() With {
+                    .Text = "Autorizar",
+                    .Location = New Point(185, 180),
+                    .Size = New Size(100, 34)
+                }
+                UITheme.StyleButton(btnConfirmar, "Primary")
+
+                Dim btnCancelar As New Button() With {
+                    .Text = "Cancelar",
+                    .Location = New Point(295, 180),
+                    .Size = New Size(100, 34)
+                }
+                UITheme.StyleButton(btnCancelar, "Secondary")
+
+                Dim autorizado As Boolean = False
+
+                AddHandler btnConfirmar.Click, Sub()
+                    If String.IsNullOrWhiteSpace(txtPass.Text) Then
+                        MessageBox.Show("Ingrese la contraseña de Administrador o Gerente.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                        Return
+                    End If
+
+                    If ValidarCredencialesAdminOManager(txtPass.Text) Then
+                        autorizado = True
+                        dlg.DialogResult = DialogResult.OK
+                        dlg.Close()
+                    Else
+                        MessageBox.Show("Contraseña de Administrador o Gerente incorrecta.", "Acceso Denegado", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        txtPass.Clear()
+                        txtPass.Focus()
+                    End If
+                End Sub
+
+                AddHandler btnCancelar.Click, Sub()
+                    dlg.DialogResult = DialogResult.Cancel
+                    dlg.Close()
+                End Sub
+
+                AddHandler txtPass.KeyDown, Sub(s, e)
+                    If e.KeyCode = Keys.Enter Then
+                        btnConfirmar.PerformClick()
+                    End If
+                End Sub
+
+                dlg.Controls.AddRange({pnlTop, lblMotivo, lblPass, txtPass, btnConfirmar, btnCancelar})
+                dlg.AcceptButton = btnConfirmar
+                dlg.CancelButton = btnCancelar
+
                 dlg.ShowDialog(owner)
                 Return autorizado
             End Using

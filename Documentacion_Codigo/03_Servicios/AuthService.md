@@ -29,7 +29,7 @@ Garantiza seguridad en entornos multihilo (*Thread-Safety*). Si dos usuarios int
 * **`IsAuthenticated As Boolean`**:
   * Devuelve `True` si hay un usuario conectado (`CurrentUser IsNot Nothing`).
 * **`IsAdmin As Boolean`**:
-  * Devuelve `True` solo si el rol del usuario conectado es `"Administrador"`. Los vendedores o cajeros recibirán `False`.
+  * Devuelve `True` solo si el rol del usuario conectado es `"Administrador"`. Los gerentes o vendedores recibirán `False`.
 
 ---
 

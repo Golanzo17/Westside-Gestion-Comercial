@@ -1,3 +1,18 @@
+' ARCHIVO: FrmVentasPOS.vb
+' PROPÓSITO: Terminal de Punto de Venta (POS / TPV) para el mostrador del local.
+' Es la pantalla donde el vendedor opera durante la jornada comercial:
+' 1. Diseñado para Agilidad: Foco permanente en la búsqueda para disparar con la pistola
+'    lectora de código de barras o ingresar el código numérico con Enter.
+' 2. Selector Táctil/Visual de Talles y Colores: Al elegir una prenda, dibuja dinámicamente
+'    botones con los talles disponibles (S, M, L, etc.) mostrando el stock en tiempo real.
+' 3. Carrito con Totales en Vivo: Recalcula subtotales, descuentos y vuelto automáticamente
+'    cada vez que se agrega una prenda o se tipea el dinero entregado por el cliente.
+' 4. Control de Descuentos Comerciales: Si el vendedor intenta aplicar más del 15% de
+'    descuento, el sistema solicita autorización de supervisor.
+' 5. Emisión de Comprobante: Invoca la transacción en VentaService, descuenta el inventario
+'    y genera el ticket de venta listo para entregar al comprador.
+
+
 Imports System.Drawing
 Imports System.Windows.Forms
 Imports GestionComercial.Models
@@ -8,7 +23,7 @@ Namespace Forms
     Public Class FrmVentasPOS
         Inherits Form
 
-        ' Servicios
+        ' Servicios inyectados
         Private catalogService As New CatalogService()
         Private ventaService As New VentaService()
         Private clienteService As New ClienteService()
@@ -43,7 +58,7 @@ Namespace Forms
         Private lblVuelto As Label
         Private btnFinalizarVenta As Button
 
-        ' Estado actual
+        ' Estado actual del carrito y de la venta
         Private productoActual As Producto = Nothing
         Private talleSeleccionado As ProductoTalle = Nothing
         Private listaClientes As List(Of Cliente) = New List(Of Cliente)()
@@ -84,7 +99,7 @@ Namespace Forms
                 .Padding = New Padding(15)
             }
 
-            ' ==================== COLUMNA DERECHA: TOTALES Y COBRO ====================
+            ' Panel derecho: totales y cobro
             Dim pnlCobro As New Panel() With {
                 .Dock = DockStyle.Right,
                 .Width = 360,
@@ -164,7 +179,7 @@ Namespace Forms
                 lblVueltoTitle, lblVuelto, btnFinalizarVenta
             })
 
-            ' ==================== COLUMNA IZQUIERDA: BÚSQUEDA Y CARRITO ====================
+            ' Panel izquierdo: búsqueda y carrito
             Dim pnlIzquierda As New Panel() With {
                 .Dock = DockStyle.Fill,
                 .Padding = New Padding(0, 0, 15, 0)
@@ -554,7 +569,7 @@ Namespace Forms
         Private Function ValidarDescuentoVendedor() As Boolean
             If AuthService.IsAdminOrManager Then Return True
             If numDescuentoPorc.Value > 15 AndAlso Not _descuentoAutorizado Then
-                If AuthService.SolicitarAutorizacionAdmin(Me, $"Un descuento del {numDescuentoPorc.Value}% supera el tope de vendedor (15%). Requiere autorización de un Administrador.") Then
+                If AuthService.SolicitarAutorizacionAdminOManager(Me, $"Un descuento del {numDescuentoPorc.Value}% supera el tope de vendedor (15%). Requiere autorización de un Administrador o Gerente.") Then
                     _descuentoAutorizado = True
                     Return True
                 Else

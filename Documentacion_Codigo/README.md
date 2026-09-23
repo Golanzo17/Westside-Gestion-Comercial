@@ -14,7 +14,7 @@ Para aprender sin abrumarte, te recomendamos seguir este orden de lectura:
 1. [01_Curso_Rapido_VB_NET.md]:
    * ¿Qué es VB.NET? Sintaxis básica, variables (`Dim`), funciones (`Function`), procedimientos (`Sub`), condicionales y bucles.
 2. [02_Arquitectura_Del_Sistema.md]:
-   * Cómo viajan los datos: desde que haces clic en un botón en la pantalla hasta que se guardan en la base de datos (SQLite o MySQL).
+   * Cómo viajan los datos: desde que haces clic en un botón en la pantalla hasta que se guardan en la base de datos (SQLite).
 
 ---
 
@@ -50,6 +50,15 @@ Para aprender sin abrumarte, te recomendamos seguir este orden de lectura:
     * Colores, fuentes y estilos modernos para todos los controles visuales.
 14. [Formularios_Principales.md]:
     * Explicación de `FrmLogin.vb`, `FrmMain.vb`, `FrmVentasPOS.vb`, `FrmProductos.vb`, `FrmStock.vb`, etc.
+
+---
+
+### Fase 5: Preparación para la Defensa Oral
+15. [05_Guia_Defensa_Oral/Guia_Defensa_Proyecto.md](file:///c:/Users/gonza/Desktop/Proyecto/Documentacion_Codigo/05_Guia_Defensa_Oral/Guia_Defensa_Proyecto.md):
+    * Resumen ejecutivo ("Elevator Pitch" de 1 minuto).
+    * Justificación arquitectónica y seguridad por roles.
+    * Preguntas típicas del profesor y respuestas técnicas exactas.
+    * Guía paso a paso para la demostración en vivo (Live Demo).
 
 ---
 

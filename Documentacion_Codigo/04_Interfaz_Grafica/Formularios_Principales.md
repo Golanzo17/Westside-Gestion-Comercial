@@ -1,6 +1,6 @@
 # 🖥️ Explicación de los Formularios y Ventanas (Forms)
 
-* **Ubicación**: [GestionComercial/Forms/](file:///c:/Users/gonza/Desktop/Proyecto/GestionComercial/Forms/)
+* **Ubicación**: 
 * **Propósito**: Contiene todas las pantallas gráficas con las que interactúa el usuario final.
 
 ---
@@ -35,10 +35,32 @@ AddHandler btnCobrar.Click, AddressOf BtnCobrar_Click
 
 ### 2. [FrmMain.vb](Menú Principal y Navegación)
 * **Estructura**:
-  * **Barra lateral izquierda (`pnlSidebar`)**: Botones de navegación (Punto de Venta, Catálogo, Stock, Caja, Clientes, Reportes, Sincronización Web, etc.).
-  * **Panel de contenido central (`pnlContainer`)**: El espacio donde se cargan los diferentes formularios hijos sin abrir ventanas flotantes desordenadas.
-* **Seguridad por Roles**:
-  * Al iniciar, comprueba `AuthService.IsAdmin`. Si el usuario es un cajero o vendedor, oculta automáticamente los botones de "Usuarios", "Configuración" y "Reportes Gerenciales".
+  * **Barra lateral izquierda (`pnlSidebar`)**: Botones de navegación (Panel Principal, Punto de Venta, Catálogo, Stock, Clientes, Caja, Reportes, Usuarios, Configuración).
+  * **Barra superior (`pnlTopBar`)**: Sesión activa con distintivo del rol actual, indicador de estado de caja en tiempo real, botón de venta rápida (F1) y reloj sincronizado.
+  * **Panel de contenido central (`pnlContentHost`)**: El espacio donde se cargan los diferentes formularios hijos sin abrir ventanas flotantes desordenadas.
+* **Seguridad y Segregación de Funciones por Rol (Principle of Least Privilege)**:
+  El sistema implementa una arquitectura deliberada de **segregación corporativa de funciones** para prevenir fraudes internos y garantizar auditoría contable. Cada rol posee un ámbito operativo claramente delimitado:
+  * **Administrador (Perfil Auditor / TI / Propietario)**:
+    * Gestiona la infraestructura del sistema: Configuración general del local, altas/bajas de empleados en el módulo de Usuarios, mantenimiento de Catálogo y visualización de Reportes/Métricas.
+    * **Restricción intencional**: No opera el Punto de Venta (POS) ni abre turnos de Caja física diaria, preservando la separación estricta entre la administración/auditoría del negocio y el manejo material de dinero en efectivo.
+  * **Gerente (Perfil Supervisión / Operaciones)**:
+    * Supervisa el salón y la logística: Control de Stock y reposición, recepción de mercadería, altas y modificaciones de precios y prendas en Catálogo, gestión del equipo en Usuarios, apertura y arqueo de Caja, y análisis en Reportes.
+    * Posee facultad de **autorización presencial** (mediante contraseña) para operaciones sensibles de los vendedores (descuentos mayores al 15%, retiros manuales de caja o ajustes de inventario).
+  * **Vendedor (Perfil Atención al Público / Caja de Mostrador)**:
+    * Enfocado en la atención operativa: Venta rápida en Punto de Venta (POS), operación de su turno de Caja diaria (apertura, cobros y arqueo), consulta del Catálogo de prendas y gestión de la cartera de Clientes.
+    * No tiene acceso a la Configuración global del sistema ni a la edición libre de Stock o creación de cuentas de usuario.
+
+| Módulo / Función | Administrador | Gerente | Vendedor |
+| :--- | :---: | :---: | :---: |
+| **Panel Principal (KPIs)** | ✅ Visible | ✅ Visible | ✅ Visible |
+| **Punto de Venta (POS)** | ❌ Restringido (Auditoría) | ✅ Operativo | ✅ Operativo |
+| **Catálogo y Talles** | ✅ Gestión total | ✅ Gestión total | ✅ Solo consulta / venta |
+| **Stock y Reposición** | ❌ Restringido | ✅ Operativo | 🔒 Requiere Autorización |
+| **Caja Diaria y Arqueo** | ❌ Restringido (Auditoría) | ✅ Operativo | ✅ Operativo (su turno) |
+| **Clientes** | ✅ Visible | ✅ Visible | ✅ Visible |
+| **Reportes y Ventas** | ✅ Completo | ✅ Completo | ✅ Métricas de ventas |
+| **Usuarios y Equipo** | ✅ Gestión total | ✅ Gestión de equipo | ❌ Restringido |
+| **Configuración General** | ✅ Exclusivo | ❌ Restringido | ❌ Restringido |
 
 ---
 
@@ -79,7 +101,7 @@ Es la pantalla más utilizada en el mostrador del local:
 ---
 
 ### 6. [FrmUsuarios.vb] (Gestión de Usuarios y Equipo)
-* Permite dar de alta, modificar y desactivar empleados con sus roles (Administrador, Vendedor, Cajero).
+* Permite dar de alta, modificar y desactivar empleados con sus roles (Administrador, Gerente, Vendedor).
 * Campos de información personal: Nombre, Apellido, DNI (con validación de duplicados), Teléfono, Email, Ciudad, Dirección y Notas.
 * Gestión segura de contraseñas mediante hashing PBKDF2 y control de bloqueo por intentos fallidos.
 

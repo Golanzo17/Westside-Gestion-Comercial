@@ -1,10 +1,21 @@
+' ARCHIVO: CajaService.vb
+' PROPÓSITO: Lógica de negocio de turnos de caja, arqueo de efectivo y control de gastos.
+' En este servicio resolvemos el control financiero diario del salón de ventas:
+' 1. Apertura de Turno: Exige registrar el fondo inicial para cambio antes de vender.
+' 2. Movimientos Manuales en Transacción: Registra retiros (egresos) o ingresos extraordinarios
+'    actualizando de inmediato el dinero que debería haber en el cajón.
+' 3. Arqueo y Cierre Ciego: Cuando el cajero cuenta el dinero físico real (montoReal),
+'    el sistema calcula automáticamente la diferencia (Monto Real - Monto Esperado),
+'    dejando registro transparente de si hubo sobrante o faltante de dinero en el turno.
+
 Imports System.Data
-Imports MySqlConnector
 Imports GestionComercial.Data
 Imports GestionComercial.Models
 
 Namespace Services
     Public Class CajaService
+
+        ' Busca si existe una caja con estado "Abierta".
 
         Public Function GetCajaAbierta(usuarioId As Integer) As Caja
             Dim query As String = "SELECT c.*, u.nombre_completo AS usuario_nombre " &
@@ -19,6 +30,8 @@ Namespace Services
             Dim row As DataRow = dt.Rows(0)
             Return MapCaja(row)
         End Function
+
+        ' Abre un nuevo turno de caja con el monto de cambio inicial.
 
         Public Function AbrirCaja(usuarioId As Integer, montoInicial As Decimal, ByRef errorMessage As String) As Caja
             Try
@@ -45,6 +58,9 @@ Namespace Services
             End Try
         End Function
 
+        ' Movimientos Manuales con Transacción Atómica.
+        ' Si el vendedor paga un flete o saca cambio, guardamos el comprobante en
+        ' movimientos_caja y recalculamos monto_esperado en cajas dentro de la misma transacción.
         Public Function RegistrarMovimiento(cajaId As Integer, usuarioId As Integer, tipo As String, concepto As String, monto As Decimal, referencia As String, ByRef errorMessage As String) As Boolean
             Try
                 Using conn As Common.DbConnection = DatabaseHelper.GetConnection()
@@ -63,7 +79,7 @@ Namespace Services
                                 cmdMov.ExecuteNonQuery()
                             End Using
 
-                            ' Actualizar totales en la caja
+                            ' Actualizamos los acumuladores y el dinero esperado en la caja
                             Dim updateCol As String = If(tipo = "Ingreso", "`total_ingresos` = `total_ingresos` + @monto", "`total_egresos` = `total_egresos` + @monto")
                             Dim updateCaja As String = $"UPDATE `cajas` SET {updateCol}, `monto_esperado` = `monto_inicial` + `total_ventas_efectivo` + `total_ingresos` - `total_egresos` WHERE `id` = @cajaId;"
                             Using cmdCaja = DatabaseHelper.CreateCommand(conn, updateCaja, trans)
@@ -88,9 +104,12 @@ Namespace Services
             End Try
         End Function
 
+        ' Arqueo y Cierre de Turno.
+        ' El cajero ingresa el dinero físico que contó en mano (montoReal).
+        ' El sistema calcula: Diferencia = Monto Real - Monto Esperado
+        ' Si es 0: Arqueo exacto. Si es positivo: Sobrante. Si es negativo: Faltante.
         Public Function CerrarCaja(cajaId As Integer, montoReal As Decimal, observaciones As String, ByRef errorMessage As String) As Boolean
             Try
-                ' Calcular monto esperado final
                 Dim queryGet As String = "SELECT * FROM `cajas` WHERE `id` = @cajaId LIMIT 1;"
                 Dim dt As DataTable = DatabaseHelper.ExecuteQuery(queryGet, New Dictionary(Of String, Object) From {{"@cajaId", cajaId}})
                 If dt.Rows.Count = 0 Then

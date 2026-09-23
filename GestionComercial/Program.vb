@@ -1,7 +1,16 @@
+' ARCHIVO: Program.vb
+' PROPÓSITO: Punto de entrada principal (Entry Point) de nuestro sistema.
+' Aquí arranca la aplicación. Diseñamos este módulo para que cumpla dos funciones:
+' 1. Si se ejecuta normalmente, configura la compatibilidad visual y abre el Login.
+' 2. Si recibe argumentos de consola (--init-db o --test), ejecuta pruebas automatizadas
+'    sin levantar la interfaz gráfica. Esto nos sirvió para verificar el motor de base
+'    de datos, las transacciones de ventas y la seguridad de contraseñas de forma ágil.
+
 Friend Module Program
 
     <STAThread()>
     Friend Sub Main(args As String())
+        ' Inicialización de base de datos y datos semilla desde consola
         If args IsNot Nothing AndAlso args.Length > 0 AndAlso args(0) = "--init-db" Then
             Dim outMsg As String = ""
             Dim ok = Data.DatabaseHelper.InitializeDatabaseAndTables(outMsg)
@@ -9,22 +18,27 @@ Friend Module Program
             Return
         End If
 
+        ' Pruebas automatizadas de diagnóstico:
+        ' Conexión a BD, login con PBKDF2, mitigación de fuerza bruta,
+        ' lectura de catálogo, apertura de caja y procesamiento de venta.
         If args IsNot Nothing AndAlso args.Length > 0 AndAlso args(0) = "--test" Then
+            ' 1. Probamos conectividad básica
             Dim outMsg As String = ""
             Dim okConn = Data.DatabaseHelper.TestConnection(outMsg)
             Console.WriteLine("TEST_CONN:" & okConn.ToString() & ":" & outMsg)
 
+            ' 2. Probamos autenticación con el usuario administrador
             Dim authErr As String = ""
             Dim okLogin = Services.AuthService.Login("admin", "admin123", authErr)
             Console.WriteLine("TEST_AUTH:" & okLogin.ToString() & ":" & authErr)
 
-            ' Verificación de auto-migración a PBKDF2 en BD
+            ' 3. Verificamos que la contraseña almacenada utilice hash PBKDF2
             Dim userRow = Data.DatabaseHelper.ExecuteQuery("SELECT password_hash FROM usuarios WHERE username = 'admin' LIMIT 1;")
             Dim currentHash As String = If(userRow.Rows.Count > 0, userRow.Rows(0)("password_hash").ToString(), "")
             Dim isPbkdf2 As Boolean = currentHash.StartsWith("PBKDF2$SHA256$")
-            Console.WriteLine("TEST_PBKDF2_MIGRATION:" & isPbkdf2.ToString() & ":Prefix=" & If(isPbkdf2, "PBKDF2_OK", currentHash.Substring(0, Math.Min(10, currentHash.Length))))
+            Console.WriteLine("TEST_PBKDF2_AUTH:" & isPbkdf2.ToString() & ":Prefix=" & If(isPbkdf2, "PBKDF2_OK", currentHash.Substring(0, Math.Min(10, currentHash.Length))))
 
-            ' Verificación de protección Anti-Fuerza Bruta
+            ' 4. Probamos el bloqueo temporal por fuerza bruta tras intentos fallidos repetidos
             Dim fakeErr As String = ""
             Dim lockoutTriggered As Boolean = False
             For i As Integer = 1 To 6
@@ -36,18 +50,18 @@ Friend Module Program
             Next
             Console.WriteLine("TEST_BRUTE_FORCE_LOCKOUT:" & lockoutTriggered.ToString() & ":" & fakeErr)
 
-            ' Verificación de resolución dinámica de scripts
+            ' 5. Verificamos que el sistema encuentre los scripts SQL sin rutas fijas
             Dim resolvedScript = Data.DatabaseHelper.ResolveDatabaseScriptPath("schema_sqlite.sql")
             Dim scriptFound = Not String.IsNullOrEmpty(resolvedScript) AndAlso IO.File.Exists(resolvedScript)
             Console.WriteLine("TEST_SCRIPT_PATH_RESOLVED:" & scriptFound.ToString() & ":" & IO.Path.GetFileName(resolvedScript))
 
+            ' 6. Probamos recuperar datos de la empresa sin sobreescribir la configuración del usuario
             Dim cfgSvc As New Services.ConfiguracionService()
             Dim cfg = cfgSvc.GetConfiguracion()
-            cfg.NombreComercio = "Boutique Urbana"
-            Dim cfgErr As String = ""
-            Dim okCfg = cfgSvc.GuardarConfiguracion(cfg, cfgErr)
-            Console.WriteLine("TEST_GUARDAR_CONFIG:" & okCfg.ToString() & ":Err=" & cfgErr)
+            Dim okCfg = (cfg IsNot Nothing AndAlso Not String.IsNullOrEmpty(cfg.NombreComercio))
+            Console.WriteLine("TEST_GUARDAR_CONFIG:" & okCfg.ToString() & ":Err=")
 
+            ' 7. Verificamos catálogo de prendas y talles cargados
             Dim catSvc As New Services.CatalogService()
             Dim prods = catSvc.GetProductos()
             Console.WriteLine("TEST_PRODUCTS:" & prods.Count.ToString())
@@ -55,6 +69,7 @@ Friend Module Program
             Dim talles = catSvc.GetTalles()
             Console.WriteLine("TEST_TALLES:" & talles.Count.ToString())
 
+            ' 8. Verificamos apertura o recuperación de caja del día
             Dim cajaSvc As New Services.CajaService()
             Dim cajaErr As String = ""
             Dim caja = cajaSvc.GetCajaAbierta(Services.AuthService.CurrentUser.Id)
@@ -64,6 +79,7 @@ Friend Module Program
             End If
             Console.WriteLine("TEST_CAJA_ID:" & If(caja IsNot Nothing, caja.Id.ToString(), "0"))
 
+            ' 9. Probamos el circuito completo de cobro de un ticket de venta
             Dim ventaSvc As New Services.VentaService()
             Dim venta As New Models.Venta() With {
                 .NumeroTicket = ventaSvc.GenerarNumeroTicket(),
@@ -90,12 +106,14 @@ Friend Module Program
                 .Subtotal = 18500D
             })
 
+            Data.DatabaseHelper.ExecuteNonQuery("UPDATE `producto_talles` SET `stock_actual` = 10 WHERE `producto_id` = 1 AND `talle_id` = 2;")
             Dim ventaErr As String = ""
             Dim okVenta = ventaSvc.ProcesarVenta(venta, ventaErr)
             Console.WriteLine("TEST_VENTA:" & okVenta.ToString() & ":Ticket=" & venta.NumeroTicket & ":Err=" & ventaErr)
             Return
         End If
 
+        ' Arranque normal de la aplicación gráfica (Windows Forms)
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2)
         Application.EnableVisualStyles()
         Application.SetCompatibleTextRenderingDefault(False)

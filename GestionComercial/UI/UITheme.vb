@@ -1,13 +1,25 @@
+' ARCHIVO: UITheme.vb
+' PROPÓSITO: Sistema de Diseño Centralizado (Design System, Paleta, Tipografías y Helpers UI)
+' - Construcción de la UI 100% por Código:
+'   1. En lugar de coordenadas fijas que se descalibran con resoluciones High-DPI,
+'      instanciar y estilizar por código mediante 'UITheme' da un diseño modular y con control de cada píxel.
+'   2. Cambios de tema o colores corporativos se propagan instantáneamente modificando las constantes aquí.
+' - Características Incorporadas:
+'   - Paleta cromática Slate e Indigo limpia y descansada para la vista.
+'   - Bordes redondeados dinámicos mediante regiones GDI+ (GraphicsPath).
+'   - Tablas DataGridView con hover interactivo de filas y cabeceras contrastadas.
+'   - Sistema de Toasts flotantes no invasivos para notificaciones inmediatas.
+
+
 Imports System.Drawing
 Imports System.Drawing.Drawing2D
 Imports System.Windows.Forms
 
 Namespace UI
     Public Module UITheme
-        ' ═══════════════════════════════════════════════════════════
-        ' PALETA PREMIUM – Colores más vibrantes y modernos
-        ' ═══════════════════════════════════════════════════════════
-        Public ReadOnly ColorPrimary As Color = Color.FromArgb(99, 102, 241)        ' Indigo 500 más vivo
+        ' Paleta de colores institucionales
+
+        Public ReadOnly ColorPrimary As Color = Color.FromArgb(99, 102, 241)        ' Indigo 500
         Public ReadOnly ColorPrimaryDark As Color = Color.FromArgb(79, 70, 229)     ' Indigo 600
         Public ReadOnly ColorPrimaryLight As Color = Color.FromArgb(224, 231, 255)  ' Indigo 100
         Public ReadOnly ColorSecondary As Color = Color.FromArgb(15, 23, 42)        ' Slate 900
@@ -32,7 +44,7 @@ Namespace UI
         Public ReadOnly ColorInfo As Color = Color.FromArgb(59, 130, 246)           ' Blue 500
         Public ReadOnly ColorRowHover As Color = Color.FromArgb(238, 242, 255)      ' Hover fila tabla
 
-        ' Tipografías
+        ' Tipografías institucionales consistentes (Segoe UI)
         Public ReadOnly FontHeading As New Font("Segoe UI", 16.0F, FontStyle.Bold)
         Public ReadOnly FontSubheading As New Font("Segoe UI", 12.0F, FontStyle.Bold)
         Public ReadOnly FontRegular As New Font("Segoe UI", 9.5F, FontStyle.Regular)
@@ -42,9 +54,8 @@ Namespace UI
         Public ReadOnly FontKpiValue As New Font("Segoe UI", 16.0F, FontStyle.Bold)
         Public ReadOnly FontButton As New Font("Segoe UI", 9.5F, FontStyle.Bold)
 
-        ' ═══════════════════════════════════════════════════════════
-        ' BOTONES – Estilo plano con bordes redondeados
-        ' ═══════════════════════════════════════════════════════════
+        ' Botones con estilo plano y bordes redondeados
+
         Public Sub StyleButton(btn As Button, Optional btnType As String = "Primary", Optional rounded As Boolean = True)
             btn.FlatStyle = FlatStyle.Flat
             btn.FlatAppearance.BorderSize = 0
@@ -99,7 +110,9 @@ Namespace UI
             End If
         End Sub
 
-        ''' <summary>Aplica esquinas redondeadas a cualquier control.</summary>
+        ''' <summary>
+        ''' Aplica esquinas redondeadas modernas a cualquier control WinForms mediante GraphicsPath.
+        ''' </summary>
         Public Sub ApplyRoundedRegion(ctrl As Control, radius As Integer)
             Try
                 Dim path As New GraphicsPath()
@@ -111,13 +124,12 @@ Namespace UI
                 path.CloseFigure()
                 ctrl.Region = New Region(path)
             Catch
-                ' Si el control aún no tiene tamaño, ignorar
+                ' Si el control aún no tiene tamaño renderizado, se ignora de forma segura
             End Try
         End Sub
 
-        ' ═══════════════════════════════════════════════════════════
-        ' DATAGRIDVIEW – Con hover en filas y modo lectura por defecto
-        ' ═══════════════════════════════════════════════════════════
+        ' DataGridView: formato de grillas con hover interactivo en filas
+
         Public Sub StyleDataGrid(dgv As DataGridView, Optional readOnlyGrid As Boolean = True)
             dgv.ReadOnly = readOnlyGrid
             dgv.AllowUserToAddRows = False
@@ -173,9 +185,8 @@ Namespace UI
                                            End Sub
         End Sub
 
-        ' ═══════════════════════════════════════════════════════════
-        ' TEXTBOX
-        ' ═══════════════════════════════════════════════════════════
+        ' Cajas de texto y selectores
+
         Public Sub StyleTextBox(txt As TextBox)
             txt.BorderStyle = BorderStyle.FixedSingle
             txt.Font = FontRegular
@@ -190,9 +201,16 @@ Namespace UI
             cbo.FlatStyle = FlatStyle.Flat
         End Sub
 
-        ' ═══════════════════════════════════════════════════════════
-        ' TOAST / NOTIFICACIÓN INLINE – Aparece arriba y se va solo
-        ' ═══════════════════════════════════════════════════════════
+        ' Mensajes flotantes temporales (toasts no bloqueantes)
+
+        ''' <summary>
+        ''' Despliega un mensaje flotante temporal (toast) en la parte superior del formulario.
+        ''' 
+        ''' DECISIÓN DE UX:
+        ''' En un punto de venta (POS), el cajero necesita velocidad. Interrumpir el flujo
+        ''' con ventanas emergentes modales (MessageBox.Show) ralentiza el cobro en horas pico.
+        ''' Los toasts confirman operaciones en 3 segundos sin bloquear el teclado ni el lector.
+        ''' </summary>
         Public Sub ShowToast(parentControl As Control, message As String, Optional toastType As String = "Success", Optional durationMs As Integer = 3000)
             Dim backColor As Color
             Dim icon As String
@@ -228,7 +246,7 @@ Namespace UI
             }
             toast.Controls.Add(lblMsg)
 
-            ' Botón cerrar
+            ' Botón para cerrar manualmente antes de que expire el temporizador
             Dim btnClose As New Label() With {
                 .Text = "×",
                 .Font = New Font("Segoe UI", 14.0F, FontStyle.Bold),
@@ -245,6 +263,7 @@ Namespace UI
             toast.BringToFront()
             ApplyRoundedRegion(toast, 10)
 
+            ' Temporizador para autodestrucción suave
             Dim t As New Timer() With {.Interval = durationMs}
             AddHandler t.Tick, Sub()
                                    t.Stop()
@@ -259,9 +278,12 @@ Namespace UI
             t.Start()
         End Sub
 
-        ' ═══════════════════════════════════════════════════════════
-        ' KPI CARDS – Tarjetas del dashboard
-        ' ═══════════════════════════════════════════════════════════
+        ' Componente para tarjetas de métricas (KPI Cards)
+
+        ''' <summary>
+        ''' Genera una tarjeta métrica con esquinas redondeadas y barra lateral de acento de color.
+        ''' Usado tanto en el Dashboard principal como en los reportes comerciales.
+        ''' </summary>
         Public Function CreateKpiCard(title As String, value As String, subtitle As String, accentColor As Color) As Panel
             Dim pnl As New Panel() With {
                 .BackColor = ColorSurface,
@@ -271,7 +293,7 @@ Namespace UI
             }
             ApplyRoundedRegion(pnl, 10)
 
-            ' Borde izquierdo de acento
+            ' Franja vertical de acento visual (Verde, Azul, Ámbar, etc.)
             Dim strip As New Panel() With {
                 .BackColor = accentColor,
                 .Dock = DockStyle.Left,

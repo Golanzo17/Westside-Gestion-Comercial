@@ -4,6 +4,21 @@ Imports GestionComercial.Models
 Imports GestionComercial.Services
 Imports GestionComercial.UI
 
+' ARCHIVO: FrmReportes.vb
+' PROPÓSITO: Inteligencia Comercial, Métricas de Facturación y Anulación de Ventas
+' - Separación de Privilegios Financieros:
+'   Si el usuario actual tiene el rol 'Vendedor', se ocultan automáticamente
+'   las tarjetas KPI de facturación total y el listado de tickets globales.
+'   Un vendedor solo debe ver el 'Ranking de prendas más vendidas' para asesorar
+'   al cliente sobre tendencias de moda sin acceder a la recaudación total de la empresa.
+' - Métricas de Pago (Efectivo vs Digital):
+'   Separamos el dinero recaudado en efectivo del recaudado en medios digitales
+'   (tarjetas, QR, transferencias) para facilitar el control cruzado con los arqueos de caja.
+' - Anulación de Ventas con Trazabilidad:
+'   Anular un comprobante fiscal/comercial es una operación crítica:
+'   Exige confirmación de credenciales de Gerente y revierte automáticamente
+'   el stock al inventario dentro de una transacción ACID.
+
 Namespace Forms
     Public Class FrmReportes
         Inherits Form
@@ -36,7 +51,7 @@ Namespace Forms
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
 
-            ' Header
+            ' Header superior institucional
             Dim pnlHeader As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 60,
@@ -52,7 +67,7 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Toolbar de Fechas con FlowLayoutPanel para evitar recorte de botones
+            ' Toolbar de Fechas con FlowLayoutPanel para garantizar fluidez
             Dim pnlFilter As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 55,
@@ -82,7 +97,7 @@ Namespace Forms
             flpFilter.Controls.AddRange({lblD, dtpDesde, lblH, dtpHasta, btnFiltrar, btnAnularVenta})
             pnlFilter.Controls.Add(flpFilter)
 
-            ' Tarjetas KPI
+            ' Tarjetas KPI para visualización rápida de la salud financiera del comercio
             Dim pnlKpis As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 105,
@@ -114,7 +129,7 @@ Namespace Forms
                 .Padding = New Point(12, 6)
             }
 
-            ' Tab 1: Ventas
+            ' Tab 1: Ventas y Comprobantes
             Dim tabVentas As New TabPage("Listado de ventas y tickets emitidos") With {.BackColor = UITheme.ColorBackground}
             dgvVentas = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvVentas)
@@ -122,7 +137,7 @@ Namespace Forms
             tabVentas.Controls.Add(dgvVentas)
             tabs.TabPages.Add(tabVentas)
 
-            ' Tab 2: Ranking Prendas
+            ' Tab 2: Ranking de Artículos
             Dim tabRanking As New TabPage("Ranking de prendas más vendidas") With {.BackColor = UITheme.ColorBackground}
             dgvRanking = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvRanking)
@@ -130,6 +145,7 @@ Namespace Forms
             tabRanking.Controls.Add(dgvRanking)
             tabs.TabPages.Add(tabRanking)
 
+            ' Si es rol Vendedor: restringimos el acceso a la recaudación total
             If AuthService.IsVendor Then
                 tabs.TabPages.Remove(tabVentas)
                 pnlKpis.Visible = False
@@ -198,6 +214,10 @@ Namespace Forms
             dgvRanking.Columns("Recaudado").DefaultCellStyle.Font = UITheme.FontBold
         End Sub
 
+        ''' <summary>
+        ''' Consolida las métricas del período seleccionado.
+        ''' Calcula los totales facturados discriminados por medio de pago y alimenta el ranking comercial.
+        ''' </summary>
         Private Sub LoadReportes()
             Dim desde = dtpDesde.Value.Date
             Dim hasta = dtpHasta.Value.Date
@@ -221,6 +241,7 @@ Namespace Forms
                         totalDig += v.Total
                     End If
                 Else
+                    ' Si la venta fue anulada, la atenuamos visualmente para no confundir al usuario
                     dgvVentas.Rows(rIdx).DefaultCellStyle.ForeColor = UITheme.ColorTextMuted
                 End If
             Next
@@ -230,7 +251,7 @@ Namespace Forms
             lblEfectivo.Text = totalEfec.ToString("C2")
             lblDigital.Text = totalDig.ToString("C2")
 
-            ' Cargar Ranking
+            ' Cargar ranking de los 20 artículos más vendidos en el intervalo
             Dim top = reporteService.GetTopProductosVendidos(20, desde, hasta)
             dgvRanking.Rows.Clear()
             For Each p In top
@@ -238,6 +259,10 @@ Namespace Forms
             Next
         End Sub
 
+        ''' <summary>
+        ''' Anulación de venta con reversión de inventario y auditoría.
+        ''' Requiere autorización obligatoria de Gerente y justificación de motivo (cambio de prenda, falla, etc.).
+        ''' </summary>
         Private Sub BtnAnularVenta_Click(sender As Object, e As EventArgs)
             If AuthService.IsAdmin AndAlso Not AuthService.SolicitarAutorizacionManager(Me, "Anular comprobantes de venta emitidos requiere autorización de un Gerente.") Then
                 Return
@@ -256,6 +281,7 @@ Namespace Forms
                     Return
                 End If
 
+                ' Diálogo modal para capturar el motivo de la anulación para auditoría
                 Dim prompt As New Form() With {
                     .Text = "Anular Venta y Devolver Stock",
                     .Size = New Size(420, 240),

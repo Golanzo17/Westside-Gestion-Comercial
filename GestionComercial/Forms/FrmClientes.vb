@@ -4,6 +4,18 @@ Imports GestionComercial.Models
 Imports GestionComercial.Services
 Imports GestionComercial.UI
 
+' ARCHIVO: FrmClientes.vb
+' PROPÓSITO: Directorio Comercial, Fidelización y Gestión de Datos de Clientes
+' - Registro de Clientes en Indumentaria:
+'   Permite almacenar historial de compras, talles preferidos en el campo 'Notas',
+'   y fecha de nacimiento para promociones de fidelización.
+' - Integridad del Sistema ('Consumidor Final'):
+'   El cliente con ID = 1 corresponde a 'Consumidor Final' (ventas de mostrador anónimas).
+'   Se bloquea su eliminación para preservar la integridad referencial de la tabla 'ventas'.
+' - Borrado Lógico:
+'   Al igual que en usuarios y productos, los clientes se desactivan (Activo = 0)
+'   para conservar la auditoría de ventas históricas asociadas a su DNI/CUIT.
+
 Namespace Forms
     Public Class FrmClientes
         Inherits Form
@@ -30,7 +42,7 @@ Namespace Forms
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
 
-            ' Header
+            ' Header superior institucional
             Dim pnlHeader As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 60,
@@ -46,7 +58,7 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Toolbar con FlowLayoutPanel para evitar recorte de botones
+            ' Toolbar con FlowLayoutPanel para adaptar botones en resoluciones variadas
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 55,
@@ -84,7 +96,7 @@ Namespace Forms
             flpToolbar.Controls.AddRange({lblB, txtBuscar, btnBuscar, btnNuevo, btnEditar, btnEliminar})
             pnlToolbar.Controls.Add(flpToolbar)
 
-            ' Grilla
+            ' Grilla de clientes registrados
             Dim pnlGrid As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(15)}
             dgvClientes = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvClientes)
@@ -94,12 +106,12 @@ Namespace Forms
                                                 End Sub
             pnlGrid.Controls.Add(dgvClientes)
 
-            ' Footer
+            ' Footer con conteo dinámico
             Dim pnlFooter As New Panel() With {.Dock = DockStyle.Bottom, .Height = 35, .BackColor = UITheme.ColorSurfaceMuted, .Padding = New Padding(15, 8, 15, 8)}
             lblTotal = New Label() With {.Text = "Clientes: 0", .Font = UITheme.FontBold, .ForeColor = UITheme.ColorTextSecondary, .AutoSize = True}
             pnlFooter.Controls.Add(lblTotal)
 
-            ' Orden exacto de Docking: Fill primero, Bottom segundo, Toolbar tercero, Header último
+            ' Orden exacto de Docking de WinForms
             Me.Controls.Add(pnlGrid)
             Me.Controls.Add(pnlFooter)
             Me.Controls.Add(pnlToolbar)
@@ -133,6 +145,9 @@ Namespace Forms
             dgvClientes.Columns("FechaNac").Width = 100
         End Sub
 
+        ''' <summary>
+        ''' Carga la lista de clientes filtrando por nombre o DNI de forma segura con parámetros SQL.
+        ''' </summary>
         Private Sub LoadClientes()
             Dim lista = clienteService.GetClientes(txtBuscar.Text.Trim(), True)
             dgvClientes.Rows.Clear()
@@ -164,6 +179,10 @@ Namespace Forms
             End If
         End Sub
 
+        ''' <summary>
+        ''' Control de baja lógica de clientes.
+        ''' Verificamos que no sea el cliente ID=1 (Consumidor Final) antes de procesar la baja.
+        ''' </summary>
         Private Sub BtnEliminar_Click(sender As Object, e As EventArgs)
             If dgvClientes.CurrentRow IsNot Nothing Then
                 Dim id As Integer = Convert.ToInt32(dgvClientes.CurrentRow.Cells("Id").Value)
@@ -187,6 +206,9 @@ Namespace Forms
 
     End Class
 
+    ''' <summary>
+    ''' Diálogo modal para dar de alta un nuevo cliente o modificar datos de contacto y fidelización.
+    ''' </summary>
     Public Class FrmClienteEditor
         Inherits Form
 
@@ -304,6 +326,10 @@ Namespace Forms
             End If
         End Sub
 
+        ''' <summary>
+        ''' Valida campos obligatorios y delega en ClienteService.GuardarCliente
+        ''' que valida unicidad de DNI/CUIT antes del INSERT o UPDATE.
+        ''' </summary>
         Private Sub BtnGuardar_Click(sender As Object, e As EventArgs)
             If String.IsNullOrWhiteSpace(txtDni.Text) OrElse String.IsNullOrWhiteSpace(txtNombre.Text) Then
                 MessageBox.Show("El DNI y el Nombre son obligatorios.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)

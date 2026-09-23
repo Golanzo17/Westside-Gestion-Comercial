@@ -1,3 +1,15 @@
+' ARCHIVO: VentaService.vb
+' PROPÓSITO: Lógica de negocio de cobros, transacciones atómicas y control de inventario.
+' Este es el servicio central del circuito comercial:
+' 1. Transacciones ACID (DbTransaction): Todo el cobro se ejecuta como una sola unidad atómica.
+'    Si falla el descuento de stock de una sola prenda, se hace Rollback y no se cobra nada.
+' 2. Formato de Comprobantes Único: Los tickets se generan con numeración cronológica
+'    "TICK-YYYYMMDD-0001", garantizando trazabilidad contable diaria.
+' 3. Auditoría de Stock en Vivo: No solo restamos del inventario, sino que insertamos un
+'    registro en movimientos_stock asociando el ticket y el vendedor que hizo la operación.
+' 4. Impacto Inmediato en Caja: Actualiza en tiempo real el efectivo o dinero digital
+'    esperado en el turno abierto de caja.
+
 Imports System.Data
 Imports System.Data.Common
 Imports GestionComercial.Data
@@ -6,6 +18,8 @@ Imports GestionComercial.Models
 Namespace Services
     Public Class VentaService
 
+        ' Genera el número secuencial de ticket para el día de hoy (ej: TICK-20260922-0001).
+        ' Busca el último emitido hoy, extrae el número y le suma 1 con formato de 4 dígitos.
         Public Function GenerarNumeroTicket(Optional conn As DbConnection = Nothing, Optional trans As DbTransaction = Nothing) As String
             Dim hoyStr = DateTime.Now.ToString("yyyyMMdd")
             Dim prefijo = "TICK-" & hoyStr & "-"
@@ -42,6 +56,15 @@ Namespace Services
             Return prefijo & nextSeq.ToString("D4")
         End Function
 
+        ' Procesamiento de Venta con Transacción ACID.
+        ' Flujo seguro de 5 pasos:
+        '   Paso 0: Garantizamos que el número de ticket no colisione con otro usuario.
+        '   Paso 1: Validamos que haya stock físico suficiente de cada talle y color.
+        '   Paso 2: Descontamos las unidades y registramos el movimiento en la auditoría.
+        '   Paso 3: Insertamos la cabecera del ticket en la tabla ventas.
+        '   Paso 4: Insertamos cada artículo vendido en detalle_ventas.
+        '   Paso 5: Sumamos el importe a la caja activa del vendedor (Efectivo o Digital).
+        ' Si ocurre cualquier error en el camino, se ejecuta trans.Rollback() y no se guarda nada.
         Public Function ProcesarVenta(venta As Venta, ByRef errorMessage As String) As Boolean
             If venta Is Nothing Then
                 errorMessage = "La información de la venta no es válida."
@@ -58,30 +81,31 @@ Namespace Services
                     conn.Open()
                     Using trans = conn.BeginTransaction()
                         Try
-                            ' 0. Garantizar número correlativo de ticket
+                            ' Paso 0: Verificamos o generamos el correlativo único del comprobante
                             GarantizarNumeroTicket(conn, trans, venta)
 
-                            ' 1. Validar disponibilidad de stock sin lanzar excepciones
+                            ' Paso 1: Verificamos stock físico disponible para cada variante elegida
                             If Not ValidarStockDisponible(conn, trans, venta.Detalles, errorMessage) Then
                                 trans.Rollback()
                                 Return False
                             End If
 
-                            ' 2. Descontar stock y registrar trazabilidad de movimientos
+                            ' Paso 2: Descontamos stock e insertamos los registros en movimientos_stock (Kardex)
                             DescontarStockYAuditar(conn, trans, venta.Detalles, venta.NumeroTicket, venta.UsuarioId)
 
-                            ' 3. Insertar encabezado de la venta
+                            ' Paso 3: Guardamos la cabecera del ticket en la tabla ventas
                             Dim ventaId = InsertarVenta(conn, trans, venta)
                             venta.Id = ventaId
 
-                            ' 4. Insertar detalles de la venta
+                            ' Paso 4: Guardamos los renglones comprados en detalle_ventas
                             InsertarDetalles(conn, trans, ventaId, venta.Detalles)
 
-                            ' 5. Actualizar totales de la caja activa si aplica
+                            ' Paso 5: Impactamos el dinero cobrado en la caja activa del turno
                             If venta.CajaId > 0 Then
                                 ActualizarCajaVenta(conn, trans, venta.CajaId, venta.MetodoPago, venta.Total)
                             End If
 
+                            ' Si todo salió perfecto, confirmamos la transacción de forma atómica
                             trans.Commit()
                             errorMessage = String.Empty
                             Return True
@@ -144,6 +168,13 @@ Namespace Services
             Return list
         End Function
 
+        ' Anulación Segura de Venta con Reversa Transaccional.
+        ' Si un cliente devuelve prendas o hubo un error de cobro:
+        ' 1. Verificamos que la venta exista y no haya sido anulada previamente.
+        ' 2. Restituimos el stock físico sumando las unidades a producto_talles.
+        ' 3. Auditamos en movimientos_stock con motivo "Anulacion_Venta" y el usuario supervisor.
+        ' 4. Marcamos el estado del ticket como "Anulada".
+        ' 5. Reversamos el monto en la caja para que el arqueo final coincida con el dinero real.
         Public Function AnularVenta(ventaId As Integer, usuarioId As Integer, motivo As String, ByRef errorMessage As String) As Boolean
             If ventaId <= 0 Then
                 errorMessage = "Identificador de venta inválido."
@@ -169,15 +200,15 @@ Namespace Services
                                 Return False
                             End If
 
-                            ' Restituir stock de cada artículo
+                            ' Paso 1: Restituir stock físico de cada artículo y auditar en movimientos_stock
                             Dim detalles = GetDetalleVenta(ventaId)
                             Dim ticket = ventaRow("numero_ticket").ToString()
                             RestituirStockYAuditar(conn, trans, detalles, ticket, motivo, usuarioId)
 
-                            ' Marcar venta como anulada
+                            ' Paso 2: Marcar comprobante como Anulado
                             MarcarVentaAnulada(conn, trans, ventaId, motivo)
 
-                            ' Reversar impacto en caja
+                            ' Paso 3: Restar el monto de la caja activa para mantener el balance contable
                             Dim cajaId = Convert.ToInt32(ventaRow("caja_id"))
                             Dim total = Convert.ToDecimal(ventaRow("total"))
                             Dim metodo = ventaRow("metodo_pago").ToString()

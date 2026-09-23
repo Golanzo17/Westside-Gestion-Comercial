@@ -44,7 +44,7 @@ Es la operación central del catálogo:
 4. Si es un producto nuevo (`prod.Id = 0`), recupera el `ID` generado automáticamente.
 5. **`GuardarMatrizTalles(...)`**:
    * Recorre la lista de talles asociados a la prenda.
-   * Utiliza la sintaxis SQL adecuada (`ON CONFLICT` en SQLite o `ON DUPLICATE KEY UPDATE` en MySQL) para insertar las combinaciones nuevas o actualizar las existentes en una sola pasada eficiente.
+   * Utiliza la sintaxis SQL nativa de SQLite (`ON CONFLICT(...) DO UPDATE SET...`) para insertar las combinaciones nuevas o actualizar las existentes en una sola pasada eficiente (técnica UPSERT).
 
 ---
 

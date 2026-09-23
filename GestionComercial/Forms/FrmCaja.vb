@@ -1,3 +1,16 @@
+' ARCHIVO: FrmCaja.vb
+' PROPÓSITO: Control de turnos de caja, registro de gastos y arqueo ciego de efectivo.
+' Esta ventana garantiza el control sobre el dinero físico en el salón:
+' 1. Visualización de Balances: Muestra en tarjetas el fondo inicial, las ventas en efectivo,
+'    las ventas digitales (tarjetas), los egresos y el monto que debe haber en el cajón.
+' 2. Seguridad en Retiros: Si el cajero registra un retiro o egreso de efectivo, el sistema
+'    exige la autorización presencial de un Administrador o Gerente.
+' 3. Arqueo y Cierre: Al finalizar el turno, pide contar los billetes en mano (montoReal),
+'    calcula automáticamente si sobró o faltó plata y emite el balance impreso.
+' 4. Pestaña de Historial: Permite a los supervisores consultar los cierres de cajas
+'    anteriores para auditorías contables.
+
+
 Imports System.Drawing
 Imports System.Windows.Forms
 Imports GestionComercial.Models
@@ -128,7 +141,7 @@ Namespace Forms
             ConfigurarColumnas()
             pnlGrid.Controls.Add(dgvMovimientos)
 
-            ' ==================== TAB CONTROL ====================
+            ' Pestañas de control de caja
             tabControlCaja = New TabControl() With {
                 .Dock = DockStyle.Fill,
                 .Padding = New Point(12, 6)

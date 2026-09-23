@@ -1,3 +1,12 @@
+' ARCHIVO: FrmLogin.vb
+' PROPÓSITO: Formulario de inicio de sesión y autenticación de usuarios.
+' Es la primera ventana que ve el usuario al ejecutar el sistema:
+' 1. Construcción 100% por Código: Paneles, etiquetas, cajas de texto y botones en InitializeUI() aplicando los tokens de UITheme.vb.
+' 2. Chequeo de Conexión en Tiempo Real: En el evento de carga, comprueba si la base de datos responde correctamente y muestra un indicador verde/rojo.
+' 3. Transición Segura a FrmMain: Si el login es exitoso, oculta el formulario de login y abre FrmMain.
+'    Vincula el evento FormClosed de FrmMain para que al salir se cierre el proceso en Windows.
+
+
 Imports System.Drawing
 Imports System.Windows.Forms
 Imports GestionComercial.Config
@@ -12,18 +21,18 @@ Namespace Forms
         Private txtUser As TextBox
         Private txtPass As TextBox
         Private btnLogin As Button
-        Private btnConfig As Button
         Private lblStatus As Label
         Private lblInfoCuentas As Label
 
         Public Sub New()
             InitializeUI()
+            ' Verificamos la base de datos antes de que el usuario intente ingresar
             CheckInitialConnection()
         End Sub
 
         Private Sub InitializeUI()
             Me.Text = "Acceso al Sistema - Gestión Comercial de Indumentaria"
-            Me.Size = New Size(450, 520)
+            Me.Size = New Size(450, 475)
             Me.StartPosition = FormStartPosition.CenterScreen
             Me.FormBorderStyle = FormBorderStyle.FixedDialog
             Me.MaximizeBox = False
@@ -72,7 +81,7 @@ Namespace Forms
             ' Tarjeta central de login
             Dim pnlCard As New Panel() With {
                 .Location = New Point(35, 150),
-                .Size = New Size(365, 300),
+                .Size = New Size(365, 260),
                 .BackColor = UITheme.ColorSurface,
                 .Padding = New Padding(20)
             }
@@ -87,8 +96,7 @@ Namespace Forms
             }
             txtUser = New TextBox() With {
                 .Location = New Point(20, 45),
-                .Size = New Size(325, 28),
-                .Text = "admin"
+                .Size = New Size(325, 28)
             }
             UITheme.StyleTextBox(txtUser)
 
@@ -102,8 +110,7 @@ Namespace Forms
             txtPass = New TextBox() With {
                 .Location = New Point(20, 110),
                 .Size = New Size(325, 28),
-                .PasswordChar = "●"c,
-                .Text = "admin123"
+                .PasswordChar = "●"c
             }
             UITheme.StyleTextBox(txtPass)
 
@@ -128,21 +135,12 @@ Namespace Forms
                 .Text = "Ingrese sus credenciales para continuar",
                 .Font = UITheme.FontSmall,
                 .ForeColor = UITheme.ColorTextSecondary,
-                .Location = New Point(20, 230),
-                .Size = New Size(325, 30),
+                .Location = New Point(20, 228),
+                .Size = New Size(325, 24),
                 .TextAlign = ContentAlignment.MiddleCenter
             }
 
-            btnConfig = New Button() With {
-                .Text = "Configuración de base de datos",
-                .Location = New Point(20, 265),
-                .Size = New Size(325, 26)
-            }
-            UITheme.StyleButton(btnConfig, "Secondary")
-            btnConfig.Font = UITheme.FontSmall
-            AddHandler btnConfig.Click, AddressOf BtnConfig_Click
-
-            pnlCard.Controls.AddRange({lblUser, txtUser, lblPass, txtPass, btnLogin, lblStatus, lblInfoCuentas, btnConfig})
+            pnlCard.Controls.AddRange({lblUser, txtUser, lblPass, txtPass, btnLogin, lblStatus, lblInfoCuentas})
             Me.Controls.Add(pnlCard)
 
             ' Atajos de teclado
@@ -153,18 +151,10 @@ Namespace Forms
             Dim errMsg As String = ""
             Dim ok As Boolean = DatabaseHelper.TestConnection(errMsg)
             If ok Then
-                If DatabaseHelper.IsSQLite Then
-                    lblStatus.Text = "● Base de Datos SQLite Lista"
-                Else
-                    lblStatus.Text = "● MySQL Conectado (" & AppConfig.Settings.Database & ")"
-                End If
+                lblStatus.Text = "● Base de Datos SQLite Lista"
                 lblStatus.ForeColor = UITheme.ColorSuccess
             Else
-                If DatabaseHelper.IsSQLite Then
-                    lblStatus.Text = "⚠ Error SQLite: " & errMsg
-                Else
-                    lblStatus.Text = "⚠ Sin conexión a MySQL. Revisa Configuración"
-                End If
+                lblStatus.Text = "⚠ Error Base de Datos: " & errMsg
                 lblStatus.ForeColor = UITheme.ColorDanger
             End If
         End Sub
@@ -172,6 +162,11 @@ Namespace Forms
         Private Sub BtnLogin_Click(sender As Object, e As EventArgs)
             Dim user As String = txtUser.Text.Trim()
             Dim pass As String = txtPass.Text
+
+            If String.IsNullOrWhiteSpace(user) OrElse String.IsNullOrWhiteSpace(pass) Then
+                MessageBox.Show("Por favor ingrese su usuario y contraseña.", "Campos Requeridos", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
 
             Dim errMsg As String = ""
             If AuthService.Login(user, pass, errMsg) Then
@@ -181,22 +176,12 @@ Namespace Forms
                 AddHandler frm.FormClosed, Sub() Me.Close()
                 frm.Show()
             Else
-                ' Si falló porque no existe la base de datos o conexión, ofrecer inicializar
                 If errMsg.Contains("Unable to connect", StringComparison.OrdinalIgnoreCase) OrElse errMsg.Contains("Unknown database", StringComparison.OrdinalIgnoreCase) OrElse errMsg.Contains("no such table", StringComparison.OrdinalIgnoreCase) Then
-                    Dim resp = MessageBox.Show("No se pudo conectar con la base de datos o faltan tablas." & vbCrLf & vbCrLf & "¿Deseas abrir la configuración para inicializar las tablas automáticamente?", "Base de Datos Requerida", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
-                    If resp = DialogResult.Yes Then
-                        BtnConfig_Click(Nothing, Nothing)
-                    End If
+                    MessageBox.Show("No se pudo conectar con la base de datos o el servicio no está disponible." & vbCrLf & vbCrLf & "Por favor verifique que la base de datos esté activa o contacte al administrador del sistema.", "Error de Conexión", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 Else
                     MessageBox.Show(errMsg, "Error de Inicio de Sesión", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 End If
             End If
-        End Sub
-
-        Private Sub BtnConfig_Click(sender As Object, e As EventArgs)
-            Dim frm As New FrmConfiguracion()
-            frm.ShowDialog()
-            CheckInitialConnection()
         End Sub
 
     End Class

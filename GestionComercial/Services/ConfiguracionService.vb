@@ -1,3 +1,12 @@
+' ARCHIVO: ConfiguracionService.vb
+' PROPÓSITO: Persistencia de datos institucionales de la empresa y pie de ticket.
+' Administra los datos del comercio que luego se imprimen en los comprobantes (Nombre,
+' CUIT, Dirección, Teléfono, Condición de IVA y mensaje de cambio de prendas).
+' Para persistir estos datos usamos la técnica UPSERT (Insert or Update):
+' Sintaxis nativa SQLite "ON CONFLICT(id) DO UPDATE SET...".
+' De este modo garantizamos que siempre exista una única fila (id = 1) sin duplicados.
+
+
 Imports System.Data
 Imports GestionComercial.Data
 Imports GestionComercial.Models
@@ -5,6 +14,7 @@ Imports GestionComercial.Models
 Namespace Services
     Public Class ConfiguracionService
 
+        ' Recupera la configuración del local; si no existe aún, devuelve valores predeterminados
         Public Function GetConfiguracion() As ConfiguracionComercio
             Dim config As New ConfiguracionComercio()
             Try
@@ -28,20 +38,14 @@ Namespace Services
             Return config
         End Function
 
+        ' Guarda los datos comerciales asegurando una única fila mediante UPSERT.
+
         Public Function GuardarConfiguracion(cfg As ConfiguracionComercio, ByRef errorMessage As String) As Boolean
             Try
-                Dim query As String
-                If DatabaseHelper.IsSQLite Then
-                    query = "INSERT INTO `configuracion` (`id`, `nombre_comercio`, `cuit`, `direccion`, `telefono`, `email`, `condicion_iva`, `mensaje_ticket`, `moneda_simbolo`) " &
-                            "VALUES (1, @nombre, @cuit, @dir, @tel, @email, @iva, @mensaje, @moneda) " &
-                            "ON CONFLICT(`id`) DO UPDATE SET " &
-                            "`nombre_comercio` = @nombre, `cuit` = @cuit, `direccion` = @dir, `telefono` = @tel, `email` = @email, `condicion_iva` = @iva, `mensaje_ticket` = @mensaje, `moneda_simbolo` = @moneda;"
-                Else
-                    query = "INSERT INTO `configuracion` (`id`, `nombre_comercio`, `cuit`, `direccion`, `telefono`, `email`, `condicion_iva`, `mensaje_ticket`, `moneda_simbolo`) " &
-                            "VALUES (1, @nombre, @cuit, @dir, @tel, @email, @iva, @mensaje, @moneda) " &
-                            "ON DUPLICATE KEY UPDATE " &
-                            "`nombre_comercio` = @nombre, `cuit` = @cuit, `direccion` = @dir, `telefono` = @tel, `email` = @email, `condicion_iva` = @iva, `mensaje_ticket` = @mensaje, `moneda_simbolo` = @moneda;"
-                End If
+                Dim query As String = "INSERT INTO `configuracion` (`id`, `nombre_comercio`, `cuit`, `direccion`, `telefono`, `email`, `condicion_iva`, `mensaje_ticket`, `moneda_simbolo`) " &
+                                      "VALUES (1, @nombre, @cuit, @dir, @tel, @email, @iva, @mensaje, @moneda) " &
+                                      "ON CONFLICT(`id`) DO UPDATE SET " &
+                                      "`nombre_comercio` = @nombre, `cuit` = @cuit, `direccion` = @dir, `telefono` = @tel, `email` = @email, `condicion_iva` = @iva, `mensaje_ticket` = @mensaje, `moneda_simbolo` = @moneda;"
 
                 Dim params As New Dictionary(Of String, Object) From {
                     {"@nombre", cfg.NombreComercio},

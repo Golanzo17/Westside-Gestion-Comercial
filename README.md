@@ -1,6 +1,6 @@
 # Software de Gestión Comercial para Local de Ropa
 
-Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en **Visual Basic (.NET WinForms)** con motor de base de datos híbrido (**SQLite** local por defecto o **MySQL** en red), diseñado específicamente para locales de indumentaria.
+Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en **Visual Basic (.NET WinForms)** con motor de base de datos embebido **SQLite**, diseñado específicamente para locales de indumentaria.
 
 ---
 
@@ -8,15 +8,11 @@ Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en *
 
 ### 1. Requisitos Previos
 - **.NET SDK** (.NET 8 LTS o .NET 10).
-- **Servidor MySQL** (Opcional, si se usa MySQL en vez de SQLite: Community Server, MariaDB, XAMPP, Laragon o Herd).
 - **Visual Studio 2022/2026** o **Visual Studio Code**.
 
 ### 2. Base de Datos
-- **SQLite (Por Defecto)**: No requiere ningún servidor ni instalación externa. El sistema gestiona automáticamente el archivo `Database/gestion_comercial.db`.
-- **MySQL (Opcional)**: En tu gestor MySQL preferido (phpMyAdmin, MySQL Workbench, DBeaver o consola), puedes ejecutar el script:
-  - `Database/schema_mysql.sql`: Crea la base de datos `gestion_comercial_db` y todas sus tablas con índices y relaciones.
-  - `Database/seed_data.sql`: Carga datos iniciales (talles estándar XS a XXL y 36 a 44, categorías de ropa, usuarios y catálogo de muestra).
-  - **Inicialización Automática**: El propio software cuenta con una herramienta en el menú de **Configuración** (`⚙ Conexión -> Crear / Inicializar Tablas`) que crea la base de datos y la estructura automáticamente.
+- **SQLite Embebido (Zero-Config)**: No requiere ningún servidor ni instalación externa de servicios. El sistema gestiona automáticamente el archivo `Database/gestion_comercial.db`, inicializando tablas (`schema_sqlite.sql`) y datos semilla (`seed_sqlite.sql`) de forma transparente al iniciar por primera vez.
+- **Inicialización Asistida**: El propio software cuenta con una herramienta en el menú de **Configuración** (`⚙ Configuración -> Inicializar tablas y datos`) para verificar y regenerar la estructura cuando sea necesario.
 
 ### 3. Ejecutar la Aplicación
 - Desde **Visual Studio**: Abre `GestionComercial.sln` y presiona **F5**.
@@ -30,7 +26,8 @@ Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en *
 | Rol | Usuario | Contraseña |
 |---|---|---|
 | **Administrador** | `admin` | `admin123` |
-| **Vendedor / Cajero** | `vendedor` | `1234` |
+| **Gerente** | `gerente` | `gerente123` |
+| **Vendedor** | `vendedor` | `1234` |
 
 ---
 
@@ -77,10 +74,8 @@ Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en *
 c:\Users\gonza\Desktop\Proyecto\
 ├── Database/
 │   ├── gestion_comercial.db          # Base de datos SQLite local activa
-│   ├── schema_mysql.sql              # Estructura DDL completa para MySQL
 │   ├── schema_sqlite.sql             # Estructura DDL completa para SQLite
-│   ├── seed_data.sql                 # Datos iniciales para MySQL
-│   └── seed_sqlite.sql               # Datos iniciales para SQLite
+│   └── seed_sqlite.sql               # Datos iniciales para SQLite (usuarios, talles, categorías)
 ├── GestionComercial.sln              # Solución estándar Visual Studio
 ├── GestionComercial.slnx             # Solución formato .NET moderno
 └── GestionComercial/
@@ -90,7 +85,7 @@ c:\Users\gonza\Desktop\Proyecto\
     ├── Config/
     │   └── AppConfig.vb              # Manejador de configuración JSON y connection string
     ├── Data/
-    │   └── DatabaseHelper.vb         # Conexión ADO.NET híbrida SQLite/MySQL
+    │   └── DatabaseHelper.vb         # Capa de persistencia SQLite y seguridad criptográfica
     ├── Models/
     │   └── Entities.vb               # Clases POCO (Producto, Talle, Venta, Cliente, Caja, etc.)
     ├── Services/

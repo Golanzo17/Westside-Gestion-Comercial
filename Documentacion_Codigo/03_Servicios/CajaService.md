@@ -41,7 +41,7 @@ Controla las entradas o salidas de dinero que **no son ventas**:
 Es el momento del **arqueo de caja** al final del día o cambio de turno:
 1. Obtiene los valores registrados de la caja activa:
    $$\text{Monto Esperado} = \text{Inicial} + \text{Ventas Efectivo} + \text{Ingresos} - \text{Egresos}$$
-2. El cajero ingresa el dinero físico que contó en la mano (`montoReal`).
+2. El usuario responsable ingresa el dinero físico que contó en la mano (`montoReal`).
 3. El sistema calcula la **diferencia**:
    $$\text{Diferencia} = \text{Monto Real} - \text{Monto Esperado}$$
    * Si es `0`: Caja perfecta (sin sobrantes ni faltantes).

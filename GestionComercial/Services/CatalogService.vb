@@ -1,3 +1,15 @@
+' ARCHIVO: CatalogService.vb
+' PROPÓSITO: Lógica de catálogo de indumentaria, talles, categorías y matriz de stock.
+' Este servicio resuelve la estructura comercial de las prendas de ropa:
+' 1. Matriz de Variantes: Una prenda no tiene una única cantidad fija; tiene múltiples
+'    talles (S, M, L, XL, etc.) y colores registrados en la tabla producto_talles.
+' 2. Búsqueda por Código de Barras o ID: Permite que el vendedor escanee la etiqueta
+'    con una pistola láser en el mostrador para cargar la prenda al instante en el POS.
+' 3. Ajustes Manuales de Inventario: Cuando llega mercadería de un proveedor o se detecta
+'    una prenda rota, este servicio actualiza el stock y genera el movimiento de auditoría
+'    asociando el motivo y el usuario responsable.
+
+
 Imports System.Data
 Imports System.Data.Common
 Imports GestionComercial.Data
@@ -7,6 +19,8 @@ Namespace Services
     Public Class CatalogService
 
 #Region "Categorías"
+        ' Retorna el listado de categorías de ropa (ej: Remeras, Jeans, Abrigos, etc.)
+
         Public Function GetCategorias(Optional soloActivas As Boolean = True) As List(Of Categoria)
             Dim list = New List(Of Categoria)()
             Dim query = "SELECT * FROM `categorias` " & If(soloActivas, "WHERE `activo` = 1 ", "") & "ORDER BY `nombre` ASC;"
@@ -18,6 +32,7 @@ Namespace Services
             Return list
         End Function
 
+        ' Guarda o modifica una categoría en la base de datos
         Public Function GuardarCategoria(cat As Categoria, ByRef errorMessage As String) As Boolean
             If cat Is Nothing OrElse String.IsNullOrWhiteSpace(cat.Nombre) Then
                 errorMessage = "El nombre de la categoría es obligatorio."
@@ -50,6 +65,8 @@ Namespace Services
 #End Region
 
 #Region "Talles"
+        ' Retorna los talles ordenados por su campo "orden" (XS -> S -> M -> L -> XL) para visualización ordenada.
+
         Public Function GetTalles() As List(Of Talle)
             Dim list = New List(Of Talle)()
             Dim query = "SELECT * FROM `talles` ORDER BY `orden` ASC, `id` ASC;"
@@ -92,6 +109,8 @@ Namespace Services
 #End Region
 
 #Region "Productos y Matriz de Stock"
+        ' Consulta el catálogo de prendas calculando la suma total de stock a partir de producto_talles.
+
         Public Function GetProductos(Optional filtro As String = "", Optional categoriaId As Integer = 0, Optional soloActivos As Boolean = True) As List(Of Producto)
             Dim list = New List(Of Producto)()
             Dim query = "SELECT p.*, c.nombre AS categoria_nombre, IFNULL(SUM(pt.stock_actual), 0) AS total_stock " &
@@ -124,6 +143,9 @@ Namespace Services
             Next
             Return list
         End Function
+
+        ' Búsqueda rápida para el Punto de Venta (Lector de Código de Barras o ID).
+        ' Carga la prenda y sus variantes de talle y color correspondientes.
 
         Public Function GetProductoPorCodigo(codigo As String) As Producto
             If String.IsNullOrWhiteSpace(codigo) Then
@@ -302,13 +324,9 @@ Namespace Services
 #Region "Helpers Privados de Soporte"
 
         Private Sub GuardarMatrizTalles(conn As DbConnection, trans As DbTransaction, prodId As Integer, codBarra As String, talles As List(Of ProductoTalle))
-            Dim queryPt = If(DatabaseHelper.IsSQLite,
-                "INSERT INTO `producto_talles` (`producto_id`, `talle_id`, `color`, `stock_actual`, `stock_minimo`, `sku_especifico`) " &
-                "VALUES (@prodId, @talleId, @color, @stock, @stockMin, @sku) " &
-                "ON CONFLICT(`producto_id`, `talle_id`, `color`) DO UPDATE SET `stock_actual` = @stock, `stock_minimo` = @stockMin, `sku_especifico` = @sku;",
-                "INSERT INTO `producto_talles` (`producto_id`, `talle_id`, `color`, `stock_actual`, `stock_minimo`, `sku_especifico`) " &
-                "VALUES (@prodId, @talleId, @color, @stock, @stockMin, @sku) " &
-                "ON DUPLICATE KEY UPDATE `stock_actual` = @stock, `stock_minimo` = @stockMin, `sku_especifico` = @sku;")
+            Dim queryPt = "INSERT INTO `producto_talles` (`producto_id`, `talle_id`, `color`, `stock_actual`, `stock_minimo`, `sku_especifico`) " &
+                          "VALUES (@prodId, @talleId, @color, @stock, @stockMin, @sku) " &
+                          "ON CONFLICT(`producto_id`, `talle_id`, `color`) DO UPDATE SET `stock_actual` = @stock, `stock_minimo` = @stockMin, `sku_especifico` = @sku;"
 
             For Each pt In talles
                 Dim colorFinal = If(String.IsNullOrWhiteSpace(pt.Color), "Único", pt.Color.Trim())

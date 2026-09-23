@@ -7,17 +7,24 @@ Imports GestionComercial.Models
 Imports GestionComercial.Services
 Imports GestionComercial.UI
 
+' ARCHIVO: FrmConfiguracion.vb
+' PROPÓSITO: Configuración del Motor de Base de Datos y Datos Fiscales del Local
+' - Persistencia Relacional Embebida:
+'   El sistema utiliza SQLite como motor de base de datos relacional local (.db embebido),
+'   proporcionando portabilidad total, integridad referencial y cero dependencias de servicios externos.
+' - Prueba e Inicialización Asistida:
+'   Provee botones para verificar la conexión (btnProbar) y crear automáticamente
+'   el esquema relacional junto a los datos semilla (categorías, talles, prendas y usuarios).
+' - Datos Comerciales para Comprobantes:
+'   Los datos del comercio (Razón social, CUIT, Condición IVA, Dirección y
+'   política de cambios al pie) se persisten en la tabla `configuracion`
+'   y son consumidos dinámicamente por el motor de tickets del POS.
+
 Namespace Forms
     Public Class FrmConfiguracion
         Inherits Form
 
-        Private cboProvider As ComboBox
         Private txtSqlitePath As TextBox
-        Private txtHost As TextBox
-        Private numPort As NumericUpDown
-        Private txtDatabase As TextBox
-        Private txtUser As TextBox
-        Private txtPassword As TextBox
         Private btnProbar As Button
         Private btnInicializarDb As Button
 
@@ -42,7 +49,7 @@ Namespace Forms
 
         Private Sub InitializeUI()
             Me.Text = "Configuración del Sistema y Base de Datos"
-            Me.Size = New Size(760, 720)
+            Me.Size = New Size(760, 610)
             Me.StartPosition = FormStartPosition.CenterScreen
             Me.FormBorderStyle = FormBorderStyle.FixedDialog
             Me.MaximizeBox = False
@@ -64,7 +71,7 @@ Namespace Forms
                 .Location = New Point(20, 15)
             }
             Dim lblSub As New Label() With {
-                .Text = "Motor de persistencia (SQLite / MySQL) y datos comerciales para tickets",
+                .Text = "Motor de persistencia local (SQLite) y datos comerciales para tickets",
                 .Font = UITheme.FontSmall,
                 .ForeColor = UITheme.ColorTextMuted,
                 .AutoSize = True,
@@ -73,56 +80,26 @@ Namespace Forms
             pnlHeader.Controls.AddRange({lblTitle, lblSub})
             Me.Controls.Add(pnlHeader)
 
-            ' Grupo Base de Datos
+            ' Grupo Base de Datos: Configuración de persistencia SQLite
             Dim grpDb As New GroupBox() With {
-                .Text = "Motor y Conexión de Base de Datos",
+                .Text = "Motor de Base de Datos (SQLite)",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorPrimaryDark,
                 .Location = New Point(20, 80),
-                .Size = New Size(705, 245),
+                .Size = New Size(705, 135),
                 .BackColor = UITheme.ColorSurface
             }
 
-            Dim lblProv As New Label() With {.Text = "Motor de Base de Datos:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(20, 26), .AutoSize = True}
-            cboProvider = New ComboBox() With {.Location = New Point(20, 48), .Size = New Size(320, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
-            UITheme.StyleComboBox(cboProvider)
-            cboProvider.Items.AddRange({"SQLite (Local sin servidor - Recomendado)", "MySQL (Servidor externo)"})
-            AddHandler cboProvider.SelectedIndexChanged, AddressOf CboProvider_SelectedIndexChanged
-
-            Dim lblSqPath As New Label() With {.Text = "Ubicación del Archivo SQLite:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(360, 26), .AutoSize = True}
-            txtSqlitePath = New TextBox() With {.Location = New Point(360, 48), .Size = New Size(325, 26), .ReadOnly = True}
+            Dim lblSqPath As New Label() With {.Text = "Ubicación del Archivo de Base de Datos SQLite:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(20, 26), .AutoSize = True}
+            txtSqlitePath = New TextBox() With {.Location = New Point(20, 48), .Size = New Size(665, 26), .ReadOnly = True}
             UITheme.StyleTextBox(txtSqlitePath)
 
-            ' Servidor / Host
-            Dim lblH As New Label() With {.Text = "Servidor / Host (MySQL):", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(20, 85), .AutoSize = True}
-            txtHost = New TextBox() With {.Location = New Point(20, 107), .Size = New Size(220, 26)}
-            UITheme.StyleTextBox(txtHost)
-
-            ' Puerto
-            Dim lblP As New Label() With {.Text = "Puerto (default 3306):", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(260, 85), .AutoSize = True}
-            numPort = New NumericUpDown() With {.Location = New Point(260, 107), .Size = New Size(100, 26), .Minimum = 1, .Maximum = 65535, .Value = 3306}
-
-            ' Base de datos
-            Dim lblD As New Label() With {.Text = "Nombre Base de Datos:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(380, 85), .AutoSize = True}
-            txtDatabase = New TextBox() With {.Location = New Point(380, 107), .Size = New Size(305, 26)}
-            UITheme.StyleTextBox(txtDatabase)
-
-            ' Usuario
-            Dim lblU As New Label() With {.Text = "Usuario MySQL:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(20, 142), .AutoSize = True}
-            txtUser = New TextBox() With {.Location = New Point(20, 164), .Size = New Size(220, 26)}
-            UITheme.StyleTextBox(txtUser)
-
-            ' Contraseña
-            Dim lblPw As New Label() With {.Text = "Contraseña:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(260, 142), .AutoSize = True}
-            txtPassword = New TextBox() With {.Location = New Point(260, 164), .Size = New Size(220, 26), .PasswordChar = "*"c}
-            UITheme.StyleTextBox(txtPassword)
-
-            ' Botones de prueba y creación
-            btnProbar = New Button() With {.Text = "Probar conexión", .Location = New Point(20, 200), .Size = New Size(170, 34)}
+            ' Botones de prueba y migración de tablas
+            btnProbar = New Button() With {.Text = "Probar conexión", .Location = New Point(20, 86), .Size = New Size(170, 34)}
             UITheme.StyleButton(btnProbar, "Secondary")
             AddHandler btnProbar.Click, AddressOf BtnProbar_Click
 
-            btnInicializarDb = New Button() With {.Text = "Inicializar tablas y datos", .Location = New Point(200, 200), .Size = New Size(220, 34)}
+            btnInicializarDb = New Button() With {.Text = "Inicializar tablas y datos", .Location = New Point(200, 86), .Size = New Size(220, 34)}
             UITheme.StyleButton(btnInicializarDb, "Primary")
             AddHandler btnInicializarDb.Click, AddressOf BtnInicializarDb_Click
 
@@ -130,11 +107,11 @@ Namespace Forms
                 .Text = "Estado: Verificando...",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorTextSecondary,
-                .Location = New Point(430, 207),
+                .Location = New Point(430, 93),
                 .AutoSize = True
             }
 
-            grpDb.Controls.AddRange({lblProv, cboProvider, lblSqPath, txtSqlitePath, lblH, txtHost, lblP, numPort, lblD, txtDatabase, lblU, txtUser, lblPw, txtPassword, btnProbar, btnInicializarDb, lblEstadoConexion})
+            grpDb.Controls.AddRange({lblSqPath, txtSqlitePath, btnProbar, btnInicializarDb, lblEstadoConexion})
             Me.Controls.Add(grpDb)
 
             ' Grupo Comercio
@@ -142,7 +119,7 @@ Namespace Forms
                 .Text = "Datos del Comercio / Local de Ropa (Para Tickets y Comprobantes)",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorPrimaryDark,
-                .Location = New Point(20, 335),
+                .Location = New Point(20, 225),
                 .Size = New Size(705, 260),
                 .BackColor = UITheme.ColorSurface
             }
@@ -199,10 +176,15 @@ Namespace Forms
             Dim btnIrUsuarios As New Button() With {
                 .Text = "Usuarios y empleados",
                 .Dock = DockStyle.Right,
-                .Width = 190
+                .Width = 190,
+                .Visible = AuthService.IsAdmin
             }
             UITheme.StyleButton(btnIrUsuarios, "Primary")
             AddHandler btnIrUsuarios.Click, Sub()
+                                                If Not AuthService.IsAdmin Then
+                                                    MessageBox.Show("Esta acción requiere permisos de Administrador.", "Acceso Denegado", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                                                    Return
+                                                End If
                                                 Dim frmU As New FrmUsuarios()
                                                 frmU.ShowDialog(Me)
                                             End Sub
@@ -219,32 +201,8 @@ Namespace Forms
             Me.Controls.Add(pnlBottom)
         End Sub
 
-        Private Sub CboProvider_SelectedIndexChanged(sender As Object, e As EventArgs)
-            Dim isSqlite = (cboProvider.SelectedIndex = 0)
-            txtHost.Enabled = Not isSqlite
-            numPort.Enabled = Not isSqlite
-            txtDatabase.Enabled = Not isSqlite
-            txtUser.Enabled = Not isSqlite
-            txtPassword.Enabled = Not isSqlite
-            txtSqlitePath.Enabled = isSqlite
-        End Sub
-
         Private Sub LoadConfigData()
-            ' Cargar proveedor
-            If AppConfig.Settings.Provider.Equals("MySQL", StringComparison.OrdinalIgnoreCase) Then
-                cboProvider.SelectedIndex = 1
-            Else
-                cboProvider.SelectedIndex = 0
-            End If
-
             txtSqlitePath.Text = AppConfig.Settings.GetSqlitePath()
-
-            ' Cargar MySQL settings
-            txtHost.Text = AppConfig.Settings.Host
-            numPort.Value = AppConfig.Settings.Port
-            txtDatabase.Text = AppConfig.Settings.Database
-            txtUser.Text = AppConfig.Settings.Username
-            txtPassword.Text = AppConfig.Settings.Password
 
             ' Intentar cargar datos del local si hay conexión
             Try
@@ -265,7 +223,7 @@ Namespace Forms
             ' Comprobar estado actual de conexión
             Dim errMsg As String = ""
             If DatabaseHelper.TestConnection(errMsg) Then
-                lblEstadoConexion.Text = "✔ Conectado a " & If(DatabaseHelper.IsSQLite, "SQLite", "MySQL")
+                lblEstadoConexion.Text = "✔ Conectado a SQLite"
                 lblEstadoConexion.ForeColor = UITheme.ColorSuccess
             Else
                 lblEstadoConexion.Text = "⚠ Sin conexión inicial"
@@ -273,28 +231,29 @@ Namespace Forms
             End If
         End Sub
 
+        ''' <summary>
+        ''' Prueba la conexión a la base de datos SQLite local.
+        ''' </summary>
         Private Sub BtnProbar_Click(sender As Object, e As EventArgs)
-            ApplyDbFormToSettings()
-
             Dim errMsg As String = ""
             Dim ok As Boolean = DatabaseHelper.TestConnection(errMsg)
-            Dim motor = If(cboProvider.SelectedIndex = 0, "SQLite", "MySQL")
 
             If ok Then
-                lblEstadoConexion.Text = "✔ Conexión Exitosa (" & motor & ")"
+                lblEstadoConexion.Text = "✔ Conexión Exitosa (SQLite)"
                 lblEstadoConexion.ForeColor = UITheme.ColorSuccess
-                MessageBox.Show($"¡Conexión establecida exitosamente con el motor {motor}!", "Conexión Correcta", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                MessageBox.Show("¡Conexión establecida exitosamente con la base de datos SQLite!", "Conexión Correcta", MessageBoxButtons.OK, MessageBoxIcon.Information)
             Else
                 lblEstadoConexion.Text = "✖ Error de conexión"
                 lblEstadoConexion.ForeColor = UITheme.ColorDanger
-                MessageBox.Show($"No se pudo conectar con {motor}." & vbCrLf & vbCrLf & "Detalle: " & errMsg, "Fallo de Conexión", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                MessageBox.Show("No se pudo conectar con SQLite." & vbCrLf & vbCrLf & "Detalle: " & errMsg, "Fallo de Conexión", MessageBoxButtons.OK, MessageBoxIcon.Warning)
             End If
         End Sub
 
+        ''' <summary>
+        ''' Ejecuta la creación del esquema y la siembra de datos maestros (seed data).
+        ''' Es la función que permite desplegar el sistema desde cero en una máquina limpia.
+        ''' </summary>
         Private Sub BtnInicializarDb_Click(sender As Object, e As EventArgs)
-            ApplyDbFormToSettings()
-            AppConfig.SaveSettings()
-
             Dim outMsg As String = ""
             Dim ok As Boolean = DatabaseHelper.InitializeDatabaseAndTables(outMsg)
             If ok Then
@@ -307,10 +266,10 @@ Namespace Forms
             End If
         End Sub
 
+        ''' <summary>
+        ''' Guarda los datos institucionales del local en la base de datos SQLite configurada.
+        ''' </summary>
         Private Sub BtnGuardarTodo_Click(sender As Object, e As EventArgs)
-            ApplyDbFormToSettings()
-            AppConfig.SaveSettings()
-
             ' Guardar info del comercio
             Dim cfg As New ConfiguracionComercio() With {
                 .NombreComercio = txtNombreLocal.Text.Trim(),
@@ -329,17 +288,8 @@ Namespace Forms
                 Me.DialogResult = DialogResult.OK
                 Me.Close()
             Else
-                MessageBox.Show("Se guardaron los parámetros de base de datos, pero ocurrió un aviso con los datos del comercio: " & errMsg, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                MessageBox.Show("Ocurrió un aviso al guardar los datos del comercio: " & errMsg, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
             End If
-        End Sub
-
-        Private Sub ApplyDbFormToSettings()
-            AppConfig.Settings.Provider = If(cboProvider.SelectedIndex = 0, "SQLite", "MySQL")
-            AppConfig.Settings.Host = txtHost.Text.Trim()
-            AppConfig.Settings.Port = Convert.ToInt32(numPort.Value)
-            AppConfig.Settings.Database = txtDatabase.Text.Trim()
-            AppConfig.Settings.Username = txtUser.Text.Trim()
-            AppConfig.Settings.Password = txtPassword.Text
         End Sub
 
     End Class

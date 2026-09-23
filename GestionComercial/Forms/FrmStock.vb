@@ -4,13 +4,25 @@ Imports GestionComercial.Models
 Imports GestionComercial.Services
 Imports GestionComercial.UI
 
+' ARCHIVO: FrmStock.vb
+' PROPÓSITO: Panel de Control de Inventario, Reposición y Auditoría de Movimientos
+' - Estructura de la pantalla:
+'   1. 'Prendas con Stock Crítico': Alerta visual inmediata sobre artículos que alcanzaron o quebraron el stock mínimo configurado.
+'   2. 'Historial de Movimientos': Trazabilidad completa (kardex) que muestra cada entrada, salida, ajuste, venta o anulación registrada.
+' - Seguridad y Privilegios:
+'   Un vendedor solo puede visualizar las alertas para consultar disponibilidad.
+'   Registrar ingresos de mercadería o ajustes manuales requiere confirmación de credenciales de Administrador o Gerente.
+
+
 Namespace Forms
     Public Class FrmStock
         Inherits Form
 
+        ' Servicios de negocio reutilizados
         Private catalogService As New CatalogService()
         Private reporteService As New ReporteService()
 
+        ' Controles de interfaz gráfica
         Private dgvAlertas As DataGridView
         Private dgvMovimientos As DataGridView
         Private btnIngresoMercaderia As Button
@@ -22,6 +34,10 @@ Namespace Forms
             LoadStockData()
         End Sub
 
+        ''' <summary>
+        ''' Construcción programática del formulario.
+        ''' Implementamos un TabControl para organizar la información sin saturar al usuario.
+        ''' </summary>
         Private Sub InitializeUI()
             Me.Text = "Control de Stock y Reposición de Mercadería"
             Me.Size = New Size(1020, 640)
@@ -29,7 +45,7 @@ Namespace Forms
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
 
-            ' Header
+            ' Header institucional superior
             Dim pnlHeader As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 60,
@@ -45,7 +61,7 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Toolbar con FlowLayoutPanel para evitar recorte de botones
+            ' Toolbar con FlowLayoutPanel para garantizar que los botones no se recorten en pantallas de baja resolución
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 55,
@@ -57,6 +73,8 @@ Namespace Forms
                 .WrapContents = False
             }
 
+            ' Botón de ingreso/ajuste: Solo visible inicialmente si el usuario actual es Admin/Gerente,
+            ' pero si un vendedor lo presiona se invoca el diálogo de autorización.
             btnIngresoMercaderia = New Button() With {.Text = "+ Ingreso de Mercadería / Ajuste", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0)}
             UITheme.StyleButton(btnIngresoMercaderia, "Success")
             btnIngresoMercaderia.Visible = AuthService.IsAdminOrManager
@@ -77,13 +95,13 @@ Namespace Forms
             flpToolbar.Controls.AddRange({btnIngresoMercaderia, btnRefrescar, lblResumenAlertas})
             pnlToolbar.Controls.Add(flpToolbar)
 
-            ' TabControl para separar "Prendas con Stock Crítico" de "Historial de Movimientos"
+            ' TabControl para separar la vista operativa de compras (alertas) de la auditoría histórica
             Dim tabControl As New TabControl() With {
                 .Dock = DockStyle.Fill,
                 .Padding = New Point(12, 6)
             }
 
-            ' Tab 1: Alertas
+            ' Pestaña 1: Prendas con Stock Crítico o Agotado
             Dim tabAlertas As New TabPage("Prendas con stock crítico / reposición") With {.BackColor = UITheme.ColorBackground}
             dgvAlertas = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvAlertas)
@@ -91,7 +109,7 @@ Namespace Forms
             tabAlertas.Controls.Add(dgvAlertas)
             tabControl.TabPages.Add(tabAlertas)
 
-            ' Tab 2: Movimientos Audit
+            ' Pestaña 2: Historial de Auditoría de Movimientos
             Dim tabMovs As New TabPage("Historial de movimientos de inventario") With {.BackColor = UITheme.ColorBackground}
             dgvMovimientos = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvMovimientos)
@@ -99,7 +117,7 @@ Namespace Forms
             tabMovs.Controls.Add(dgvMovimientos)
             tabControl.TabPages.Add(tabMovs)
 
-            ' Orden exacto de Docking: Fill primero, Toolbar segundo, Header último
+            ' Orden de Docking de WinForms (Fill primero, paneles acoplados después)
             Me.Controls.Add(tabControl)
             Me.Controls.Add(pnlToolbar)
             Me.Controls.Add(pnlHeader)
@@ -156,8 +174,12 @@ Namespace Forms
             dgvMovimientos.Columns("Motivo").Width = 200
         End Sub
 
+        ''' <summary>
+        ''' Carga en paralelo los datos de alertas de stock crítico y la auditoría de movimientos.
+        ''' Aplicamos formato condicional (rojo/amarillo) según la gravedad de la falta de stock.
+        ''' </summary>
         Private Sub LoadStockData()
-            ' Cargar alertas
+            ' 1. Consultar artículos bajo stock mínimo
             Dim alertas = reporteService.GetAlertasStockBajo()
             dgvAlertas.Rows.Clear()
             For Each a In alertas
@@ -172,7 +194,7 @@ Namespace Forms
 
             lblResumenAlertas.Text = $"Se encontraron {alertas.Count} prendas en nivel crítico o sin stock."
 
-            ' Cargar historial de movimientos
+            ' 2. Consultar los últimos 100 movimientos de inventario con datos de producto y talle
             Dim dtMovs = Data.DatabaseHelper.ExecuteQuery("SELECT ms.*, p.nombre AS prenda_nombre, t.nombre AS talle_nombre " &
                                                          "FROM `movimientos_stock` ms " &
                                                          "INNER JOIN `productos` p ON ms.producto_id = p.id " &
@@ -194,6 +216,9 @@ Namespace Forms
             Next
         End Sub
 
+        ''' <summary>
+        ''' Valida permisos de supervisor antes de abrir el diálogo de ajuste de inventario.
+        ''' </summary>
         Private Sub BtnIngresoMercaderia_Click(sender As Object, e As EventArgs)
             If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Los ingresos de mercadería y ajustes de inventario requieren permisos de Administrador o Gerente.") Then
                 Return
@@ -207,7 +232,12 @@ Namespace Forms
     End Class
 
     ''' <summary>
-    ''' Diálogo para registrar ingreso de mercadería o ajuste manual de stock
+    ''' Diálogo modal para registrar ingresos de mercadería (compras a proveedores)
+    ''' o ajustes manuales de stock (roturas, devoluciones extraordinarias, mermas).
+    ''' 
+    ''' DECISIÓN DE AUDITORÍA:
+    ''' Exigimos obligatoriamente un 'Motivo' y registramos el usuario responsable
+    ''' para evitar discrepancias inexplicables en el balance de inventario.
     ''' </summary>
     Public Class FrmAjusteStock
         Inherits Form
@@ -293,6 +323,11 @@ Namespace Forms
             End If
         End Sub
 
+        ''' <summary>
+        ''' Validación y persistencia transaccional del ajuste manual.
+        ''' Invoca CatalogService.AjustarStockManual que registra el movimiento en kardex y
+        ''' actualiza la matriz producto_talles atómicamente.
+        ''' </summary>
         Private Sub BtnGuardar_Click(sender As Object, e As EventArgs)
             If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Guardar movimientos de stock manuales requiere permisos de Administrador o Gerente.") Then
                 Return

@@ -18,7 +18,7 @@ Cuando un usuario interactúa con la aplicación, la información viaja en este 
 [ 3. Capa de Acceso a Datos (DatabaseHelper) ]
             │
             ▼  (Ejecuta SQL con parámetros seguros)
-[ 4. Motor de Base de Datos (SQLite o MySQL) ]
+[ 4. Motor de Base de Datos (SQLite) ]
 ```
 
 ---
@@ -45,6 +45,8 @@ Cuando un usuario interactúa con la aplicación, la información viaja en este 
   * `AuthService.vb`: ¿Es correcta la contraseña? ¿Está bloqueado por 5 intentos fallidos?
   * `CajaService.vb`: ¿La caja ya está abierta? ¿Cuánto dinero debería haber en el cajón?
   * `UsuarioService.vb` y `ClienteService.vb`: Validación preventiva de unicidad de DNI y gestión de altas y bajas.
+  * `ReporteService.vb`: Métricas de ventas, rankings comerciales e inteligencia de negocio.
+  * `ConfiguracionService.vb`: Administración de datos comerciales y leyenda de tickets.
 
 ---
 
@@ -57,12 +59,12 @@ Cuando un usuario interactúa con la aplicación, la información viaja en este 
 
 ### 4. `Data/` (Acceso a Bases de Datos)
 * **¿Qué hay aquí?** En `DatabaseHelper.vb` está todo el código que abre conexiones, ejecuta `SELECT`, `INSERT`, `UPDATE`, y gestiona transacciones.
-* **Gran ventaja de tu sistema**: Es **híbrido**. Funciona tanto con **SQLite** (archivo local sin necesidad de instalar ningún servidor) como con **MySQL** si se desea trabajar en red multiusuario. `DatabaseHelper` traduce automáticamente las diferencias.
+* **Gran ventaja de tu sistema**: Utiliza **SQLite** como motor relacional embebido (archivo `gestion_comercial.db`). Es completamente autónomo, no requiere servicios ni configuración previa, es portable y garantiza consistencia ACID total.
 
 ---
 
 ### 5. `Config/` (Configuración de la Aplicación)
-* **¿Qué hay aquí?** `AppConfig.vb` lee el archivo `appsettings.json` al arrancar el programa, detectando si se debe usar SQLite o MySQL, los puertos, usuarios y contraseñas.
+* **¿Qué hay aquí?** `AppConfig.vb` lee el archivo `appsettings.json` al arrancar el programa, administrando la ruta de la base de datos y los parámetros de inicialización.
 
 ---
 

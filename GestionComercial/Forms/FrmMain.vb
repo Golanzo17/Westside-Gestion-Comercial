@@ -1,3 +1,18 @@
+' ARCHIVO: FrmMain.vb
+' PROPÓSITO: Ventana Principal, Panel de Navegación (Sidebar) y Dashboard de KPIs.
+' Este formulario es el centro de control del sistema:
+' 1. Patrón Contenedor (MDI Moderno): Para evitar ventanas flotantes desordenadas,
+'    utilizamos un panel central (pnlContentHost) donde incrustamos los formularios
+'    hijos (FrmVentasPOS, FrmCaja, etc.) configurando TopLevel = False y Dock = Fill.
+' 2. Segregación de Roles (Principle of Least Privilege):
+'    Configuramos la visibilidad de los accesos según el rol activo:
+'    - Administrador: Gestiona Configuración y Equipo.
+'    - Gerente: Ve Catálogo, Stock, Caja, Reportes y Equipo, con potestad de autorizar.
+'    - Vendedor: Opera POS, Caja, Clientes y Catálogo; restringido en Configuración y Usuarios.
+' 3. Dashboard con KPIs en Vivo: Muestra métricas comerciales del día (total facturado,
+'    tickets emitidos, prendas en stock crítico y estado de caja abierta).
+
+
 Imports System.Drawing
 Imports System.Windows.Forms
 Imports GestionComercial.Models
@@ -45,7 +60,7 @@ Namespace Forms
             Me.Font = UITheme.FontRegular
             Me.AutoScaleMode = AutoScaleMode.Dpi
 
-            ' ==================== SIDEBAR (IZQUIERDA) ====================
+            ' Panel lateral de navegación (Sidebar)
             pnlSidebar = New Panel() With {
                 .Dock = DockStyle.Left,
                 .Width = 260,
@@ -58,33 +73,34 @@ Namespace Forms
                 .Dock = DockStyle.Top,
                 .Height = 120,
                 .BackColor = UITheme.ColorSecondary,
-                .Padding = New Padding(15, 18, 15, 10)
+                .Padding = New Padding(15, 20, 15, 10)
             }
 
             Dim lblBrandIcon As New Label() With {
-                .Text = "GC",
+                .Text = "WESTSIDE",
                 .Font = New Font("Segoe UI", 16.0F, FontStyle.Bold),
                 .ForeColor = Color.White,
-                .Location = New Point(15, 22),
-                .Size = New Size(58, 36),
-                .TextAlign = ContentAlignment.MiddleCenter,
-                .BackColor = UITheme.ColorPrimaryDark
+                .Dock = DockStyle.Top,
+                .Height = 35,
+                .TextAlign = ContentAlignment.MiddleCenter
             }
 
             Dim lblBrandTitle As New Label() With {
-                .Text = "GESTIÓN RETAIL",
-                .Font = New Font("Segoe UI", 12.0F, FontStyle.Bold),
-                .ForeColor = Color.White,
-                .Location = New Point(88, 22),
-                .AutoSize = True
+                .Text = "GESTIÓN COMERCIAL",
+                .Font = New Font("Segoe UI", 9.0F, FontStyle.Bold),
+                .ForeColor = UITheme.ColorPrimaryLight,
+                .Dock = DockStyle.Top,
+                .Height = 22,
+                .TextAlign = ContentAlignment.MiddleCenter
             }
 
             Dim lblBrandSubtitle As New Label() With {
-                .Text = "Local de Indumentaria",
-                .Font = New Font("Segoe UI", 9.0F, FontStyle.Regular),
-                .ForeColor = UITheme.ColorTextMuted,
-                .Location = New Point(90, 55),
-                .AutoSize = True
+                .Text = "Indumentaria & Calzado",
+                .Font = UITheme.FontSmall,
+                .ForeColor = Color.FromArgb(180, 200, 220),
+                .Dock = DockStyle.Top,
+                .Height = 20,
+                .TextAlign = ContentAlignment.MiddleCenter
             }
 
             pnlBrand.Controls.AddRange({lblBrandIcon, lblBrandTitle, lblBrandSubtitle})
@@ -106,7 +122,8 @@ Namespace Forms
             Dim btnUsuarios = CreateNavButton("Usuarios y equipo", AddressOf Nav_Usuarios)
             Dim btnConfig = CreateNavButton("Configuración", AddressOf Nav_Config)
 
-            ' Reportes y usuarios son visibles para Administradores y Gerentes.
+            ' Configuración de accesos del menú lateral según el rol activo
+
             btnPos.Visible = Not AuthService.IsAdmin
             btnStock.Visible = AuthService.IsManager
             btnCaja.Visible = Not AuthService.IsAdmin
@@ -136,7 +153,7 @@ Namespace Forms
             pnlSidebar.Controls.Add(btnLogout)
             pnlSidebar.Controls.Add(pnlBrand)
 
-            ' ==================== TOP BAR (SUPERIOR) ====================
+            ' Barra superior de estado (TopBar)
             pnlTopBar = New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 60,
@@ -212,7 +229,7 @@ Namespace Forms
             tlpTopBar.Controls.Add(lblClock, 3, 0)
             pnlTopBar.Controls.Add(tlpTopBar)
 
-            ' ==================== CONTENT HOST (CENTRAL) ====================
+            ' Contenedor central de vistas
             pnlContentHost = New Panel() With {
                 .Dock = DockStyle.Fill,
                 .BackColor = UITheme.ColorBackground

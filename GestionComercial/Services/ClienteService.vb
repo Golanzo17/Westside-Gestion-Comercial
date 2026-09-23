@@ -1,9 +1,21 @@
+' ARCHIVO: ClienteService.vb
+' PROPÓSITO: Lógica de directorio de clientes, búsqueda rápida y validación de DNI/CUIT.
+' En este servicio manejamos los compradores del negocio:
+' 1. Búsqueda Multicriterio en POS: Permite buscar un cliente por DNI, nombre, apellido
+'    o teléfono con una sola caja de texto mediante comodines SQL LIKE parametrizados.
+' 2. Validación de DNI Único: Evita que se registren dos fichas para una misma persona.
+' 3. Cliente por Defecto (Consumidor Final): El sistema predetermina el ID 1 para ventas
+'    rápidas de mostrador donde el cliente no desea registrar sus datos personales.
+
+
 Imports System.Data
 Imports GestionComercial.Data
 Imports GestionComercial.Models
 
 Namespace Services
     Public Class ClienteService
+
+        ' Consulta el listado de clientes con filtro de texto opcional y estado activo.
 
         Public Function GetClientes(Optional busqueda As String = "", Optional soloActivos As Boolean = True) As List(Of Cliente)
             Dim list As New List(Of Cliente)()

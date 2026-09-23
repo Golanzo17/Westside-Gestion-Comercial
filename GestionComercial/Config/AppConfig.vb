@@ -1,18 +1,23 @@
+' ARCHIVO: AppConfig.vb
+' PROPÓSITO: Administrador centralizado de la configuración de base de datos del sistema.
+' En este archivo manejamos la configuración de persistencia del sistema. Decidimos
+' guardar los parámetros en formato JSON (appsettings.json) usando System.Text.Json.
+' El sistema utiliza como motor principal SQLite embebido: un archivo .db local que
+' ofrece total portabilidad, cero dependencias de servicios externos y cumplimiento ACID.
+
 Imports System.IO
 Imports System.Text.Json
 
 Namespace Config
-    Public Class DatabaseSettings
-        Public Property Provider As String = "SQLite" ' "SQLite" (recomendado, sin servidor) o "MySQL"
-        Public Property SqliteFileName As String = "gestion_comercial.db"
-        Public Property Host As String = "localhost"
-        Public Property Port As Integer = 3306
-        Public Property Database As String = "gestion_comercial_db"
-        Public Property Username As String = "root"
-        Public Property Password As String = ""
 
+    ' Configuración de persistencia para conexión a la base de datos SQLite.
+    Public Class DatabaseSettings
+        ' Motor seleccionado: "SQLite"
+        Public Property Provider As String = "SQLite"
+        Public Property SqliteFileName As String = "gestion_comercial.db"
+
+        ' Ubica el archivo SQLite (.db) buscando en las carpetas relativas del proyecto o junto al ejecutable.
         Public Function GetSqlitePath() As String
-            ' Buscar el archivo gestion_comercial.db priorizando la carpeta raíz del proyecto
             Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
             Dim candidates As String() = {
                 Path.Combine(baseDir, "..", "..", "..", "..", "Database", SqliteFileName),
@@ -21,6 +26,7 @@ Namespace Config
                 Path.Combine(baseDir, SqliteFileName)
             }
 
+            ' Recorremos las rutas candidatas y si el archivo ya existe físicamente, usamos esa
             For Each c In candidates
                 Try
                     Dim full = Path.GetFullPath(c)
@@ -31,7 +37,7 @@ Namespace Config
                 End Try
             Next
 
-            ' Si no existe el archivo aún, devolver la ruta en la carpeta Database del proyecto si la carpeta existe
+            ' Si el archivo aún no existe (primera ejecución), buscamos si la carpeta Database existe
             For Each c In candidates
                 Try
                     Dim dir = Path.GetDirectoryName(Path.GetFullPath(c))
@@ -42,48 +48,22 @@ Namespace Config
                 End Try
             Next
 
-            ' Fallback al directorio ejecutable
+            ' Si no encontramos nada, devolvemos la ruta junto al ejecutable como respaldo (fallback)
             Return Path.Combine(baseDir, SqliteFileName)
         End Function
 
+        ' Construye la cadena de conexión completa para SQLite.
         Public Function GetConnectionString() As String
-            If Provider.Equals("SQLite", StringComparison.OrdinalIgnoreCase) Then
-                Return $"Data Source={GetSqlitePath()};"
-            Else
-                Dim builder As New MySqlConnector.MySqlConnectionStringBuilder()
-                builder.Server = Host
-                builder.Port = CUInt(Port)
-                builder.Database = Database
-                builder.UserID = Username
-                builder.Password = Password
-                builder.CharacterSet = "utf8mb4"
-                builder.ConnectionTimeout = 5
-                builder.DefaultCommandTimeout = 30
-                builder.AllowUserVariables = True
-                Return builder.ConnectionString
-            End If
-        End Function
-
-        Public Function GetServerOnlyConnectionString() As String
-            If Provider.Equals("SQLite", StringComparison.OrdinalIgnoreCase) Then
-                Return GetConnectionString()
-            Else
-                Dim builder As New MySqlConnector.MySqlConnectionStringBuilder()
-                builder.Server = Host
-                builder.Port = CUInt(Port)
-                builder.UserID = Username
-                builder.Password = Password
-                builder.CharacterSet = "utf8mb4"
-                builder.ConnectionTimeout = 5
-                Return builder.ConnectionString
-            End If
+            Return $"Data Source={GetSqlitePath()};"
         End Function
     End Class
 
+    ' Módulo global para lectura y guardado de appsettings.json.
     Public Module AppConfig
         Private ReadOnly ConfigFilePath As String = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json")
         Private _settings As DatabaseSettings
 
+        ' Propiedad estática para acceder a la configuración desde cualquier parte del sistema
         Public Property Settings As DatabaseSettings
             Get
                 If _settings Is Nothing Then
@@ -96,6 +76,7 @@ Namespace Config
             End Set
         End Property
 
+        ' Carga la configuración desde appsettings.json. Si no existe, genera la configuración por defecto.
         Public Sub LoadSettings()
             Try
                 If File.Exists(ConfigFilePath) Then
@@ -103,7 +84,7 @@ Namespace Config
                     _settings = JsonSerializer.Deserialize(Of DatabaseSettings)(json)
                 End If
             Catch ex As Exception
-                ' Fallback
+                ' Si hay error de lectura, usamos valores por defecto
             End Try
 
             If _settings Is Nothing Then
@@ -117,16 +98,18 @@ Namespace Config
             End If
         End Sub
 
+        ' Guarda los ajustes actuales en appsettings.json con formato legible.
         Public Sub SaveSettings()
             Try
                 Dim options As New JsonSerializerOptions With {.WriteIndented = True}
                 Dim json As String = JsonSerializer.Serialize(_settings, options)
                 File.WriteAllText(ConfigFilePath, json)
             Catch ex As Exception
-                ' Silently continue
+                ' Error silencioso para no interrumpir el flujo si el archivo está bloqueado
             End Try
         End Sub
 
+        ' Acceso rápido a la cadena de conexión activa
         Public ReadOnly Property ConnectionString As String
             Get
                 Return Settings.GetConnectionString()

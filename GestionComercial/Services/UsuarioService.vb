@@ -1,3 +1,16 @@
+' ARCHIVO: UsuarioService.vb
+' PROPÓSITO: Administración de cuentas de empleados, roles, DNI único y contraseñas.
+' En este servicio manejamos el personal del comercio:
+' 1. Roles Soportados: Vendedor, Gerente y Administrador.
+' 2. Validación de Identidad Única: Controla que no existan dos empleados con el mismo
+'    username ni con el mismo DNI.
+' 3. Hashing Automático PBKDF2: Toda alta o cambio de contraseña se encripta inmediatamente
+'    usando DatabaseHelper.HashPasswordSecure.
+' 4. Baja Lógica (Soft Delete): Los usuarios nunca se borran físicamente de la base de datos
+'    con un DELETE, sino que se marcan con Activo = False. Esto preserva la integridad
+'    referencial de todas las ventas y arqueos de caja que ese empleado haya realizado.
+
+
 Imports System.Data
 Imports GestionComercial.Data
 Imports GestionComercial.Models
@@ -5,6 +18,10 @@ Imports GestionComercial.Models
 Namespace Services
     Public Class UsuarioService
 
+        ' Roles disponibles en el sistema según la matriz de segregación de funciones
+        Public Shared ReadOnly RolesDisponibles As String() = {"Vendedor", "Gerente", "Administrador"}
+
+        ' Retorna la lista de empleados (con opción de ver solo activos o todos para auditoría)
         Public Function GetUsuarios(Optional soloActivos As Boolean = False) As List(Of Usuario)
             Dim list As New List(Of Usuario)()
             Try
@@ -42,9 +59,8 @@ Namespace Services
             Return Nothing
         End Function
 
-        ''' <summary>
-        ''' Verifica si un DNI ya pertenece a otro usuario en el sistema.
-        ''' </summary>
+        ' Validación de unicidad de DNI (excluye el propio ID en caso de edición).
+
         Public Function ExisteDni(dni As String, Optional excludeId As Integer = 0) As Boolean
             Dim dniTrimmed = If(dni, "").Trim()
             If String.IsNullOrWhiteSpace(dniTrimmed) Then Return False
@@ -266,10 +282,13 @@ Namespace Services
         End Function
 
         Private Function EsRolValido(rol As String) As Boolean
-            Return rol.Equals("Administrador", StringComparison.OrdinalIgnoreCase) OrElse
-                   rol.Equals("Gerente", StringComparison.OrdinalIgnoreCase) OrElse
-                   rol.Equals("Vendedor", StringComparison.OrdinalIgnoreCase) OrElse
-                   rol.Equals("Cajero", StringComparison.OrdinalIgnoreCase)
+            If String.IsNullOrWhiteSpace(rol) Then Return False
+            For Each r In RolesDisponibles
+                If r.Equals(rol.Trim(), StringComparison.OrdinalIgnoreCase) Then
+                    Return True
+                End If
+            Next
+            Return False
         End Function
 
         Private Function MapUsuario(row As DataRow) As Usuario
