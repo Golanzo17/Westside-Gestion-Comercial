@@ -41,7 +41,7 @@ AddHandler btnCobrar.Click, AddressOf BtnCobrar_Click
 * **Seguridad y Segregación de Funciones por Rol (Principle of Least Privilege)**:
   El sistema implementa una arquitectura deliberada de **segregación corporativa de funciones** para prevenir fraudes internos y garantizar auditoría contable. Cada rol posee un ámbito operativo claramente delimitado:
   * **Administrador (Perfil Auditor / TI / Propietario)**:
-    * Gestiona la infraestructura del sistema: Configuración general del local, altas/bajas de empleados en el módulo de Usuarios, mantenimiento de Catálogo y visualización de Reportes/Métricas.
+    * Gestiona la infraestructura del sistema: Configuración general del local y altas/bajas de empleados en el módulo de Usuarios.
     * **Restricción intencional**: No opera el Punto de Venta (POS) ni abre turnos de Caja física diaria, preservando la separación estricta entre la administración/auditoría del negocio y el manejo material de dinero en efectivo.
   * **Gerente (Perfil Supervisión / Operaciones)**:
     * Supervisa el salón y la logística: Control de Stock y reposición, recepción de mercadería, altas y modificaciones de precios y prendas en Catálogo, gestión del equipo en Usuarios, apertura y arqueo de Caja, y análisis en Reportes.
@@ -54,11 +54,11 @@ AddHandler btnCobrar.Click, AddressOf BtnCobrar_Click
 | :--- | :---: | :---: | :---: |
 | **Panel Principal (KPIs)** | ✅ Visible | ✅ Visible | ✅ Visible |
 | **Punto de Venta (POS)** | ❌ Restringido (Auditoría) | ✅ Operativo | ✅ Operativo |
-| **Catálogo y Talles** | ✅ Gestión total | ✅ Gestión total | ✅ Solo consulta / venta |
+| **Catálogo y Talles** | ❌ Restringido | ✅ Gestión total | ✅ Solo consulta / venta |
 | **Stock y Reposición** | ❌ Restringido | ✅ Operativo | 🔒 Requiere Autorización |
 | **Caja Diaria y Arqueo** | ❌ Restringido (Auditoría) | ✅ Operativo | ✅ Operativo (su turno) |
 | **Clientes** | ✅ Visible | ✅ Visible | ✅ Visible |
-| **Reportes y Ventas** | ✅ Completo | ✅ Completo | ✅ Métricas de ventas |
+| **Reportes y Ventas** | ❌ Restringido | ✅ Completo | ✅ Métricas de ventas |
 | **Usuarios y Equipo** | ✅ Gestión total | ✅ Gestión de equipo | ❌ Restringido |
 | **Configuración General** | ✅ Exclusivo | ❌ Restringido | ❌ Restringido |
 

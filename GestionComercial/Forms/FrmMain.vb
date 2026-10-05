@@ -124,10 +124,11 @@ Namespace Forms
             Dim btnConfig = CreateNavButton("Configuración", AddressOf Nav_Config)
 
             ' Configuración de accesos del menú lateral según el rol activo
-            btnPos.Visible = Not AuthService.IsAdmin
+            btnPos.Visible = AuthService.IsVendor
             btnStock.Visible = AuthService.IsManager
-            btnCaja.Visible = Not AuthService.IsAdmin
-            btnReportes.Visible = AuthService.IsAdminOrManager OrElse AuthService.IsVendor
+            btnProductos.Visible = Not AuthService.IsAdmin
+            btnCaja.Visible = AuthService.IsVendor
+            btnReportes.Visible = AuthService.IsManager OrElse AuthService.IsVendor
             btnUsuarios.Visible = AuthService.IsAdminOrManager
             btnConfig.Visible = AuthService.IsAdmin
 
@@ -206,7 +207,7 @@ Namespace Forms
                 .Text = "+ NUEVA VENTA (F1)",
                 .Size = New Size(195, 36),
                 .Anchor = AnchorStyles.None,
-                .Visible = Not AuthService.IsAdmin
+                .Visible = AuthService.IsVendor
             }
             UITheme.StyleButton(btnQuickPOS, "Primary")
             AddHandler btnQuickPOS.Click, AddressOf Nav_POS
@@ -242,7 +243,7 @@ Namespace Forms
             ' Atajos globales
             Me.KeyPreview = True
             AddHandler Me.KeyDown, Sub(s, e)
-                                       If e.KeyCode = Keys.F1 AndAlso Not AuthService.IsAdmin Then
+                                       If e.KeyCode = Keys.F1 AndAlso AuthService.IsVendor Then
                                            e.SuppressKeyPress = True
                                            Nav_POS(Nothing, Nothing)
                                        End If
@@ -358,8 +359,8 @@ Namespace Forms
                 .AutoSizeMode = AutoSizeMode.GrowAndShrink
             }
 
-            ' Operaciones para Vendedor y Gerente (POS y Caja)
-            If Not AuthService.IsAdmin Then
+            ' Operaciones para Vendedor (POS y Caja)
+            If AuthService.IsVendor Then
                 Dim btnAccionPOS As New Button() With {
                     .Text = "🛒 Realizar Nueva Venta",
                     .Height = 48,
@@ -387,17 +388,19 @@ Namespace Forms
 
             ' Operaciones de Gestión (Admin y Gerente)
             If AuthService.IsAdminOrManager Then
-                Dim btnAccionPrenda As New Button() With {
-                    .Text = "+ Cargar Nueva Prenda",
-                    .Height = 48,
-                    .AutoSize = True,
-                    .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    .Padding = New Padding(14, 0, 14, 0),
-                    .Margin = New Padding(0, 0, 10, 0)
-                }
-                UITheme.StyleButton(btnAccionPrenda, "Success")
-                AddHandler btnAccionPrenda.Click, AddressOf Nav_Productos
-                flpAcciones.Controls.Add(btnAccionPrenda)
+                If AuthService.IsManager Then
+                    Dim btnAccionPrenda As New Button() With {
+                        .Text = "+ Cargar Nueva Prenda",
+                        .Height = 48,
+                        .AutoSize = True,
+                        .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                        .Padding = New Padding(14, 0, 14, 0),
+                        .Margin = New Padding(0, 0, 10, 0)
+                    }
+                    UITheme.StyleButton(btnAccionPrenda, "Success")
+                    AddHandler btnAccionPrenda.Click, AddressOf Nav_Productos
+                    flpAcciones.Controls.Add(btnAccionPrenda)
+                End If
 
                 If AuthService.IsManager Then
                     Dim btnAccionStock As New Button() With {
@@ -535,12 +538,13 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_POS(sender As Object, e As EventArgs)
-            If AuthService.IsAdmin Then Return
+            If Not AuthService.IsVendor Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmVentasPOS())
         End Sub
 
         Private Sub Nav_Productos(sender As Object, e As EventArgs)
+            If AuthService.IsAdmin Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmProductos())
         End Sub
@@ -557,13 +561,13 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_Caja(sender As Object, e As EventArgs)
-            If AuthService.IsAdmin Then Return
+            If Not AuthService.IsVendor Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmCaja())
         End Sub
 
         Private Sub Nav_Reportes(sender As Object, e As EventArgs)
-            If Not (AuthService.IsAdminOrManager OrElse AuthService.IsVendor) Then
+            If AuthService.IsAdmin OrElse Not (AuthService.IsManager OrElse AuthService.IsVendor) Then
                 Return
             End If
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
