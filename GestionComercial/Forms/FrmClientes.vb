@@ -12,9 +12,10 @@ Imports GestionComercial.UI
 ' - Integridad del Sistema ('Consumidor Final'):
 '   El cliente con ID = 1 corresponde a 'Consumidor Final' (ventas de mostrador anónimas).
 '   Se bloquea su eliminación para preservar la integridad referencial de la tabla 'ventas'.
-' - Borrado Lógico:
+' - Borrado Lógico y Reactivación:
 '   Al igual que en usuarios y productos, los clientes se desactivan (Activo = 0)
 '   para conservar la auditoría de ventas históricas asociadas a su DNI/CUIT.
+'   Permite visualizar e alternar el estado (activo/inactivo) desde el listado mediante un filtro.
 
 Namespace Forms
     Public Class FrmClientes
@@ -26,7 +27,8 @@ Namespace Forms
         Private btnBuscar As Button
         Private btnNuevo As Button
         Private btnEditar As Button
-        Private btnEliminar As Button
+        Private btnToggleActivo As Button
+        Private chkMostrarInactivos As CheckBox
         Private dgvClientes As DataGridView
         Private lblTotal As Label
 
@@ -37,7 +39,7 @@ Namespace Forms
 
         Private Sub InitializeUI()
             Me.Text = "Directorio de Clientes"
-            Me.Size = New Size(950, 580)
+            Me.Size = New Size(1020, 580)
             Me.StartPosition = FormStartPosition.CenterScreen
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
@@ -71,29 +73,32 @@ Namespace Forms
             }
 
             Dim lblB As New Label() With {.Text = "Buscar por DNI o Nombre:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 5, 4, 0)}
-            txtBuscar = New TextBox() With {.Size = New Size(240, 26), .Margin = New Padding(0, 2, 0, 0)}
+            txtBuscar = New TextBox() With {.Size = New Size(200, 26), .Margin = New Padding(0, 2, 0, 0)}
             UITheme.StyleTextBox(txtBuscar)
             AddHandler txtBuscar.KeyDown, Sub(s, e)
                                               If e.KeyCode = Keys.Enter Then LoadClientes()
                                           End Sub
 
-            btnBuscar = New Button() With {.Text = "Buscar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
+            btnBuscar = New Button() With {.Text = "Buscar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
             UITheme.StyleButton(btnBuscar, "Primary")
             AddHandler btnBuscar.Click, Sub() LoadClientes()
 
-            btnNuevo = New Button() With {.Text = "+ Nuevo Cliente", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
+            btnNuevo = New Button() With {.Text = "+ Nuevo Cliente", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
             UITheme.StyleButton(btnNuevo, "Success")
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-            btnEditar = New Button() With {.Text = "Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
+            btnEditar = New Button() With {.Text = "Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
             UITheme.StyleButton(btnEditar, "Secondary")
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
-            btnEliminar = New Button() With {.Text = "Eliminar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
-            UITheme.StyleButton(btnEliminar, "Danger")
-            AddHandler btnEliminar.Click, AddressOf BtnEliminar_Click
+            btnToggleActivo = New Button() With {.Text = "🚫 Activar / Desactivar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
+            UITheme.StyleButton(btnToggleActivo, "Danger")
+            AddHandler btnToggleActivo.Click, AddressOf BtnToggleActivo_Click
 
-            flpToolbar.Controls.AddRange({lblB, txtBuscar, btnBuscar, btnNuevo, btnEditar, btnEliminar})
+            chkMostrarInactivos = New CheckBox() With {.Text = "Mostrar inactivos", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 0, 0)}
+            AddHandler chkMostrarInactivos.CheckedChanged, Sub() LoadClientes()
+
+            flpToolbar.Controls.AddRange({lblB, txtBuscar, btnBuscar, btnNuevo, btnEditar, btnToggleActivo, chkMostrarInactivos})
             pnlToolbar.Controls.Add(flpToolbar)
 
             ' Grilla de clientes registrados
@@ -104,6 +109,7 @@ Namespace Forms
             AddHandler dgvClientes.CellDoubleClick, Sub()
                                                     If AuthService.IsAdminOrManager Then EditarSeleccionado()
                                                 End Sub
+            AddHandler dgvClientes.CellFormatting, AddressOf DgvClientes_CellFormatting
             pnlGrid.Controls.Add(dgvClientes)
 
             ' Footer con conteo dinámico
@@ -127,35 +133,64 @@ Namespace Forms
             dgvClientes.Columns("Dni").Width = 120
 
             dgvClientes.Columns.Add("Apellido", "Apellido")
-            dgvClientes.Columns("Apellido").Width = 140
+            dgvClientes.Columns("Apellido").Width = 130
 
             dgvClientes.Columns.Add("NombreCompleto", "Nombre")
             dgvClientes.Columns("NombreCompleto").Width = 130
 
             dgvClientes.Columns.Add("Telefono", "Teléfono")
-            dgvClientes.Columns("Telefono").Width = 130
+            dgvClientes.Columns("Telefono").Width = 120
 
             dgvClientes.Columns.Add("Email", "Email")
             dgvClientes.Columns("Email").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
 
             dgvClientes.Columns.Add("Ciudad", "Ciudad")
-            dgvClientes.Columns("Ciudad").Width = 120
+            dgvClientes.Columns("Ciudad").Width = 110
 
             dgvClientes.Columns.Add("FechaNac", "Fecha Nac.")
-            dgvClientes.Columns("FechaNac").Width = 100
+            dgvClientes.Columns("FechaNac").Width = 95
+
+            dgvClientes.Columns.Add("Activo", "Estado")
+            dgvClientes.Columns("Activo").Width = 85
         End Sub
 
         ''' <summary>
-        ''' Carga la lista de clientes filtrando por nombre o DNI de forma segura con parámetros SQL.
+        ''' Carga la lista de clientes filtrando por nombre o DNI y respetando el estado del filtro de inactivos.
         ''' </summary>
         Private Sub LoadClientes()
-            Dim lista = clienteService.GetClientes(txtBuscar.Text.Trim(), True)
+            Dim soloActivos As Boolean = Not chkMostrarInactivos.Checked
+            Dim lista = clienteService.GetClientes(txtBuscar.Text.Trim(), soloActivos)
             dgvClientes.Rows.Clear()
+            Dim activosCount As Integer = 0
             For Each c In lista
                 Dim fnacStr = If(c.FechaNacimiento.HasValue, c.FechaNacimiento.Value.ToString("dd/MM/yyyy"), "-")
-                dgvClientes.Rows.Add(c.Id, c.DniCuit, c.Apellido, c.Nombre, c.Telefono, c.Email, c.Ciudad, fnacStr)
+                Dim estadoStr = If(c.Activo, "Activo", "Inactivo")
+                If c.Activo Then activosCount += 1
+                dgvClientes.Rows.Add(c.Id, c.DniCuit, c.Apellido, c.Nombre, c.Telefono, c.Email, c.Ciudad, fnacStr, estadoStr)
             Next
-            lblTotal.Text = $"Total clientes registrados: {lista.Count}"
+            If chkMostrarInactivos.Checked Then
+                lblTotal.Text = $"Total clientes: {lista.Count} ({activosCount} activos, {lista.Count - activosCount} inactivos)"
+            Else
+                lblTotal.Text = $"Total clientes registrados: {lista.Count}"
+            End If
+        End Sub
+
+        ''' <summary>
+        ''' Formato visual condicional para resaltar el estado activo / inactivo en verde o rojo.
+        ''' </summary>
+        Private Sub DgvClientes_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs)
+            If e.RowIndex >= 0 Then
+                If dgvClientes.Columns(e.ColumnIndex).Name = "Activo" Then
+                    Dim val = e.Value?.ToString()
+                    If val = "Activo" Then
+                        e.CellStyle.ForeColor = UITheme.ColorSuccess
+                        e.CellStyle.Font = UITheme.FontBold
+                    Else
+                        e.CellStyle.ForeColor = UITheme.ColorDanger
+                        e.CellStyle.Font = UITheme.FontBold
+                    End If
+                End If
+            End If
         End Sub
 
         Private Sub BtnNuevo_Click(sender As Object, e As EventArgs)
@@ -180,22 +215,25 @@ Namespace Forms
         End Sub
 
         ''' <summary>
-        ''' Control de baja lógica de clientes.
-        ''' Verificamos que no sea el cliente ID=1 (Consumidor Final) antes de procesar la baja.
+        ''' Control de activación/desactivación (baja lógica / reactivación) de clientes.
+        ''' Protege al cliente ID=1 (Consumidor Final) impidiendo su desactivación.
         ''' </summary>
-        Private Sub BtnEliminar_Click(sender As Object, e As EventArgs)
+        Private Sub BtnToggleActivo_Click(sender As Object, e As EventArgs)
             If dgvClientes.CurrentRow IsNot Nothing Then
                 Dim id As Integer = Convert.ToInt32(dgvClientes.CurrentRow.Cells("Id").Value)
                 If id = 1 Then
-                    MessageBox.Show("El cliente 'Consumidor Final' es del sistema y no puede ser eliminado.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                    MessageBox.Show("El cliente 'Consumidor Final' es del sistema y no puede ser desactivado.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
                     Return
                 End If
 
                 Dim nombre As String = dgvClientes.CurrentRow.Cells("NombreCompleto").Value.ToString()
-                If MessageBox.Show($"¿Deseas dar de baja a {nombre}?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.Yes Then
+                Dim estadoActual As String = dgvClientes.CurrentRow.Cells("Activo").Value?.ToString()
+                Dim accion As String = If(estadoActual = "Activo", "desactivar", "reactivar")
+
+                If MessageBox.Show($"¿Deseas {accion} al cliente '{nombre}'?", "Confirmar Acción", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.Yes Then
                     Dim errMsg As String = ""
-                    If clienteService.EliminarCliente(id, errMsg) Then
-                        UITheme.ShowToast(Me, "Cliente dado de baja correctamente.", "Success")
+                    If clienteService.ToggleActivo(id, errMsg) Then
+                        UITheme.ShowToast(Me, $"Cliente {accion}do correctamente.", "Success")
                         LoadClientes()
                     Else
                         UITheme.ShowToast(Me, "Error: " & errMsg, "Error")
@@ -225,7 +263,6 @@ Namespace Forms
         Private txtCiudad As TextBox
         Private txtNotas As TextBox
         Private dtpFechaNac As DateTimePicker
-        Private chkSinFecha As CheckBox
         Private btnGuardar As Button
         Private btnCancelar As Button
 
@@ -237,7 +274,7 @@ Namespace Forms
 
         Private Sub InitializeUI()
             Me.Text = If(_clienteId = 0, "Nuevo Cliente", "Editar Cliente")
-            Me.Size = New Size(540, 530)
+            Me.Size = New Size(540, 570)
             Me.StartPosition = FormStartPosition.CenterParent
             Me.FormBorderStyle = FormBorderStyle.FixedDialog
             Me.MaximizeBox = False
@@ -245,47 +282,40 @@ Namespace Forms
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
 
-            Dim lblDni As New Label() With {.Text = "DNI / CUIT:", .Font = UITheme.FontBold, .Location = New Point(30, 20), .AutoSize = True}
-            txtDni = New TextBox() With {.Location = New Point(30, 50), .Size = New Size(220, 26)}
+            Dim lblDni As New Label() With {.Text = "DNI / CUIT *:", .Font = UITheme.FontBold, .Location = New Point(30, 20), .AutoSize = True}
+            txtDni = New TextBox() With {.Location = New Point(30, 45), .Size = New Size(220, 26)}
             UITheme.StyleTextBox(txtDni)
 
-            Dim lblTel As New Label() With {.Text = "Teléfono / Celular:", .Font = UITheme.FontBold, .Location = New Point(270, 20), .AutoSize = True}
-            txtTelefono = New TextBox() With {.Location = New Point(270, 50), .Size = New Size(220, 26)}
+            Dim lblTel As New Label() With {.Text = "Teléfono / Celular *:", .Font = UITheme.FontBold, .Location = New Point(270, 20), .AutoSize = True}
+            txtTelefono = New TextBox() With {.Location = New Point(270, 45), .Size = New Size(220, 26)}
             UITheme.StyleTextBox(txtTelefono)
 
-            Dim lblNom As New Label() With {.Text = "Nombre:", .Font = UITheme.FontBold, .Location = New Point(30, 95), .AutoSize = True}
-            txtNombre = New TextBox() With {.Location = New Point(30, 125), .Size = New Size(220, 26)}
+            Dim lblNom As New Label() With {.Text = "Nombre *:", .Font = UITheme.FontBold, .Location = New Point(30, 85), .AutoSize = True}
+            txtNombre = New TextBox() With {.Location = New Point(30, 110), .Size = New Size(220, 26)}
             UITheme.StyleTextBox(txtNombre)
 
-            Dim lblApe As New Label() With {.Text = "Apellido:", .Font = UITheme.FontBold, .Location = New Point(270, 95), .AutoSize = True}
-            txtApellido = New TextBox() With {.Location = New Point(270, 125), .Size = New Size(220, 26)}
+            Dim lblApe As New Label() With {.Text = "Apellido *:", .Font = UITheme.FontBold, .Location = New Point(270, 85), .AutoSize = True}
+            txtApellido = New TextBox() With {.Location = New Point(270, 110), .Size = New Size(220, 26)}
             UITheme.StyleTextBox(txtApellido)
 
-            Dim lblEmail As New Label() With {.Text = "Email:", .Font = UITheme.FontBold, .Location = New Point(30, 170), .AutoSize = True}
-            txtEmail = New TextBox() With {.Location = New Point(30, 200), .Size = New Size(460, 26)}
+            Dim lblEmail As New Label() With {.Text = "Email *:", .Font = UITheme.FontBold, .Location = New Point(30, 150), .AutoSize = True}
+            txtEmail = New TextBox() With {.Location = New Point(30, 175), .Size = New Size(460, 26)}
             UITheme.StyleTextBox(txtEmail)
 
-            Dim lblDir As New Label() With {.Text = "Dirección:", .Font = UITheme.FontBold, .Location = New Point(30, 245), .AutoSize = True}
-            txtDireccion = New TextBox() With {.Location = New Point(30, 275), .Size = New Size(290, 26)}
+            Dim lblDir As New Label() With {.Text = "Dirección *:", .Font = UITheme.FontBold, .Location = New Point(30, 215), .AutoSize = True}
+            txtDireccion = New TextBox() With {.Location = New Point(30, 240), .Size = New Size(290, 26)}
             UITheme.StyleTextBox(txtDireccion)
 
-            Dim lblCiu As New Label() With {.Text = "Ciudad:", .Font = UITheme.FontBold, .Location = New Point(330, 245), .AutoSize = True}
-            txtCiudad = New TextBox() With {.Location = New Point(330, 275), .Size = New Size(160, 26)}
+            Dim lblCiu As New Label() With {.Text = "Ciudad *:", .Font = UITheme.FontBold, .Location = New Point(330, 215), .AutoSize = True}
+            txtCiudad = New TextBox() With {.Location = New Point(330, 240), .Size = New Size(160, 26)}
             UITheme.StyleTextBox(txtCiudad)
 
-            Dim lblNotas As New Label() With {.Text = "Notas / Preferencias (Talles preferidos, etc.):", .Font = UITheme.FontBold, .Location = New Point(30, 320), .AutoSize = True}
-            txtNotas = New TextBox() With {.Location = New Point(30, 350), .Size = New Size(460, 55), .Multiline = True}
+            Dim lblFnac As New Label() With {.Text = "Fecha de Nacimiento *:", .Font = UITheme.FontBold, .Location = New Point(30, 280), .AutoSize = True}
+            dtpFechaNac = New DateTimePicker() With {.Location = New Point(30, 305), .Size = New Size(460, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddYears(-25)}
+
+            Dim lblNotas As New Label() With {.Text = "Notas / Preferencias (Opcional):", .Font = UITheme.FontBold, .Location = New Point(30, 345), .AutoSize = True}
+            txtNotas = New TextBox() With {.Location = New Point(30, 370), .Size = New Size(460, 55), .Multiline = True}
             UITheme.StyleTextBox(txtNotas)
-
-            Dim lblFnac As New Label() With {.Text = "Fecha de Nacimiento:", .Font = UITheme.FontBold, .Location = New Point(30, 422), .AutoSize = True}
-            dtpFechaNac = New DateTimePicker() With {.Location = New Point(30, 447), .Size = New Size(200, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddYears(-25)}
-            chkSinFecha = New CheckBox() With {.Text = "Sin fecha", .Location = New Point(245, 450), .AutoSize = True, .Checked = True}
-            dtpFechaNac.Enabled = Not chkSinFecha.Checked
-            AddHandler chkSinFecha.CheckedChanged, Sub()
-                                                       dtpFechaNac.Enabled = Not chkSinFecha.Checked
-                                                   End Sub
-
-            Me.Size = New Size(540, 590)
 
             Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = Color.FromArgb(241, 245, 249), .Padding = New Padding(20, 10, 20, 10)}
             btnGuardar = New Button() With {.Text = "💾 Guardar Cliente", .Dock = DockStyle.Right, .Width = 160}
@@ -298,7 +328,7 @@ Namespace Forms
 
             pnlBottom.Controls.AddRange({btnGuardar, btnCancelar})
 
-            Me.Controls.AddRange({lblDni, txtDni, lblTel, txtTelefono, lblNom, txtNombre, lblApe, txtApellido, lblEmail, txtEmail, lblDir, txtDireccion, lblCiu, txtCiudad, lblNotas, txtNotas, lblFnac, dtpFechaNac, chkSinFecha, pnlBottom})
+            Me.Controls.AddRange({lblDni, txtDni, lblTel, txtTelefono, lblNom, txtNombre, lblApe, txtApellido, lblEmail, txtEmail, lblDir, txtDireccion, lblCiu, txtCiudad, lblFnac, dtpFechaNac, lblNotas, txtNotas, pnlBottom})
         End Sub
 
         Private Sub LoadData()
@@ -317,10 +347,6 @@ Namespace Forms
                     txtNotas.Text = clienteActual.Notas
                     If clienteActual.FechaNacimiento.HasValue Then
                         dtpFechaNac.Value = clienteActual.FechaNacimiento.Value
-                        dtpFechaNac.Enabled = True
-                        chkSinFecha.Checked = False
-                    Else
-                        chkSinFecha.Checked = True
                     End If
                 End If
             End If
@@ -331,8 +357,14 @@ Namespace Forms
         ''' que valida unicidad de DNI/CUIT antes del INSERT o UPDATE.
         ''' </summary>
         Private Sub BtnGuardar_Click(sender As Object, e As EventArgs)
-            If String.IsNullOrWhiteSpace(txtDni.Text) OrElse String.IsNullOrWhiteSpace(txtNombre.Text) Then
-                MessageBox.Show("El DNI y el Nombre son obligatorios.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            If String.IsNullOrWhiteSpace(txtDni.Text) OrElse
+               String.IsNullOrWhiteSpace(txtNombre.Text) OrElse
+               String.IsNullOrWhiteSpace(txtApellido.Text) OrElse
+               String.IsNullOrWhiteSpace(txtTelefono.Text) OrElse
+               String.IsNullOrWhiteSpace(txtEmail.Text) OrElse
+               String.IsNullOrWhiteSpace(txtDireccion.Text) OrElse
+               String.IsNullOrWhiteSpace(txtCiudad.Text) Then
+                MessageBox.Show("Por favor complete todos los campos obligatorios (DNI, Nombre, Apellido, Teléfono, Email, Dirección, Ciudad).", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 Return
             End If
 
@@ -344,7 +376,7 @@ Namespace Forms
             clienteActual.Direccion = txtDireccion.Text.Trim()
             clienteActual.Ciudad = txtCiudad.Text.Trim()
             clienteActual.Notas = txtNotas.Text.Trim()
-            clienteActual.FechaNacimiento = If(chkSinFecha.Checked, Nothing, CType(dtpFechaNac.Value.Date, Nullable(Of DateTime)))
+            clienteActual.FechaNacimiento = dtpFechaNac.Value.Date
             clienteActual.Activo = True
 
             Dim errMsg As String = ""

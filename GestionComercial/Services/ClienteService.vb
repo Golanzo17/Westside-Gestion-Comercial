@@ -112,6 +112,36 @@ Namespace Services
                     Return False
                 End If
 
+                If String.IsNullOrWhiteSpace(cli.Apellido) Then
+                    errorMessage = "El apellido del cliente es obligatorio."
+                    Return False
+                End If
+
+                If String.IsNullOrWhiteSpace(cli.Telefono) Then
+                    errorMessage = "El teléfono / celular es obligatorio."
+                    Return False
+                End If
+
+                If String.IsNullOrWhiteSpace(cli.Email) Then
+                    errorMessage = "El email es obligatorio."
+                    Return False
+                End If
+
+                If String.IsNullOrWhiteSpace(cli.Direccion) Then
+                    errorMessage = "La dirección es obligatoria."
+                    Return False
+                End If
+
+                If String.IsNullOrWhiteSpace(cli.Ciudad) Then
+                    errorMessage = "La ciudad es obligatoria."
+                    Return False
+                End If
+
+                If Not cli.FechaNacimiento.HasValue Then
+                    errorMessage = "La fecha de nacimiento es obligatoria."
+                    Return False
+                End If
+
                 ' Control preventivo de unicidad de DNI
                 Dim clienteDuplicado As Cliente = Nothing
                 If ExisteDni(dniTrimmed, cli.Id, clienteDuplicado) Then
@@ -161,6 +191,37 @@ Namespace Services
             Try
                 Dim query As String = "UPDATE `clientes` SET `activo` = 0 WHERE `id` = @id;"
                 DatabaseHelper.ExecuteNonQuery(query, New Dictionary(Of String, Object) From {{"@id", id}})
+                errorMessage = String.Empty
+                Return True
+            Catch ex As Exception
+                errorMessage = ex.Message
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>
+        ''' Alterna el estado activo/inactivo de un cliente.
+        ''' Protege la desactivación del cliente ID=1 (Consumidor Final).
+        ''' </summary>
+        Public Function ToggleActivo(id As Integer, ByRef errorMessage As String) As Boolean
+            Try
+                Dim cli = GetClienteById(id)
+                If cli Is Nothing Then
+                    errorMessage = "El cliente no existe."
+                    Return False
+                End If
+
+                If cli.Id = 1 AndAlso cli.Activo Then
+                    errorMessage = "El cliente 'Consumidor Final' es del sistema y no puede ser desactivado."
+                    Return False
+                End If
+
+                Dim nuevoEstado As Integer = If(cli.Activo, 0, 1)
+                Dim query As String = "UPDATE `clientes` SET `activo` = @activo WHERE `id` = @id;"
+                DatabaseHelper.ExecuteNonQuery(query, New Dictionary(Of String, Object) From {
+                    {"@activo", nuevoEstado},
+                    {"@id", id}
+                })
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception

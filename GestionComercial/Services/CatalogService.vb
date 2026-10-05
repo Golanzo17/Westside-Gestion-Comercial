@@ -319,7 +319,29 @@ Namespace Services
                 Return False
             End Try
         End Function
+
+        ''' <summary>
+        ''' Alterna el estado activo/inactivo de una prenda en el catálogo.
+        ''' Preserva las ventas y registros pasados mediante baja lógica (activo = 0 / 1).
+        ''' </summary>
+        Public Function ToggleActivo(id As Integer, ByRef errorMessage As String) As Boolean
+            If id <= 0 Then
+                errorMessage = "Identificador de producto inválido."
+                Return False
+            End If
+
+            Try
+                Dim query = "UPDATE `productos` SET `activo` = CASE WHEN `activo` = 1 THEN 0 ELSE 1 END WHERE `id` = @id;"
+                DatabaseHelper.ExecuteNonQuery(query, New Dictionary(Of String, Object) From {{"@id", id}})
+                errorMessage = String.Empty
+                Return True
+            Catch ex As Exception
+                errorMessage = ex.Message
+                Return False
+            End Try
+        End Function
 #End Region
+
 
 #Region "Helpers Privados de Soporte"
 

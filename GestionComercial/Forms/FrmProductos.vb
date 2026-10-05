@@ -26,8 +26,8 @@ Namespace Forms
         Private btnBuscar As Button
         Private btnNuevo As Button
         Private btnEditar As Button
-        Private btnEliminar As Button
-        Private btnRefrescar As Button
+        Private btnToggleActivo As Button
+        Private chkMostrarInactivos As CheckBox
         Private dgvProductos As DataGridView
         Private lblTotalArticulos As Label
 
@@ -73,37 +73,40 @@ Namespace Forms
             }
 
             Dim lblB As New Label() With {.Text = "Buscar:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 5, 4, 0)}
-            txtBuscar = New TextBox() With {.Size = New Size(220, 26), .Margin = New Padding(0, 2, 0, 0)}
+            txtBuscar = New TextBox() With {.Size = New Size(200, 26), .Margin = New Padding(0, 2, 0, 0)}
             UITheme.StyleTextBox(txtBuscar)
             AddHandler txtBuscar.KeyDown, Sub(s, e)
                                               If e.KeyCode = Keys.Enter Then LoadProductos()
                                           End Sub
 
-            Dim lblC As New Label() With {.Text = "Categoría:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(12, 5, 4, 0)}
-            cboFiltroCategoria = New ComboBox() With {.Size = New Size(180, 26), .DropDownStyle = ComboBoxStyle.DropDownList, .Margin = New Padding(0, 2, 0, 0)}
+            Dim lblC As New Label() With {.Text = "Categoría:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 5, 4, 0)}
+            cboFiltroCategoria = New ComboBox() With {.Size = New Size(170, 26), .DropDownStyle = ComboBoxStyle.DropDownList, .Margin = New Padding(0, 2, 0, 0)}
             UITheme.StyleComboBox(cboFiltroCategoria)
             AddHandler cboFiltroCategoria.SelectedIndexChanged, Sub() LoadProductos()
 
-            btnBuscar = New Button() With {.Text = "Filtrar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
+            btnBuscar = New Button() With {.Text = "Filtrar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
             UITheme.StyleButton(btnBuscar, "Primary")
             AddHandler btnBuscar.Click, Sub() LoadProductos()
 
-            btnNuevo = New Button() With {.Text = "+ Nueva Prenda", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
+            btnNuevo = New Button() With {.Text = "+ Nueva Prenda", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
             UITheme.StyleButton(btnNuevo, "Success")
             btnNuevo.Visible = AuthService.IsAdminOrManager
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-            btnEditar = New Button() With {.Text = "Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
+            btnEditar = New Button() With {.Text = "Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
             UITheme.StyleButton(btnEditar, "Secondary")
             btnEditar.Visible = AuthService.IsAdminOrManager
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
-            btnEliminar = New Button() With {.Text = "Desactivar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 2, 0, 0)}
-            UITheme.StyleButton(btnEliminar, "Danger")
-            btnEliminar.Visible = AuthService.IsAdminOrManager
-            AddHandler btnEliminar.Click, AddressOf BtnEliminar_Click
+            btnToggleActivo = New Button() With {.Text = "🚫 Activar / Desactivar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
+            UITheme.StyleButton(btnToggleActivo, "Danger")
+            btnToggleActivo.Visible = AuthService.IsAdminOrManager
+            AddHandler btnToggleActivo.Click, AddressOf BtnToggleActivo_Click
 
-            flpToolbar.Controls.AddRange({lblB, txtBuscar, lblC, cboFiltroCategoria, btnBuscar, btnNuevo, btnEditar, btnEliminar})
+            chkMostrarInactivos = New CheckBox() With {.Text = "Mostrar inactivos", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 0, 0)}
+            AddHandler chkMostrarInactivos.CheckedChanged, Sub() LoadProductos()
+
+            flpToolbar.Controls.AddRange({lblB, txtBuscar, lblC, cboFiltroCategoria, btnBuscar, btnNuevo, btnEditar, btnToggleActivo, chkMostrarInactivos})
             pnlToolbar.Controls.Add(flpToolbar)
 
             ' Grilla
@@ -118,6 +121,7 @@ Namespace Forms
             UITheme.StyleDataGrid(dgvProductos)
             ConfigurarColumnas()
             AddHandler dgvProductos.CellDoubleClick, AddressOf DgvProductos_CellDoubleClick
+            AddHandler dgvProductos.CellFormatting, AddressOf DgvProductos_CellFormatting
 
             pnlGrid.Controls.Add(dgvProductos)
 
@@ -156,24 +160,27 @@ Namespace Forms
             dgvProductos.Columns("Nombre").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
 
             dgvProductos.Columns.Add("Categoria", "Categoría")
-            dgvProductos.Columns("Categoria").Width = 150
+            dgvProductos.Columns("Categoria").Width = 140
 
             dgvProductos.Columns.Add("PrecioCosto", "Costo")
-            dgvProductos.Columns("PrecioCosto").Width = 110
+            dgvProductos.Columns("PrecioCosto").Width = 100
             dgvProductos.Columns("PrecioCosto").DefaultCellStyle.Format = "C2"
             dgvProductos.Columns("PrecioCosto").Visible = AuthService.IsAdminOrManager
 
             dgvProductos.Columns.Add("PrecioVenta", "Precio Venta")
-            dgvProductos.Columns("PrecioVenta").Width = 120
+            dgvProductos.Columns("PrecioVenta").Width = 110
             dgvProductos.Columns("PrecioVenta").DefaultCellStyle.Format = "C2"
 
             dgvProductos.Columns.Add("Margen", "Margen %")
-            dgvProductos.Columns("Margen").Width = 90
+            dgvProductos.Columns("Margen").Width = 85
             dgvProductos.Columns("Margen").DefaultCellStyle.Format = "0.0'%'"
             dgvProductos.Columns("Margen").Visible = AuthService.IsAdminOrManager
 
             dgvProductos.Columns.Add("TotalStock", "Stock Total")
-            dgvProductos.Columns("TotalStock").Width = 100
+            dgvProductos.Columns("TotalStock").Width = 90
+
+            dgvProductos.Columns.Add("Activo", "Estado")
+            dgvProductos.Columns("Activo").Width = 85
         End Sub
 
         Private Sub LoadCategorias()
@@ -192,14 +199,40 @@ Namespace Forms
             Dim selCat = TryCast(cboFiltroCategoria.SelectedItem, Categoria)
             If selCat IsNot Nothing Then catId = selCat.Id
 
-            Dim lista = catalogService.GetProductos(filtro, catId, True)
+            Dim soloActivos As Boolean = Not chkMostrarInactivos.Checked
+            Dim lista = catalogService.GetProductos(filtro, catId, soloActivos)
             dgvProductos.Rows.Clear()
+            Dim activosCount As Integer = 0
 
             For Each p In lista
-                dgvProductos.Rows.Add(p.Id, p.CodigoBarra, p.Nombre, p.CategoriaNombre, p.PrecioCosto, p.PrecioVenta, p.PorcentajeGanancia, p.TotalStock)
+                Dim estadoStr = If(p.Activo, "Activo", "Inactivo")
+                If p.Activo Then activosCount += 1
+                dgvProductos.Rows.Add(p.Id, p.CodigoBarra, p.Nombre, p.CategoriaNombre, p.PrecioCosto, p.PrecioVenta, p.PorcentajeGanancia, p.TotalStock, estadoStr)
             Next
 
-            lblTotalArticulos.Text = $"Total de artículos listados: {lista.Count} prendas"
+            If chkMostrarInactivos.Checked Then
+                lblTotalArticulos.Text = $"Total prendas: {lista.Count} ({activosCount} activas, {lista.Count - activosCount} inactivas)"
+            Else
+                lblTotalArticulos.Text = $"Total de artículos listados: {lista.Count} prendas"
+            End If
+        End Sub
+
+        ''' <summary>
+        ''' Formato visual condicional para resaltar el estado activo / inactivo en verde o rojo.
+        ''' </summary>
+        Private Sub DgvProductos_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs)
+            If e.RowIndex >= 0 Then
+                If dgvProductos.Columns(e.ColumnIndex).Name = "Activo" Then
+                    Dim val = e.Value?.ToString()
+                    If val = "Activo" Then
+                        e.CellStyle.ForeColor = UITheme.ColorSuccess
+                        e.CellStyle.Font = UITheme.FontBold
+                    Else
+                        e.CellStyle.ForeColor = UITheme.ColorDanger
+                        e.CellStyle.Font = UITheme.FontBold
+                    End If
+                End If
+            End If
         End Sub
 
         Private Sub BtnNuevo_Click(sender As Object, e As EventArgs)
@@ -233,20 +266,22 @@ Namespace Forms
             End If
         End Sub
 
-        Private Sub BtnEliminar_Click(sender As Object, e As EventArgs)
-            If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Desactivar prendas del catálogo requiere permisos de Administrador o Gerente.") Then Return
+        Private Sub BtnToggleActivo_Click(sender As Object, e As EventArgs)
+            If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Modificar el estado de prendas requiere permisos de Administrador o Gerente.") Then Return
             If dgvProductos.CurrentRow IsNot Nothing Then
                 Dim prodId As Integer = Convert.ToInt32(dgvProductos.CurrentRow.Cells("Id").Value)
                 Dim nombre As String = dgvProductos.CurrentRow.Cells("Nombre").Value.ToString()
+                Dim estadoActual As String = dgvProductos.CurrentRow.Cells("Activo").Value?.ToString()
+                Dim accion As String = If(estadoActual = "Activo", "desactivar", "reactivar")
 
-                Dim resp = MessageBox.Show($"¿Deseas dar de baja la prenda '{nombre}'?", "Confirmar Baja", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+                Dim resp = MessageBox.Show($"¿Deseas {accion} la prenda '{nombre}'?", "Confirmar Acción", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
                 If resp = DialogResult.Yes Then
                     Dim errMsg As String = ""
-                    If catalogService.EliminarProducto(prodId, errMsg) Then
-                        UITheme.ShowToast(Me, "Prenda desactivada correctamente.", "Success")
+                    If catalogService.ToggleActivo(prodId, errMsg) Then
+                        UITheme.ShowToast(Me, $"Prenda {accion}da correctamente.", "Success")
                         LoadProductos()
                     Else
-                        UITheme.ShowToast(Me, "Error al eliminar: " & errMsg, "Error")
+                        UITheme.ShowToast(Me, "Error al modificar estado: " & errMsg, "Error")
                     End If
                 End If
             End If

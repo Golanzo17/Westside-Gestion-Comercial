@@ -95,6 +95,30 @@ Namespace Services
                     errorMessage = "El nombre del empleado es obligatorio."
                     Return False
                 End If
+                If String.IsNullOrWhiteSpace(apellido) Then
+                    errorMessage = "El apellido del empleado es obligatorio."
+                    Return False
+                End If
+                If String.IsNullOrWhiteSpace(telefono) Then
+                    errorMessage = "El teléfono / WhatsApp es obligatorio."
+                    Return False
+                End If
+                If String.IsNullOrWhiteSpace(email) Then
+                    errorMessage = "El email es obligatorio."
+                    Return False
+                End If
+                If String.IsNullOrWhiteSpace(direccion) Then
+                    errorMessage = "La dirección es obligatoria."
+                    Return False
+                End If
+                If String.IsNullOrWhiteSpace(ciudad) Then
+                    errorMessage = "La ciudad es obligatoria."
+                    Return False
+                End If
+                If Not fechaNacimiento.HasValue Then
+                    errorMessage = "La fecha de nacimiento es obligatoria."
+                    Return False
+                End If
                 If String.IsNullOrWhiteSpace(rol) Then
                     rol = "Vendedor"
                 End If
@@ -167,6 +191,30 @@ Namespace Services
             Try
                 If String.IsNullOrWhiteSpace(nombre) Then
                     errorMessage = "El nombre es obligatorio."
+                    Return False
+                End If
+                If String.IsNullOrWhiteSpace(apellido) Then
+                    errorMessage = "El apellido es obligatorio."
+                    Return False
+                End If
+                If String.IsNullOrWhiteSpace(telefono) Then
+                    errorMessage = "El teléfono / WhatsApp es obligatorio."
+                    Return False
+                End If
+                If String.IsNullOrWhiteSpace(email) Then
+                    errorMessage = "El email es obligatorio."
+                    Return False
+                End If
+                If String.IsNullOrWhiteSpace(direccion) Then
+                    errorMessage = "La dirección es obligatoria."
+                    Return False
+                End If
+                If String.IsNullOrWhiteSpace(ciudad) Then
+                    errorMessage = "La ciudad es obligatoria."
+                    Return False
+                End If
+                If Not fechaNacimiento.HasValue Then
+                    errorMessage = "La fecha de nacimiento es obligatoria."
                     Return False
                 End If
                 If Not EsRolValido(rol) Then
