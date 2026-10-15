@@ -79,9 +79,9 @@ Namespace Forms
             ' Tarjetas KPI de Estado de Caja
             Dim pnlKpis As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 110,
+                .Height = 125,
                 .BackColor = UITheme.ColorSurface,
-                .Padding = New Padding(15, 10, 15, 10)
+                .Padding = New Padding(15, 5, 15, 5)
             }
 
             ' Tarjeta 1: Estado

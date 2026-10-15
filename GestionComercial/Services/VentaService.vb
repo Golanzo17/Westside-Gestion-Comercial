@@ -122,7 +122,7 @@ Namespace Services
             End Try
         End Function
 
-        Public Function GetVentas(fechaDesde As DateTime, fechaHasta As DateTime, Optional busqueda As String = "") As List(Of Venta)
+        Public Function GetVentas(fechaDesde As DateTime, fechaHasta As DateTime, Optional busqueda As String = "", Optional clienteId As Integer = 0) As List(Of Venta)
             Dim list = New List(Of Venta)()
             Dim query = "SELECT v.*, u.nombre_completo AS usuario_nombre, (c.apellido || ', ' || c.nombre) AS cliente_nombre " &
                         "FROM `ventas` v " &
@@ -134,6 +134,11 @@ Namespace Services
                 {"@desde", fechaDesde.ToString("yyyy-MM-dd")},
                 {"@hasta", fechaHasta.ToString("yyyy-MM-dd")}
             }
+
+            If clienteId > 0 Then
+                query &= "AND v.cliente_id = @cliId "
+                params.Add("@cliId", clienteId)
+            End If
 
             Dim hasBusqueda = Not String.IsNullOrWhiteSpace(busqueda)
             If hasBusqueda Then

@@ -18,7 +18,7 @@ Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en *
 - Desde **Visual Studio**: Abre `GestionComercial.sln` y presiona **F5**.
 - Desde **Terminal / PowerShell**:
   ```powershell
-  cd c:\Users\gonza\Desktop\Proyecto\GestionComercial
+  cd GestionComercial
   dotnet run
   ```
 
@@ -71,7 +71,7 @@ Sistema integral de gestión de ventas, stock, caja y clientes desarrollado en *
 ## 📁 Estructura del Proyecto
 
 ```
-c:\Users\gonza\Desktop\Proyecto\
+Proyecto/
 ├── Database/
 │   ├── gestion_comercial.db          # Base de datos SQLite local activa
 │   ├── schema_sqlite.sql             # Estructura DDL completa para SQLite

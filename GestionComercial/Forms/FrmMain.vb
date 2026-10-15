@@ -6,8 +6,8 @@
 '    hijos (FrmVentasPOS, FrmCaja, etc.) configurando TopLevel = False y Dock = Fill.
 ' 2. Segregación de Roles (Principle of Least Privilege):
 '    Configuramos la visibilidad de los accesos según el rol activo:
-'    - Administrador: Gestiona Configuración y Equipo.
-'    - Gerente: Ve Catálogo, Stock, Caja, Reportes y Equipo, con potestad de autorizar.
+'    - Administrador: Gestiona Configuración y Equipo de Usuarios.
+'    - Gerente: Ve Catálogo, Stock, Caja y Reportes, con potestad de autorizar excepciones comerciales.
 '    - Vendedor: Opera POS, Caja, Clientes y Catálogo; restringido en Configuración y Usuarios.
 ' 3. Dashboard con KPIs en Vivo: Muestra métricas comerciales del día (total facturado,
 '    tickets emitidos, prendas en stock crítico y estado de caja abierta).
@@ -61,7 +61,7 @@ Namespace Forms
             Me.Font = UITheme.FontRegular
             Me.AutoScaleMode = AutoScaleMode.Dpi
 
-            ' Panel lateral de navegación (Sidebar)
+            ' ─── Panel lateral de navegación (Sidebar) ───
             pnlSidebar = New Panel() With {
                 .Dock = DockStyle.Left,
                 .Width = 260,
@@ -72,26 +72,26 @@ Namespace Forms
             ' Logo y Marca en Sidebar
             Dim pnlBrand As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 120,
+                .Height = 110,
                 .BackColor = UITheme.ColorSecondary,
-                .Padding = New Padding(15, 20, 15, 10)
+                .Padding = New Padding(15, 18, 15, 10)
             }
 
             Dim lblBrandIcon As New Label() With {
                 .Text = "WESTSIDE",
-                .Font = New Font("Segoe UI", 16.0F, FontStyle.Bold),
+                .Font = New Font("Segoe UI", 18.0F, FontStyle.Bold),
                 .ForeColor = Color.White,
                 .Dock = DockStyle.Top,
-                .Height = 35,
+                .Height = 38,
                 .TextAlign = ContentAlignment.MiddleCenter
             }
 
             Dim lblBrandTitle As New Label() With {
                 .Text = "GESTIÓN COMERCIAL",
-                .Font = New Font("Segoe UI", 9.0F, FontStyle.Bold),
+                .Font = New Font("Segoe UI", 8.0F, FontStyle.Bold),
                 .ForeColor = UITheme.ColorPrimaryLight,
                 .Dock = DockStyle.Top,
-                .Height = 22,
+                .Height = 20,
                 .TextAlign = ContentAlignment.MiddleCenter
             }
 
@@ -100,13 +100,13 @@ Namespace Forms
                 .Font = UITheme.FontSmall,
                 .ForeColor = Color.FromArgb(180, 200, 220),
                 .Dock = DockStyle.Top,
-                .Height = 20,
+                .Height = 18,
                 .TextAlign = ContentAlignment.MiddleCenter
             }
 
             pnlBrand.Controls.AddRange({lblBrandIcon, lblBrandTitle, lblBrandSubtitle})
 
-            ' Botones de Navegación del Menú
+            ' ─── Botones de Navegación agrupados por sección ───
             Dim pnlNavMenu As New Panel() With {
                 .Dock = DockStyle.Fill,
                 .Padding = New Padding(0, 5, 0, 5),
@@ -121,6 +121,7 @@ Namespace Forms
             Dim btnCaja = CreateNavButton("Caja diaria y arqueo", AddressOf Nav_Caja)
             Dim btnReportes = CreateNavButton("Reportes y ventas", AddressOf Nav_Reportes)
             Dim btnUsuarios = CreateNavButton("Usuarios y equipo", AddressOf Nav_Usuarios)
+            Dim btnBackup = CreateNavButton("Copias de seguridad", AddressOf Nav_Backup)
             Dim btnConfig = CreateNavButton("Configuración", AddressOf Nav_Config)
 
             ' Configuración de accesos del menú lateral según el rol activo
@@ -129,14 +130,38 @@ Namespace Forms
             btnProductos.Visible = Not AuthService.IsAdmin
             btnCaja.Visible = AuthService.IsVendor
             btnReportes.Visible = AuthService.IsManager OrElse AuthService.IsVendor
-            btnUsuarios.Visible = AuthService.IsAdminOrManager
+            btnUsuarios.Visible = AuthService.IsAdmin
+            btnBackup.Visible = AuthService.IsAdmin
             btnConfig.Visible = AuthService.IsAdmin
 
-            Dim navButtons As Button() = {btnConfig, btnUsuarios, btnReportes, btnCaja, btnClientes, btnStock, btnProductos, btnPos, btnHome}
-            For Each b In navButtons
-                b.Dock = DockStyle.Top
-                pnlNavMenu.Controls.Add(b)
-            Next
+            ' Separadores de sección visuales para agrupar la navegación
+            Dim secSistema = UITheme.CreateSidebarSection("Sistema")
+            secSistema.Visible = AuthService.IsAdmin
+            Dim divSistema = UITheme.CreateDivider(1, 6, 2)
+            divSistema.Visible = AuthService.IsAdmin
+
+            Dim secGestion = UITheme.CreateSidebarSection("Gestión")
+            secGestion.Visible = AuthService.IsManager OrElse AuthService.IsVendor
+
+            Dim secOperaciones = UITheme.CreateSidebarSection("Operaciones")
+            secOperaciones.Visible = AuthService.IsVendor
+
+            ' Orden de docking: se agregan en orden inverso (Bottom-up)
+            ' Resultado visual: Home > [Operaciones: POS, Caja, Clientes] > [Gestión: Catálogo, Stock, Reportes] > [Sistema: Usuarios, Backup, Config]
+            pnlNavMenu.Controls.Add(btnConfig)
+            pnlNavMenu.Controls.Add(btnBackup)
+            pnlNavMenu.Controls.Add(btnUsuarios)
+            pnlNavMenu.Controls.Add(secSistema)
+            pnlNavMenu.Controls.Add(divSistema)
+            pnlNavMenu.Controls.Add(btnReportes)
+            pnlNavMenu.Controls.Add(btnStock)
+            pnlNavMenu.Controls.Add(btnProductos)
+            pnlNavMenu.Controls.Add(secGestion)
+            pnlNavMenu.Controls.Add(btnCaja)
+            pnlNavMenu.Controls.Add(btnClientes)
+            pnlNavMenu.Controls.Add(btnPos)
+            pnlNavMenu.Controls.Add(secOperaciones)
+            pnlNavMenu.Controls.Add(btnHome)
 
             ' Botón Cerrar Sesión abajo
             Dim btnLogout = New Button() With {
@@ -153,7 +178,7 @@ Namespace Forms
             pnlSidebar.Controls.Add(btnLogout)
             pnlSidebar.Controls.Add(pnlBrand)
 
-            ' Barra superior de estado (TopBar)
+            ' ─── Barra superior de estado (TopBar) ───
             pnlTopBar = New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 60,
@@ -183,7 +208,7 @@ Namespace Forms
             Dim rolBadge As String = If(AuthService.IsAdmin, "ADMINISTRADOR", If(AuthService.IsManager, "GERENTE", "VENDEDOR"))
             Dim nombreUser As String = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.NombreCompleto, "Invitado")
             lblUserSession = New Label() With {
-                .Text = $"{rolBadge} {nombreUser}",
+                .Text = $"{rolBadge}  ·  {nombreUser}",
                 .Font = UITheme.FontBold,
                 .ForeColor = If(AuthService.IsAdminOrManager, UITheme.ColorPrimaryDark, UITheme.ColorTextPrimary),
                 .Dock = DockStyle.Fill,
@@ -193,7 +218,7 @@ Namespace Forms
 
             ' Estado de Caja en TopBar (Solo visible para Gerente y Vendedor)
             lblCajaStatus = New Label() With {
-                .Text = "● Verificando caja...",
+                .Text = "Verificando caja...",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorWarning,
                 .Dock = DockStyle.Fill,
@@ -253,7 +278,8 @@ Namespace Forms
         Private Function CreateNavButton(text As String, clickHandler As EventHandler) As Button
             Dim btn As New Button() With {
                 .Text = text,
-                .Height = 52
+                .Height = 44,
+                .Dock = DockStyle.Top
             }
             UITheme.StyleButton(btn, "SIDEBAR")
             AddHandler btn.Click, clickHandler
@@ -261,12 +287,15 @@ Namespace Forms
             AddHandler btn.Paint, Sub(s, ev)
                                       Dim b = CType(s, Button)
                                       If b Is activeNavBtn Then
+                                          ' Indicador activo: franja izquierda + fondo gradiente sutil
                                           ev.Graphics.FillRectangle(New SolidBrush(UITheme.ColorPrimary), 0, 0, 4, b.Height)
                                           b.ForeColor = Color.White
                                           b.BackColor = UITheme.ColorSidebarActive
+                                          b.Font = UITheme.FontBold
                                       Else
                                            b.ForeColor = UITheme.ColorTextOnDark
                                           b.BackColor = Color.Transparent
+                                          b.Font = UITheme.FontNavItem
                                       End If
                                   End Sub
             Return btn
@@ -289,14 +318,14 @@ Namespace Forms
             pnlDashboardHome = New Panel() With {
                 .Dock = DockStyle.Fill,
                 .AutoScroll = True,
-                .Padding = New Padding(25)
+                .Padding = New Padding(30)
             }
 
             Dim lblDashTitle As New Label() With {
-                .Text = "Panel de Control y Resumen de Hoy",
-                .Font = UITheme.FontHeading,
+                .Text = "Panel de Control",
+                .Font = UITheme.FontHeadingLarge,
                 .ForeColor = UITheme.ColorTextPrimary,
-                .Location = New Point(25, 20),
+                .Location = New Point(30, 20),
                 .AutoSize = True
             }
 
@@ -304,7 +333,7 @@ Namespace Forms
                 .Text = "Métricas en tiempo real de ventas, inventario y movimientos del local.",
                 .Font = UITheme.FontRegular,
                 .ForeColor = UITheme.ColorTextSecondary,
-                .Location = New Point(27, 65),
+                .Location = New Point(32, 58),
                 .AutoSize = True
             }
 
@@ -312,8 +341,8 @@ Namespace Forms
 
             ' Fila de 4 KPI Cards
             Dim pnlCardsRow As New FlowLayoutPanel() With {
-                .Location = New Point(20, 110),
-                .Size = New Size(980, 115),
+                .Location = New Point(22, 100),
+                .Size = New Size(980, 140),
                 .AutoSize = True
             }
 
@@ -338,48 +367,55 @@ Namespace Forms
             pnlCardsRow.Controls.AddRange({card1, card2, card3, card4})
             pnlDashboardHome.Controls.Add(pnlCardsRow)
 
-            ' Tarjetas de Acceso Rápido filtradas estrictamente por rol
-            Dim pnlAcciones As New GroupBox() With {
-                .Text = "Acceso Rápido a Operaciones",
-                .Location = New Point(25, 245),
-                .AutoSize = True,
-                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                .MinimumSize = New Size(950, 90),
+            ' ─── Tarjetas de Acceso Rápido filtradas estrictamente por rol ───
+            Dim pnlAcciones As New Panel() With {
+                .Location = New Point(30, 260),
+                .Size = New Size(960, 115),
                 .BackColor = UITheme.ColorSurface,
-                .Font = UITheme.FontBold,
-                .ForeColor = UITheme.ColorPrimaryDark,
-                .Padding = New Padding(15, 8, 15, 8)
+                .Padding = New Padding(20, 14, 20, 14)
+            }
+            AddHandler pnlAcciones.Paint, Sub(s, ev)
+                                              Using pen As New Pen(UITheme.ColorBorder, 1)
+                                                  ev.Graphics.DrawRectangle(pen, 0, 0, pnlAcciones.Width - 1, pnlAcciones.Height - 1)
+                                              End Using
+                                          End Sub
+
+            Dim lblAccionesTitle As New Label() With {
+                .Text = "ACCIONES RÁPIDAS",
+                .Font = UITheme.FontSectionTitle,
+                .ForeColor = UITheme.ColorTextSecondary,
+                .Dock = DockStyle.Top,
+                .Height = 24
             }
 
             Dim flpAcciones As New FlowLayoutPanel() With {
                 .Dock = DockStyle.Fill,
-                .Padding = New Padding(5, 10, 5, 5),
+                .Padding = New Padding(0, 4, 0, 0),
                 .WrapContents = False,
-                .AutoSize = True,
-                .AutoSizeMode = AutoSizeMode.GrowAndShrink
+                .AutoScroll = False
             }
 
             ' Operaciones para Vendedor (POS y Caja)
             If AuthService.IsVendor Then
                 Dim btnAccionPOS As New Button() With {
-                    .Text = "🛒 Realizar Nueva Venta",
-                    .Height = 48,
+                    .Text = "Realizar Nueva Venta",
+                    .Height = 44,
                     .AutoSize = True,
                     .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    .Padding = New Padding(14, 0, 14, 0),
-                    .Margin = New Padding(0, 0, 10, 0)
+                    .Padding = New Padding(16, 0, 16, 0),
+                    .Margin = New Padding(0, 0, 10, 8)
                 }
                 UITheme.StyleButton(btnAccionPOS, "Primary")
                 AddHandler btnAccionPOS.Click, AddressOf Nav_POS
                 flpAcciones.Controls.Add(btnAccionPOS)
 
                 Dim btnAccionCaja As New Button() With {
-                    .Text = "💵 Arqueo / Cierre de Caja",
-                    .Height = 48,
+                    .Text = "Arqueo / Cierre de Caja",
+                    .Height = 44,
                     .AutoSize = True,
                     .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    .Padding = New Padding(14, 0, 14, 0),
-                    .Margin = New Padding(0, 0, 10, 0)
+                    .Padding = New Padding(16, 0, 16, 0),
+                    .Margin = New Padding(0, 0, 10, 8)
                 }
                 UITheme.StyleButton(btnAccionCaja, "Secondary")
                 AddHandler btnAccionCaja.Click, AddressOf Nav_Caja
@@ -390,12 +426,12 @@ Namespace Forms
             If AuthService.IsAdminOrManager Then
                 If AuthService.IsManager Then
                     Dim btnAccionPrenda As New Button() With {
-                        .Text = "+ Cargar Nueva Prenda",
-                        .Height = 48,
+                        .Text = "Cargar Nueva Prenda",
+                        .Height = 44,
                         .AutoSize = True,
                         .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                        .Padding = New Padding(14, 0, 14, 0),
-                        .Margin = New Padding(0, 0, 10, 0)
+                        .Padding = New Padding(16, 0, 16, 0),
+                        .Margin = New Padding(0, 0, 10, 8)
                     }
                     UITheme.StyleButton(btnAccionPrenda, "Success")
                     AddHandler btnAccionPrenda.Click, AddressOf Nav_Productos
@@ -404,40 +440,28 @@ Namespace Forms
 
                 If AuthService.IsManager Then
                     Dim btnAccionStock As New Button() With {
-                        .Text = "📦 Ingreso de Mercadería",
-                        .Height = 48,
+                        .Text = "Ingreso de Mercadería",
+                        .Height = 44,
                         .AutoSize = True,
                         .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                        .Padding = New Padding(14, 0, 14, 0),
-                        .Margin = New Padding(0, 0, 10, 0)
+                        .Padding = New Padding(16, 0, 16, 0),
+                        .Margin = New Padding(0, 0, 10, 8)
                     }
                     UITheme.StyleButton(btnAccionStock, "Secondary")
                     AddHandler btnAccionStock.Click, AddressOf Nav_Stock
                     flpAcciones.Controls.Add(btnAccionStock)
                 End If
-
-                Dim btnAccionUsuarios As New Button() With {
-                    .Text = "👥 Gestión de Usuarios",
-                    .Height = 48,
-                    .AutoSize = True,
-                    .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    .Padding = New Padding(14, 0, 14, 0),
-                    .Margin = New Padding(0, 0, 10, 0)
-                }
-                UITheme.StyleButton(btnAccionUsuarios, "Secondary")
-                AddHandler btnAccionUsuarios.Click, AddressOf Nav_Usuarios
-                flpAcciones.Controls.Add(btnAccionUsuarios)
             End If
 
             ' Operaciones específicas para Vendedor
             If AuthService.IsVendor Then
                 Dim btnAccionClientes As New Button() With {
-                    .Text = "👤 Directorio de Clientes",
-                    .Height = 48,
+                    .Text = "Directorio de Clientes",
+                    .Height = 44,
                     .AutoSize = True,
                     .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    .Padding = New Padding(14, 0, 14, 0),
-                    .Margin = New Padding(0, 0, 10, 0)
+                    .Padding = New Padding(16, 0, 16, 0),
+                    .Margin = New Padding(0, 0, 10, 8)
                 }
                 UITheme.StyleButton(btnAccionClientes, "Secondary")
                 AddHandler btnAccionClientes.Click, AddressOf Nav_Clientes
@@ -446,13 +470,37 @@ Namespace Forms
 
             ' Operaciones específicas para Administrador
             If AuthService.IsAdmin Then
-                Dim btnAccionConfig As New Button() With {
-                    .Text = "⚙️ Configuración del Sistema",
-                    .Height = 48,
+                Dim btnAccionUsuarios As New Button() With {
+                    .Text = "Gestión de Usuarios",
+                    .Height = 44,
                     .AutoSize = True,
                     .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    .Padding = New Padding(14, 0, 14, 0),
-                    .Margin = New Padding(0, 0, 10, 0)
+                    .Padding = New Padding(16, 0, 16, 0),
+                    .Margin = New Padding(0, 0, 10, 8)
+                }
+                UITheme.StyleButton(btnAccionUsuarios, "Secondary")
+                AddHandler btnAccionUsuarios.Click, AddressOf Nav_Usuarios
+                flpAcciones.Controls.Add(btnAccionUsuarios)
+
+                Dim btnAccionBackup As New Button() With {
+                    .Text = "Copias de Seguridad",
+                    .Height = 44,
+                    .AutoSize = True,
+                    .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    .Padding = New Padding(16, 0, 16, 0),
+                    .Margin = New Padding(0, 0, 10, 8)
+                }
+                UITheme.StyleButton(btnAccionBackup, "Secondary")
+                AddHandler btnAccionBackup.Click, AddressOf Nav_Backup
+                flpAcciones.Controls.Add(btnAccionBackup)
+
+                Dim btnAccionConfig As New Button() With {
+                    .Text = "Configuración del Sistema",
+                    .Height = 44,
+                    .AutoSize = True,
+                    .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    .Padding = New Padding(16, 0, 16, 0),
+                    .Margin = New Padding(0, 0, 10, 8)
                 }
                 UITheme.StyleButton(btnAccionConfig, "Secondary")
                 AddHandler btnAccionConfig.Click, AddressOf Nav_Config
@@ -460,6 +508,9 @@ Namespace Forms
             End If
 
             pnlAcciones.Controls.Add(flpAcciones)
+            pnlAcciones.Controls.Add(lblAccionesTitle)
+            lblAccionesTitle.BringToFront()
+            flpAcciones.BringToFront()
             pnlDashboardHome.Controls.Add(pnlAcciones)
         End Sub
 
@@ -489,14 +540,14 @@ Namespace Forms
                     Dim userId = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.Id, 1)
                     Dim caja = cajaService.GetCajaAbierta(userId)
                     If caja IsNot Nothing Then
-                        lblCajaStatus.Text = $"🟢 Caja Abierta (Turno #{caja.Id})"
+                        lblCajaStatus.Text = $"Caja Abierta  ·  Turno #{caja.Id}"
                         lblCajaStatus.ForeColor = UITheme.ColorSuccess
                         Dim esp = caja.MontoInicial + caja.TotalVentasEfectivo + caja.TotalIngresos - caja.TotalEgresos
                         If lblKpiCajaTurno IsNot Nothing Then
                             lblKpiCajaTurno.Text = If(AuthService.IsAdminOrManager, esp.ToString("C2"), "Arqueo Ciego")
                         End If
                     Else
-                        lblCajaStatus.Text = "🔴 Caja Cerrada"
+                        lblCajaStatus.Text = "Caja Cerrada"
                         lblCajaStatus.ForeColor = UITheme.ColorDanger
                         If lblKpiCajaTurno IsNot Nothing Then
                             lblKpiCajaTurno.Text = "$ 0,00"
@@ -575,11 +626,21 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_Usuarios(sender As Object, e As EventArgs)
-            If Not AuthService.IsAdminOrManager Then
+            If Not AuthService.IsAdmin Then
+                MessageBox.Show("El acceso al módulo de usuarios y equipo está reservado exclusivamente para Administradores.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 Return
             End If
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmUsuarios())
+        End Sub
+
+        Private Sub Nav_Backup(sender As Object, e As EventArgs)
+            If Not AuthService.IsAdmin Then
+                MessageBox.Show("El acceso a las copias de seguridad está reservado exclusivamente para Administradores.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+            If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
+            OpenChildForm(New FrmBackup())
         End Sub
 
 

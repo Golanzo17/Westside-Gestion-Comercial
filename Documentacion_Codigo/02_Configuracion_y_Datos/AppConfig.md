@@ -29,7 +29,7 @@ Esta clase representa en memoria los campos de configuración del JSON:
   * Busca la carpeta `Database/` en varias ubicaciones relativas (directorio de ejecución `bin/Debug/...`, carpeta raíz del proyecto, etc.) y devuelve la ruta completa absoluta del archivo `.db`.
 * **`GetConnectionString() As String`**:
   * Devuelve la cadena de conexión completa para SQLite:
-    `Data Source=C:\...\Database\gestion_comercial.db;`
+    `Data Source=.../Database/gestion_comercial.db;`
 
 ---
 

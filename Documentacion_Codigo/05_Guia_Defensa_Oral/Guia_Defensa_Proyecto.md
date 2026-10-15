@@ -106,6 +106,12 @@ Aplicamos el principio de seguridad corporativa de **Mínimo Privilegio (Least P
 * **Nuestra respuesta**:  
   *"Elegimos **SQLite** por diseño de arquitectura: para un sistema de punto de venta (POS) en local comercial, la confiabilidad, la velocidad y la portabilidad son críticas. SQLite no requiere instalar ni mantener servicios de fondo de bases de datos como MySQL o SQL Server, eliminando puntos de falla si el servicio de base de datos se detiene. El archivo `gestion_comercial.db` es autocontenido, soporta transacciones ACID reales, claves foráneas (`PRAGMA foreign_keys = ON;`) y copias de seguridad inmediatas copiando el archivo."*
 
+### P8: ¿Cómo evitan que dos cajeros vendan la misma prenda si solo queda 1 en stock? (Concurrencia y Race Conditions)
+* **Nuestra respuesta**:  
+  *"Lo protegemos mediante un doble mecanismo de seguridad:
+  1. **Bloqueo exclusivo de SQLite**: SQLite gestiona cerrojos transaccionales; solo una conexión puede escribir a la vez.
+  2. **Revalidación dentro de la transacción (`ValidarStockDisponible`)**: Nunca descontamos stock a ciegas basándonos en lo que la pantalla cargó minutos antes. Al hacer clic en cobrar, dentro de `conn.BeginTransaction()`, consultamos el stock actual en la tabla `producto_talles`. El primer cajero encuentra `1`, descuenta a `0` y hace `Commit()`. El segundo cajero, al entrar su turno, lee `0`, se dispara la condición `stockActual < item.Cantidad`, se ejecuta `trans.Rollback()` y el sistema cancela la venta emitiendo un mensaje de stock insuficiente. Es imposible que el inventario quede en valores negativos."*
+
 ---
 
 ## 📊 5. Mapa de Archivos Clave para Mostrar en la Pantalla
@@ -122,6 +128,8 @@ Si el profesor pide: *"Muéstrenme dónde hacen..."*, abran estos archivos exact
 | **Arqueo y cierre de caja diaria** | `GestionComercial/Services/CajaService.vb` | `CerrarCaja(...)` |
 | **Punto de Venta con atajos de teclado** | `GestionComercial/Forms/FrmVentasPOS.vb` | `FrmVentasPOS_KeyDown(...)` |
 | **Matriz de roles y menú lateral** | `GestionComercial/Forms/FrmMain.vb` | `InitializeUI()` (visibilidad de botones) |
+
+> 📖 **Lectura recomendada**: Para ver el diagrama de secuencia completo y el recorrido paso a paso línea por línea de código desde que arranca la app hasta una venta o un alta, consulta el documento: [Flujo_Completo_Del_Programa.md](../06_Flujo_Paso_A_Paso/Flujo_Completo_Del_Programa.md).
 
 ---
 

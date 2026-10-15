@@ -57,12 +57,16 @@ En esta guía se explican los 4 servicios complementarios del sistema:
     * Cantidad de tickets emitidos hoy.
     * Total cobrado en Efectivo vs Total cobrado con Medios Digitales (Tarjeta/Transferencia).
     * Cantidad de prendas que están por debajo del stock mínimo.
-* **`GetTopProductosVendidos(top, fechaDesde, fechaHasta)`**:
-  * Ranking de las prendas más vendidas del local (las que más rotación y recaudación generan) mediante consultas `SUM(dv.cantidad)` agrupadas por producto y talle.
+* **`GetTopProductosVendidos(limite, fechaDesde, fechaHasta, criterio)`**:
+  * Ranking analítico de prendas en un período de fechas con soporte para dos modos de inteligencia comercial:
+    * **Mayor Salida**: Ordenado por unidades físicas vendidas (`SUM(dv.cantidad)`).
+    * **Mayor Margen de Ganancia**: Ordenado por utilidad neta recaudada (`SUM(subtotal - costo * cantidad)`), mostrando margen en pesos y porcentaje de rentabilidad.
+* **`GetReporteVentasPorCliente(fechaDesde, fechaHasta, clienteId, criterio)`**:
+  * Reporte consolidado de compras por cliente en un intervalo de fechas:
+    * Discrimina cantidad de tickets, prendas acumuladas, facturación total y margen de ganancia aportado al negocio.
+    * Permite filtrar por un cliente individual o listar todos, ordenando por Mayor Facturación, Mayor Salida de Prendas o Mayor Margen de Ganancia.
 * **`GetAlertasStockBajo() As List(Of AlertaStock)`**:
   * Devuelve la lista de prendas que necesitan reposición urgente (`stock_actual <= stock_minimo`).
-* **`GetReportePeriodo(desde, hasta)`**:
-  * Muestra el resumen global de facturación entre dos fechas para balances mensuales o anuales.
 
 ---
 
@@ -74,3 +78,20 @@ En esta guía se explican los 4 servicios complementarios del sistema:
   * Lee la tabla `configuracion_comercio` (nombre del local, CUIT, dirección, teléfono, pie de ticket).
 * **`GuardarConfiguracion(cfg, ByRef errorMessage)`**:
   * Actualiza los datos de la empresa para que salgan impresos en los comprobantes de venta.
+
+---
+
+## 5. `BackupService.vb` (Copias de Seguridad y Restauración)
+* **Ubicación**: [GestionComercial/Services/BackupService.vb]
+* **Propósito**: Gestión atómica de respaldos de la base de datos relacional SQLite mediante el SQLite Online Backup API.
+
+### Métodos:
+* **`CrearBackup([rutaDestino], ByRef mensajeError) As String`**:
+  * Ejecuta una copia consistente byte a byte de la base de datos activa utilizando `sourceConn.BackupDatabase(destConn)`.
+  * Si no se especifica ruta, almacena automáticamente el archivo en la carpeta `Database/Backups/` con estampa temporal (`backup_gestion_comercial_yyyyMMdd_HHmmss.db`).
+* **`RestaurarBackup(rutaBackup, ByRef mensajeError) As Boolean`**:
+  * Desconecta los pools activos con `SqliteConnection.ClearAllPools()` y restaura la base activa desde el archivo seleccionado.
+* **`GetBackups() As List(Of BackupItem)`**:
+  * Escanea la carpeta de respaldos y devuelve la lista de copias disponibles ordenadas por fecha de creación descendente con su tamaño formateado.
+* **`ObtenerInfoBaseDatosActual() As DatabaseInfo`**:
+  * Devuelve metadatos en vivo de la base activa: tamaño físico, cantidad de tablas y tickets registrados.

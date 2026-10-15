@@ -90,28 +90,35 @@ Namespace Forms
                 .BackColor = UITheme.ColorSurface
             }
 
-            Dim lblSqPath As New Label() With {.Text = "Ubicación del Archivo de Base de Datos SQLite:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(20, 26), .AutoSize = True}
-            txtSqlitePath = New TextBox() With {.Location = New Point(20, 48), .Size = New Size(665, 26), .ReadOnly = True}
-            UITheme.StyleTextBox(txtSqlitePath)
-
-            ' Botones de prueba y migración de tablas
-            btnProbar = New Button() With {.Text = "Probar conexión", .Location = New Point(20, 86), .Size = New Size(170, 34)}
-            UITheme.StyleButton(btnProbar, "Secondary")
-            AddHandler btnProbar.Click, AddressOf BtnProbar_Click
-
-            btnInicializarDb = New Button() With {.Text = "Inicializar tablas y datos", .Location = New Point(200, 86), .Size = New Size(220, 34)}
-            UITheme.StyleButton(btnInicializarDb, "Primary")
-            AddHandler btnInicializarDb.Click, AddressOf BtnInicializarDb_Click
-
+            Dim lblSqPath As New Label() With {.Text = "Ubicación del Archivo de Base de Datos SQLite:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(20, 24), .AutoSize = True}
             lblEstadoConexion = New Label() With {
                 .Text = "Estado: Verificando...",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorTextSecondary,
-                .Location = New Point(430, 93),
+                .Location = New Point(440, 24),
                 .AutoSize = True
             }
 
-            grpDb.Controls.AddRange({lblSqPath, txtSqlitePath, btnProbar, btnInicializarDb, lblEstadoConexion})
+            txtSqlitePath = New TextBox() With {.Location = New Point(20, 48), .Size = New Size(665, 26), .ReadOnly = True}
+            UITheme.StyleTextBox(txtSqlitePath)
+
+            ' Botones de prueba, inicialización y backup
+            btnProbar = New Button() With {.Text = "Probar conexión", .Location = New Point(20, 86), .Size = New Size(140, 34)}
+            UITheme.StyleButton(btnProbar, "Secondary")
+            AddHandler btnProbar.Click, AddressOf BtnProbar_Click
+
+            btnInicializarDb = New Button() With {.Text = "Inicializar tablas y datos", .Location = New Point(170, 86), .Size = New Size(190, 34)}
+            UITheme.StyleButton(btnInicializarDb, "Primary")
+            AddHandler btnInicializarDb.Click, AddressOf BtnInicializarDb_Click
+
+            Dim btnIrBackup As New Button() With {.Text = "Copias de Seguridad (Backup)...", .Location = New Point(370, 86), .Size = New Size(315, 34)}
+            UITheme.StyleButton(btnIrBackup, "Success")
+            AddHandler btnIrBackup.Click, Sub()
+                                              Dim frmB As New FrmBackup()
+                                              frmB.ShowDialog(Me)
+                                          End Sub
+
+            grpDb.Controls.AddRange({lblSqPath, lblEstadoConexion, txtSqlitePath, btnProbar, btnInicializarDb, btnIrBackup})
             Me.Controls.Add(grpDb)
 
             ' Grupo Comercio

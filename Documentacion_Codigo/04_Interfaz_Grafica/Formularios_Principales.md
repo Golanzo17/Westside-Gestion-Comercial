@@ -44,7 +44,7 @@ AddHandler btnCobrar.Click, AddressOf BtnCobrar_Click
     * Gestiona la infraestructura del sistema: Configuración general del local y altas/bajas de empleados en el módulo de Usuarios.
     * **Restricción intencional**: No opera el Punto de Venta (POS) ni abre turnos de Caja física diaria, preservando la separación estricta entre la administración/auditoría del negocio y el manejo material de dinero en efectivo.
   * **Gerente (Perfil Supervisión / Operaciones)**:
-    * Supervisa el salón y la logística: Control de Stock y reposición, recepción de mercadería, altas y modificaciones de precios y prendas en Catálogo, gestión del equipo en Usuarios, apertura y arqueo de Caja, y análisis en Reportes.
+    * Supervisa el salón y la logística: Control de Stock y reposición, recepción de mercadería, altas y modificaciones de precios y prendas en Catálogo, apertura y arqueo de Caja, y análisis en Reportes.
     * Posee facultad de **autorización presencial** (mediante contraseña) para operaciones sensibles de los vendedores (descuentos mayores al 15%, retiros manuales de caja o ajustes de inventario).
   * **Vendedor (Perfil Atención al Público / Caja de Mostrador)**:
     * Enfocado en la atención operativa: Venta rápida en Punto de Venta (POS), operación de su turno de Caja diaria (apertura, cobros y arqueo), consulta del Catálogo de prendas y gestión de la cartera de Clientes.
@@ -59,7 +59,8 @@ AddHandler btnCobrar.Click, AddressOf BtnCobrar_Click
 | **Caja Diaria y Arqueo** | ❌ Restringido (Auditoría) | ✅ Operativo | ✅ Operativo (su turno) |
 | **Clientes** | ✅ Visible | ✅ Visible | ✅ Visible |
 | **Reportes y Ventas** | ❌ Restringido | ✅ Completo | ✅ Métricas de ventas |
-| **Usuarios y Equipo** | ✅ Gestión total | ✅ Gestión de equipo | ❌ Restringido |
+| **Usuarios y Equipo** | ✅ Exclusivo | ❌ Restringido | ❌ Restringido |
+| **Copias de Seguridad (Backup)** | ✅ Exclusivo | ❌ Restringido | ❌ Restringido |
 | **Configuración General** | ✅ Exclusivo | ❌ Restringido | ❌ Restringido |
 
 ---

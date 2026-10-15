@@ -36,6 +36,14 @@ Namespace Forms
             LoadUsuarios()
         End Sub
 
+        Protected Overrides Sub OnLoad(e As EventArgs)
+            MyBase.OnLoad(e)
+            If Not AuthService.IsAdmin Then
+                MessageBox.Show("El acceso a la gestión de usuarios y equipo está reservado exclusivamente para Administradores.", "Acceso Denegado", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Me.BeginInvoke(New Action(AddressOf Me.Close))
+            End If
+        End Sub
+
         Private Sub InitializeUI()
             Me.Text = "Gestión de Usuarios y Vendedores"
             Me.Size = New Size(1020, 640)
@@ -212,7 +220,7 @@ Namespace Forms
         End Sub
 
         Private Sub DgvUsuarios_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
-            If AuthService.IsAdminOrManager AndAlso e.RowIndex >= 0 Then
+            If AuthService.IsAdmin AndAlso e.RowIndex >= 0 Then
                 EditarSeleccionado()
             End If
         End Sub

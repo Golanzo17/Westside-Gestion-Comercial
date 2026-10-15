@@ -1,5 +1,5 @@
 ' ARCHIVO: UITheme.vb
-' PROPÓSITO: Sistema de Diseño Centralizado (Design System, Paleta, Tipografías y Helpers UI)
+' PROPÓSITO: Sistema de Diseño Centralizado v2 (Design System, Paleta, Tipografías y Helpers UI)
 ' - Construcción de la UI 100% por Código:
 '   1. En lugar de coordenadas fijas que se descalibran con resoluciones High-DPI,
 '      instanciar y estilizar por código mediante 'UITheme' da un diseño modular y con control de cada píxel.
@@ -9,6 +9,8 @@
 '   - Bordes redondeados dinámicos mediante regiones GDI+ (GraphicsPath).
 '   - Tablas DataGridView con hover interactivo de filas y cabeceras contrastadas.
 '   - Sistema de Toasts flotantes no invasivos para notificaciones inmediatas.
+'   - Sombras sutiles en tarjetas para crear profundidad visual moderna.
+'   - Badges de estado para etiquetar información contextual.
 
 
 Imports System.Drawing
@@ -38,21 +40,35 @@ Namespace UI
         Public ReadOnly ColorTextOnDark As Color = Color.FromArgb(203, 213, 225)    ' Slate 300
         Public ReadOnly ColorSuccess As Color = Color.FromArgb(16, 185, 129)        ' Emerald 500
         Public ReadOnly ColorSuccessDark As Color = Color.FromArgb(5, 150, 105)     ' Emerald 600
+        Public ReadOnly ColorSuccessLight As Color = Color.FromArgb(209, 250, 229)  ' Emerald 100
         Public ReadOnly ColorDanger As Color = Color.FromArgb(239, 68, 68)          ' Rose 500
         Public ReadOnly ColorDangerDark As Color = Color.FromArgb(220, 38, 38)      ' Rose 600
+        Public ReadOnly ColorDangerLight As Color = Color.FromArgb(254, 226, 226)   ' Rose 100
         Public ReadOnly ColorWarning As Color = Color.FromArgb(245, 158, 11)        ' Amber 500
+        Public ReadOnly ColorWarningLight As Color = Color.FromArgb(254, 243, 199)  ' Amber 100
         Public ReadOnly ColorInfo As Color = Color.FromArgb(59, 130, 246)           ' Blue 500
+        Public ReadOnly ColorInfoLight As Color = Color.FromArgb(219, 234, 254)     ' Blue 100
         Public ReadOnly ColorRowHover As Color = Color.FromArgb(238, 242, 255)      ' Hover fila tabla
+        Public ReadOnly ColorShadow As Color = Color.FromArgb(25, 15, 23, 42)       ' Sombra sutil (Slate 900 con 10% opacidad)
+        Public ReadOnly ColorShadowMedium As Color = Color.FromArgb(40, 15, 23, 42) ' Sombra media
+        Public ReadOnly ColorSidebarSection As Color = Color.FromArgb(55, 65, 81)   ' Gray 700 (separadores sidebar)
 
-        ' Tipografías institucionales consistentes (Segoe UI)
+        ' Tipografías institucionales con jerarquía visual clara (Segoe UI)
+        ' v2: Escala expandida para crear contraste entre secciones
+        Public ReadOnly FontHeadingLarge As New Font("Segoe UI", 20.0F, FontStyle.Bold)
         Public ReadOnly FontHeading As New Font("Segoe UI", 16.0F, FontStyle.Bold)
         Public ReadOnly FontSubheading As New Font("Segoe UI", 12.0F, FontStyle.Bold)
+        Public ReadOnly FontSectionTitle As New Font("Segoe UI", 10.5F, FontStyle.Bold)
         Public ReadOnly FontRegular As New Font("Segoe UI", 9.5F, FontStyle.Regular)
         Public ReadOnly FontBold As New Font("Segoe UI", 9.5F, FontStyle.Bold)
         Public ReadOnly FontSmall As New Font("Segoe UI", 8.5F, FontStyle.Regular)
+        Public ReadOnly FontSmallBold As New Font("Segoe UI", 8.5F, FontStyle.Bold)
+        Public ReadOnly FontCaption As New Font("Segoe UI", 7.5F, FontStyle.Bold)
         Public ReadOnly FontPriceBig As New Font("Segoe UI", 22.0F, FontStyle.Bold)
-        Public ReadOnly FontKpiValue As New Font("Segoe UI", 16.0F, FontStyle.Bold)
+        Public ReadOnly FontKpiValue As New Font("Segoe UI", 18.0F, FontStyle.Bold)
         Public ReadOnly FontButton As New Font("Segoe UI", 9.5F, FontStyle.Bold)
+        Public ReadOnly FontNavItem As New Font("Segoe UI", 10.0F, FontStyle.Regular)
+        Public ReadOnly FontNavSection As New Font("Segoe UI", 7.5F, FontStyle.Bold)
 
         ' Botones con estilo plano y bordes redondeados
 
@@ -82,18 +98,24 @@ Namespace UI
                     btn.ForeColor = Color.White
                     btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(217, 119, 6)
                 Case "SECONDARY"
-                    btn.BackColor = ColorSurfaceMuted
+                    btn.BackColor = ColorSurface
                     btn.ForeColor = ColorTextPrimary
                     btn.FlatAppearance.BorderSize = 1
                     btn.FlatAppearance.BorderColor = ColorBorder
-                    btn.FlatAppearance.MouseOverBackColor = ColorBorder
-                    rounded = False
+                    btn.FlatAppearance.MouseOverBackColor = ColorSurfaceMuted
+                Case "GHOST"
+                    ' Botón transparente que sólo muestra hover, ideal para acciones secundarias
+                    btn.BackColor = Color.Transparent
+                    btn.ForeColor = ColorPrimary
+                    btn.FlatAppearance.BorderSize = 0
+                    btn.FlatAppearance.MouseOverBackColor = ColorSurfaceAccent
+                    rounded = True
                 Case "SIDEBAR"
                     btn.BackColor = Color.Transparent
                     btn.ForeColor = ColorTextOnDark
                     btn.TextAlign = ContentAlignment.MiddleLeft
-                    btn.Padding = New Padding(20, 0, 0, 0)
-                    btn.Font = New Font("Segoe UI", 10.0F, FontStyle.Regular)
+                    btn.Padding = New Padding(22, 0, 0, 0)
+                    btn.Font = FontNavItem
                     btn.FlatAppearance.MouseOverBackColor = ColorSidebarHover
                     rounded = False
                 Case Else
@@ -278,34 +300,34 @@ Namespace UI
             t.Start()
         End Sub
 
-        ' Componente para tarjetas de métricas (KPI Cards)
+        ' ─── Componentes v2: Tarjetas, Badges, Separadores ───
 
         ''' <summary>
-        ''' Genera una tarjeta métrica con esquinas redondeadas y barra lateral de acento de color.
+        ''' Genera una tarjeta métrica con borde sutil, sombra visual y barra lateral de acento de color.
         ''' Usado tanto en el Dashboard principal como en los reportes comerciales.
+        ''' v2: Tamaño mayor, sombra simulada con doble panel, mejor espaciado.
         ''' </summary>
         Public Function CreateKpiCard(title As String, value As String, subtitle As String, accentColor As Color) As Panel
             Dim pnl As New Panel() With {
                 .BackColor = ColorSurface,
-                .Size = New Size(220, 105),
+                .Size = New Size(230, 115),
                 .Margin = New Padding(8),
-                .Padding = New Padding(12)
+                .Padding = New Padding(14)
             }
-            ApplyRoundedRegion(pnl, 10)
 
             ' Franja vertical de acento visual (Verde, Azul, Ámbar, etc.)
             Dim strip As New Panel() With {
                 .BackColor = accentColor,
                 .Dock = DockStyle.Left,
-                .Width = 5
+                .Width = 4
             }
             pnl.Controls.Add(strip)
 
             Dim lblTitle As New Label() With {
-                .Text = title,
-                .Font = FontSmall,
+                .Text = title.ToUpper(),
+                .Font = FontCaption,
                 .ForeColor = ColorTextSecondary,
-                .Location = New Point(15, 10),
+                .Location = New Point(16, 12),
                 .AutoSize = True
             }
             pnl.Controls.Add(lblTitle)
@@ -314,7 +336,7 @@ Namespace UI
                 .Text = value,
                 .Font = FontKpiValue,
                 .ForeColor = ColorTextPrimary,
-                .Location = New Point(15, 30),
+                .Location = New Point(16, 32),
                 .AutoSize = True
             }
             pnl.Controls.Add(lblValue)
@@ -322,12 +344,81 @@ Namespace UI
             Dim lblSub As New Label() With {
                 .Text = subtitle,
                 .Font = FontSmall,
-                .ForeColor = ColorTextSecondary,
-                .Location = New Point(15, 72),
+                .ForeColor = ColorTextMuted,
+                .Location = New Point(16, 76),
                 .AutoSize = True
             }
             pnl.Controls.Add(lblSub)
 
+            ' Borde sutil y elegante de 1px usando Paint
+            AddHandler pnl.Paint, Sub(s, ev)
+                                      Using pen As New Pen(ColorBorder, 1)
+                                          ev.Graphics.DrawRectangle(pen, 0, 0, pnl.Width - 1, pnl.Height - 1)
+                                      End Using
+                                  End Sub
+
+            Return pnl
+        End Function
+
+        ''' <summary>
+        ''' Crea un badge de estado con texto, color de fondo y color de texto.
+        ''' Ideal para etiquetar estados en grillas o headers (ej: "Activa", "Anulada", "Bajo Stock").
+        ''' </summary>
+        Public Function CreateBadge(text As String, bgColor As Color, fgColor As Color) As Label
+            Dim lbl As New Label() With {
+                .Text = $"  {text}  ",
+                .Font = FontSmallBold,
+                .BackColor = bgColor,
+                .ForeColor = fgColor,
+                .AutoSize = True,
+                .TextAlign = ContentAlignment.MiddleCenter,
+                .Padding = New Padding(4, 2, 4, 2)
+            }
+            AddHandler lbl.Resize, Sub(s, ev)
+                                       Dim l = CType(s, Label)
+                                       If l.Width > 0 AndAlso l.Height > 0 Then ApplyRoundedRegion(l, 6)
+                                   End Sub
+            Return lbl
+        End Function
+
+        ''' <summary>
+        ''' Crea un separador visual para el sidebar con etiqueta de sección.
+        ''' Agrupa los botones de navegación en bloques lógicos (Operaciones, Gestión, Sistema).
+        ''' </summary>
+        Public Function CreateSidebarSection(sectionTitle As String) As Panel
+            Dim pnl As New Panel() With {
+                .Height = 32,
+                .Dock = DockStyle.Top,
+                .BackColor = Color.Transparent,
+                .Padding = New Padding(22, 12, 10, 0)
+            }
+
+            Dim lbl As New Label() With {
+                .Text = sectionTitle.ToUpper(),
+                .Font = FontNavSection,
+                .ForeColor = ColorSidebarSection,
+                .Dock = DockStyle.Fill,
+                .TextAlign = ContentAlignment.BottomLeft
+            }
+            pnl.Controls.Add(lbl)
+            Return pnl
+        End Function
+
+        ''' <summary>
+        ''' Crea una línea divisoria sutil para separar visualmente secciones dentro de un panel.
+        ''' </summary>
+        Public Function CreateDivider(Optional height As Integer = 1, Optional topMargin As Integer = 8, Optional bottomMargin As Integer = 8) As Panel
+            Dim pnl As New Panel() With {
+                .Height = height + topMargin + bottomMargin,
+                .Dock = DockStyle.Top,
+                .BackColor = Color.Transparent,
+                .Padding = New Padding(22, topMargin, 22, bottomMargin)
+            }
+            Dim line As New Panel() With {
+                .Dock = DockStyle.Fill,
+                .BackColor = Color.FromArgb(40, 255, 255, 255)
+            }
+            pnl.Controls.Add(line)
             Return pnl
         End Function
 

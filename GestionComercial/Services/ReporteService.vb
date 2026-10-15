@@ -22,13 +22,44 @@ Namespace Services
         Public Property ArticulosStockBajo As Integer = 0
     End Class
 
-    ' DTO para el ranking de artículos estrella
+    ' Criterio para el ranking de productos
+    Public Enum CriterioRankingProducto
+        MayorSalida
+        MayorMargen
+    End Enum
+
+    ' DTO para el ranking de artículos estrella y rentabilidad
     Public Class TopProductoVendido
         Public Property ProductoId As Integer
         Public Property Nombre As String = String.Empty
         Public Property Talle As String = String.Empty
         Public Property CantidadVendida As Integer = 0
         Public Property TotalRecaudado As Decimal = 0D
+        Public Property CostoTotal As Decimal = 0D
+        Public Property MargenGanancia As Decimal = 0D
+        Public Property PorcentajeMargen As Decimal = 0D
+    End Class
+
+    ' Criterio de ordenación para el reporte de clientes
+    Public Enum CriterioOrdenCliente
+        MayorFacturacion
+        MayorSalida
+        MayorMargen
+    End Enum
+
+    ' DTO para el reporte analítico de ventas por cliente
+    Public Class ReporteVentaCliente
+        Public Property ClienteId As Integer
+        Public Property ClienteNombre As String = String.Empty
+        Public Property DniCuit As String = String.Empty
+        Public Property Telefono As String = String.Empty
+        Public Property CantidadCompras As Integer = 0
+        Public Property TotalUnidades As Integer = 0
+        Public Property TotalFacturado As Decimal = 0D
+        Public Property CostoTotal As Decimal = 0D
+        Public Property MargenGanancia As Decimal = 0D
+        Public Property PorcentajeMargen As Decimal = 0D
+        Public Property UltimaCompra As Nullable(Of DateTime) = Nothing
     End Class
 
     ' DTO para alertar prendas por agotarse
@@ -77,32 +108,144 @@ Namespace Services
             Return resumen
         End Function
 
-        Public Function GetTopProductosVendidos(limite As Integer, fechaDesde As DateTime, fechaHasta As DateTime) As List(Of TopProductoVendido)
+        Public Function GetTopProductosVendidos(limite As Integer, fechaDesde As DateTime, fechaHasta As DateTime, Optional criterio As CriterioRankingProducto = CriterioRankingProducto.MayorSalida) As List(Of TopProductoVendido)
             Dim list As New List(Of TopProductoVendido)()
             Try
+                Dim orderByClause As String = If(criterio = CriterioRankingProducto.MayorMargen,
+                                                 "ORDER BY total_margen DESC, total_cantidad DESC ",
+                                                 "ORDER BY total_cantidad DESC, total_monto DESC ")
+
+                Dim limitClause As String = If(limite > 0, "LIMIT @limite;", ";")
+
                 Dim query As String = "SELECT dv.producto_id, dv.descripcion_articulo, t.nombre AS talle_nombre, " &
-                                     "SUM(dv.cantidad) AS total_cantidad, SUM(dv.subtotal) AS total_monto " &
+                                     "SUM(dv.cantidad) AS total_cantidad, SUM(dv.subtotal) AS total_monto, " &
+                                     "SUM(COALESCE(NULLIF(dv.costo_unitario, 0), p.precio_costo, 0) * dv.cantidad) AS total_costo, " &
+                                     "SUM(dv.subtotal - (COALESCE(NULLIF(dv.costo_unitario, 0), p.precio_costo, 0) * dv.cantidad)) AS total_margen " &
                                      "FROM `detalle_ventas` dv " &
                                      "INNER JOIN `ventas` v ON dv.venta_id = v.id " &
+                                     "INNER JOIN `productos` p ON dv.producto_id = p.id " &
                                      "LEFT JOIN `talles` t ON dv.talle_id = t.id " &
                                      "WHERE DATE(v.fecha) >= @desde AND DATE(v.fecha) <= @hasta AND v.estado = 'Completada' " &
                                      "GROUP BY dv.producto_id, dv.descripcion_articulo, dv.talle_id, t.nombre " &
-                                     "ORDER BY total_cantidad DESC LIMIT @limite;"
+                                     orderByClause & limitClause
 
                 Dim params As New Dictionary(Of String, Object) From {
                     {"@desde", fechaDesde.ToString("yyyy-MM-dd")},
-                    {"@hasta", fechaHasta.ToString("yyyy-MM-dd")},
-                    {"@limite", limite}
+                    {"@hasta", fechaHasta.ToString("yyyy-MM-dd")}
                 }
+                If limite > 0 Then
+                    params.Add("@limite", limite)
+                End If
 
                 Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, params)
                 For Each row As DataRow In dt.Rows
+                    Dim recaudado As Decimal = Convert.ToDecimal(row("total_monto"))
+                    Dim costo As Decimal = Convert.ToDecimal(row("total_costo"))
+                    Dim margen As Decimal = Convert.ToDecimal(row("total_margen"))
+                    Dim pctMargen As Decimal = If(recaudado > 0D, Math.Round((margen / recaudado) * 100D, 1), 0D)
+
                     list.Add(New TopProductoVendido() With {
                         .ProductoId = Convert.ToInt32(row("producto_id")),
                         .Nombre = row("descripcion_articulo").ToString(),
                         .Talle = If(IsDBNull(row("talle_nombre")), "-", row("talle_nombre").ToString()),
                         .CantidadVendida = Convert.ToInt32(row("total_cantidad")),
-                        .TotalRecaudado = Convert.ToDecimal(row("total_monto"))
+                        .TotalRecaudado = recaudado,
+                        .CostoTotal = costo,
+                        .MargenGanancia = margen,
+                        .PorcentajeMargen = pctMargen
+                    })
+                Next
+            Catch ex As Exception
+                ' Silencioso
+            End Try
+            Return list
+        End Function
+
+        Public Function GetReporteVentasPorCliente(fechaDesde As DateTime, fechaHasta As DateTime, Optional clienteId As Integer = 0, Optional criterio As CriterioOrdenCliente = CriterioOrdenCliente.MayorFacturacion) As List(Of ReporteVentaCliente)
+            Dim list As New List(Of ReporteVentaCliente)()
+            Try
+                Dim query As String = "SELECT " &
+                                     "c.id AS cliente_id, " &
+                                     "(c.apellido || ', ' || c.nombre) AS cliente_nombre, " &
+                                     "c.dni_cuit, " &
+                                     "IFNULL(c.telefono, '') AS telefono, " &
+                                     "COUNT(sub.venta_id) AS cantidad_compras, " &
+                                     "IFNULL(SUM(sub.unidades_venta), 0) AS total_unidades, " &
+                                     "IFNULL(SUM(sub.total), 0) AS total_facturado, " &
+                                     "IFNULL(SUM(sub.costo_venta), 0) AS total_costo, " &
+                                     "(IFNULL(SUM(sub.total), 0) - IFNULL(SUM(sub.costo_venta), 0)) AS margen_ganancia, " &
+                                     "MAX(sub.fecha) AS ultima_compra " &
+                                     "FROM `clientes` c " &
+                                     "INNER JOIN ( " &
+                                     "    SELECT " &
+                                     "        v.cliente_id, " &
+                                     "        v.id AS venta_id, " &
+                                     "        v.fecha, " &
+                                     "        v.total, " &
+                                     "        IFNULL(dv.unidades_venta, 0) AS unidades_venta, " &
+                                     "        IFNULL(dv.costo_venta, 0) AS costo_venta " &
+                                     "    FROM `ventas` v " &
+                                     "    LEFT JOIN ( " &
+                                     "        SELECT " &
+                                     "            dv_inner.venta_id, " &
+                                     "            SUM(dv_inner.cantidad) AS unidades_venta, " &
+                                     "            SUM(COALESCE(NULLIF(dv_inner.costo_unitario, 0), p.precio_costo, 0) * dv_inner.cantidad) AS costo_venta " &
+                                     "        FROM `detalle_ventas` dv_inner " &
+                                     "        INNER JOIN `productos` p ON dv_inner.producto_id = p.id " &
+                                     "        GROUP BY dv_inner.venta_id " &
+                                     "    ) dv ON v.id = dv.venta_id " &
+                                     "    WHERE DATE(v.fecha) >= @desde AND DATE(v.fecha) <= @hasta AND v.estado = 'Completada' " &
+                                     ") sub ON c.id = sub.cliente_id " &
+                                     "WHERE 1=1 "
+
+                Dim params As New Dictionary(Of String, Object) From {
+                    {"@desde", fechaDesde.ToString("yyyy-MM-dd")},
+                    {"@hasta", fechaHasta.ToString("yyyy-MM-dd")}
+                }
+
+                If clienteId > 0 Then
+                    query &= "AND c.id = @cliId "
+                    params.Add("@cliId", clienteId)
+                End If
+
+                query &= "GROUP BY c.id, c.apellido, c.nombre, c.dni_cuit, c.telefono "
+
+                Select Case criterio
+                    Case CriterioOrdenCliente.MayorSalida
+                        query &= "ORDER BY total_unidades DESC, total_facturado DESC;"
+                    Case CriterioOrdenCliente.MayorMargen
+                        query &= "ORDER BY margen_ganancia DESC, total_facturado DESC;"
+                    Case Else
+                        query &= "ORDER BY total_facturado DESC, cantidad_compras DESC;"
+                End Select
+
+                Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, params)
+                For Each row As DataRow In dt.Rows
+                    Dim facturado As Decimal = Convert.ToDecimal(row("total_facturado"))
+                    Dim costo As Decimal = Convert.ToDecimal(row("total_costo"))
+                    Dim margen As Decimal = Convert.ToDecimal(row("margen_ganancia"))
+                    Dim pctMargen As Decimal = If(facturado > 0D, Math.Round((margen / facturado) * 100D, 1), 0D)
+
+                    Dim ultimaFecha As Nullable(Of DateTime) = Nothing
+                    If Not IsDBNull(row("ultima_compra")) Then
+                        Dim parsed As DateTime
+                        If DateTime.TryParse(row("ultima_compra").ToString(), parsed) Then
+                            ultimaFecha = parsed
+                        End If
+                    End If
+
+                    list.Add(New ReporteVentaCliente() With {
+                        .ClienteId = Convert.ToInt32(row("cliente_id")),
+                        .ClienteNombre = row("cliente_nombre").ToString(),
+                        .DniCuit = row("dni_cuit").ToString(),
+                        .Telefono = row("telefono").ToString(),
+                        .CantidadCompras = Convert.ToInt32(row("cantidad_compras")),
+                        .TotalUnidades = Convert.ToInt32(row("total_unidades")),
+                        .TotalFacturado = facturado,
+                        .CostoTotal = costo,
+                        .MargenGanancia = margen,
+                        .PorcentajeMargen = pctMargen,
+                        .UltimaCompra = ultimaFecha
                     })
                 Next
             Catch ex As Exception

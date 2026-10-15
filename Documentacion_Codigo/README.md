@@ -53,8 +53,15 @@ Para aprender sin abrumarte, te recomendamos seguir este orden de lectura:
 
 ---
 
-### Fase 5: Preparación para la Defensa Oral
-15. [05_Guia_Defensa_Oral/Guia_Defensa_Proyecto.md](file:///c:/Users/gonza/Desktop/Proyecto/Documentacion_Codigo/05_Guia_Defensa_Oral/Guia_Defensa_Proyecto.md):
+### Fase 5: Recorrido Completo Paso a Paso (Flujo de Ejecución)
+15. [06_Flujo_Paso_A_Paso/Flujo_Completo_Del_Programa.md](06_Flujo_Paso_A_Paso/Flujo_Completo_Del_Programa.md):
+    * Cómo viaja la información por todo el sistema desde el inicio del programa hasta una venta o un alta de empleado.
+    * Diagramas de secuencia y tablas de base de datos afectadas por cada acción.
+
+---
+
+### Fase 6: Preparación para la Defensa Oral
+16. [05_Guia_Defensa_Oral/Guia_Defensa_Proyecto.md](05_Guia_Defensa_Oral/Guia_Defensa_Proyecto.md):
     * Resumen ejecutivo ("Elevator Pitch" de 1 minuto).
     * Justificación arquitectónica y seguridad por roles.
     * Preguntas típicas del profesor y respuestas técnicas exactas.
