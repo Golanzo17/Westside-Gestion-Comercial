@@ -47,6 +47,7 @@ Namespace Forms
         Private Sub InitializeUI()
             Me.Text = "Gestión de Usuarios y Vendedores"
             Me.Size = New Size(1020, 640)
+            Me.MinimumSize = New Size(860, 560)
             Me.StartPosition = FormStartPosition.CenterScreen
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
@@ -136,38 +137,84 @@ Namespace Forms
 
         Private Sub ConfigurarColumnas()
             dgvUsuarios.Columns.Clear()
+            dgvUsuarios.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
+            ' ── ID (centrado) ──
             dgvUsuarios.Columns.Add("Id", "ID")
-            dgvUsuarios.Columns("Id").Width = 50
+            dgvUsuarios.Columns("Id").FillWeight = 4
+            dgvUsuarios.Columns("Id").MinimumWidth = 40
+            dgvUsuarios.Columns("Id").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvUsuarios.Columns("Id").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Usuario/Login (izquierda) ──
             dgvUsuarios.Columns.Add("Username", "Usuario")
-            dgvUsuarios.Columns("Username").Width = 110
+            dgvUsuarios.Columns("Username").FillWeight = 9
+            dgvUsuarios.Columns("Username").MinimumWidth = 80
+            dgvUsuarios.Columns("Username").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+            dgvUsuarios.Columns("Username").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
 
+            ' ── DNI (centrado) ──
             dgvUsuarios.Columns.Add("Dni", "DNI")
-            dgvUsuarios.Columns("Dni").Width = 100
+            dgvUsuarios.Columns("Dni").FillWeight = 8
+            dgvUsuarios.Columns("Dni").MinimumWidth = 75
+            dgvUsuarios.Columns("Dni").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvUsuarios.Columns("Dni").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Apellido (izquierda) ──
             dgvUsuarios.Columns.Add("Apellido", "Apellido")
-            dgvUsuarios.Columns("Apellido").Width = 130
+            dgvUsuarios.Columns("Apellido").FillWeight = 10
+            dgvUsuarios.Columns("Apellido").MinimumWidth = 90
+            dgvUsuarios.Columns("Apellido").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+            dgvUsuarios.Columns("Apellido").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
 
+            ' ── Nombre (izquierda) ──
             dgvUsuarios.Columns.Add("Nombre", "Nombre")
-            dgvUsuarios.Columns("Nombre").Width = 130
+            dgvUsuarios.Columns("Nombre").FillWeight = 10
+            dgvUsuarios.Columns("Nombre").MinimumWidth = 90
+            dgvUsuarios.Columns("Nombre").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+            dgvUsuarios.Columns("Nombre").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
 
+            ' ── Rol (centrado) ──
             dgvUsuarios.Columns.Add("Rol", "Rol")
-            dgvUsuarios.Columns("Rol").Width = 120
+            dgvUsuarios.Columns("Rol").FillWeight = 8
+            dgvUsuarios.Columns("Rol").MinimumWidth = 80
+            dgvUsuarios.Columns("Rol").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvUsuarios.Columns("Rol").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Teléfono (centrado) ──
             dgvUsuarios.Columns.Add("Telefono", "Teléfono")
-            dgvUsuarios.Columns("Telefono").Width = 110
+            dgvUsuarios.Columns("Telefono").FillWeight = 9
+            dgvUsuarios.Columns("Telefono").MinimumWidth = 85
+            dgvUsuarios.Columns("Telefono").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvUsuarios.Columns("Telefono").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Email (relleno, izquierda) ──
             dgvUsuarios.Columns.Add("Email", "Email")
-            dgvUsuarios.Columns("Email").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvUsuarios.Columns("Email").FillWeight = 16
+            dgvUsuarios.Columns("Email").MinimumWidth = 110
+            dgvUsuarios.Columns("Email").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+            dgvUsuarios.Columns("Email").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
 
+            ' ── Fecha Nac. (centrado) ──
             dgvUsuarios.Columns.Add("FechaNac", "Fecha Nac.")
-            dgvUsuarios.Columns("FechaNac").Width = 95
+            dgvUsuarios.Columns("FechaNac").FillWeight = 8
+            dgvUsuarios.Columns("FechaNac").MinimumWidth = 75
+            dgvUsuarios.Columns("FechaNac").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvUsuarios.Columns("FechaNac").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Estado (centrado) ──
             dgvUsuarios.Columns.Add("Activo", "Estado")
-            dgvUsuarios.Columns("Activo").Width = 85
+            dgvUsuarios.Columns("Activo").FillWeight = 7
+            dgvUsuarios.Columns("Activo").MinimumWidth = 65
+            dgvUsuarios.Columns("Activo").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvUsuarios.Columns("Activo").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Último Login (centrado) ──
             dgvUsuarios.Columns.Add("UltimoLogin", "Último Acceso")
-            dgvUsuarios.Columns("UltimoLogin").Width = 140
+            dgvUsuarios.Columns("UltimoLogin").FillWeight = 11
+            dgvUsuarios.Columns("UltimoLogin").MinimumWidth = 100
+            dgvUsuarios.Columns("UltimoLogin").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvUsuarios.Columns("UltimoLogin").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
         End Sub
 
         ''' <summary>

@@ -106,6 +106,33 @@ Namespace Services
                 Return False
             End Try
         End Function
+
+        ''' <summary>
+        ''' Retorna la lista única de colores existentes registrados en el inventario.
+        ''' Si la base de datos no tiene colores registrados, incluye una paleta base de indumentaria.
+        ''' </summary>
+        Public Function GetColoresDisponibles() As List(Of String)
+            Dim list As New List(Of String)()
+            Try
+                Dim query As String = "SELECT DISTINCT `color` FROM `producto_talles` WHERE `color` IS NOT NULL AND TRIM(`color`) <> '' ORDER BY `color` ASC;"
+                Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query)
+                For Each row As DataRow In dt.Rows
+                    Dim c As String = row("color").ToString().Trim()
+                    If Not String.IsNullOrEmpty(c) AndAlso Not list.Contains(c, StringComparer.OrdinalIgnoreCase) Then
+                        list.Add(c)
+                    End If
+                Next
+            Catch ex As Exception
+            End Try
+
+            Dim baseColores As String() = {"Único", "Negro", "Blanco", "Gris", "Azul", "Azul Marino", "Rojo", "Verde", "Beige", "Bordo", "Rosa", "Marrón", "Amarillo"}
+            For Each b In baseColores
+                If Not list.Contains(b, StringComparer.OrdinalIgnoreCase) Then
+                    list.Add(b)
+                End If
+            Next
+            Return list
+        End Function
 #End Region
 
 #Region "Productos y Matriz de Stock"

@@ -33,6 +33,7 @@ Namespace Forms
         ' Controles de Búsqueda y Selección de Prenda
         Private txtBuscarArticulo As TextBox
         Private btnBuscarArticulo As Button
+        Private lstSugerenciasPOS As ListBox
         Private lblProductoSeleccionado As Label
         Private lblPrecioUnitario As Label
         Private pnlTallesContainer As FlowLayoutPanel
@@ -201,10 +202,22 @@ Namespace Forms
             txtBuscarArticulo = New TextBox() With {.Location = New Point(15, 52), .Size = New Size(380, 28)}
             UITheme.StyleTextBox(txtBuscarArticulo)
             AddHandler txtBuscarArticulo.KeyDown, AddressOf TxtBuscarArticulo_KeyDown
+            AddHandler txtBuscarArticulo.TextChanged, AddressOf TxtBuscarArticulo_TextChanged
 
             btnBuscarArticulo = New Button() With {.Text = "Buscar", .Location = New Point(405, 51), .Size = New Size(95, 30)}
             UITheme.StyleButton(btnBuscarArticulo, "Primary")
             AddHandler btnBuscarArticulo.Click, AddressOf BtnBuscarArticulo_Click
+
+            ' Lista desplegable de sugerencias coincidentes en tiempo real
+            lstSugerenciasPOS = New ListBox() With {
+                .Location = New Point(15, 82),
+                .Size = New Size(485, 160),
+                .Font = UITheme.FontRegular,
+                .Visible = False,
+                .IntegralHeight = False
+            }
+            AddHandler lstSugerenciasPOS.Click, AddressOf LstSugerenciasPOS_Click
+            AddHandler lstSugerenciasPOS.KeyDown, AddressOf LstSugerenciasPOS_KeyDown
 
             ' Fila 2: Resumen del artículo encontrado y precio
             lblProductoSeleccionado = New Label() With {
@@ -253,10 +266,11 @@ Namespace Forms
             AddHandler btnAgregarAlCarrito.Click, AddressOf BtnAgregarAlCarrito_Click
 
             grpArticulo.Controls.AddRange({
-                lblBuscar, txtBuscarArticulo, btnBuscarArticulo,
+                lblBuscar, txtBuscarArticulo, btnBuscarArticulo, lstSugerenciasPOS,
                 lblProductoSeleccionado, lblPrecioUnitario,
                 lblTalles, pnlTallesContainer, lblCol, cboColor, lblCant, numCantidad, btnAgregarAlCarrito
             })
+            lstSugerenciasPOS.BringToFront()
 
             ' Grilla del Carrito de Ventas
             Dim pnlGridContainer As New Panel() With {
@@ -347,18 +361,92 @@ Namespace Forms
             If cboClientes.Items.Count > 0 Then cboClientes.SelectedIndex = 0
         End Sub
 
-        Private Sub TxtBuscarArticulo_KeyDown(sender As Object, e As KeyEventArgs)
-            If e.KeyCode = Keys.Enter Then
-                e.SuppressKeyPress = True
-                BuscarArticulo()
+        Private Sub TxtBuscarArticulo_TextChanged(sender As Object, e As EventArgs)
+            Dim term = txtBuscarArticulo.Text.Trim()
+            If String.IsNullOrWhiteSpace(term) Then
+                lstSugerenciasPOS.Visible = False
+                Return
+            End If
+
+            Dim prods = catalogService.GetProductos(term, 0, True)
+            lstSugerenciasPOS.Items.Clear()
+            If prods.Count > 0 Then
+                For Each p In prods
+                    lstSugerenciasPOS.Items.Add(New SugerenciaPOSItem(p))
+                Next
+                lstSugerenciasPOS.Visible = True
+                lstSugerenciasPOS.BringToFront()
+            Else
+                lstSugerenciasPOS.Visible = False
             End If
         End Sub
 
+        Private Sub TxtBuscarArticulo_KeyDown(sender As Object, e As KeyEventArgs)
+            If e.KeyCode = Keys.Down AndAlso lstSugerenciasPOS.Visible Then
+                lstSugerenciasPOS.Focus()
+                If lstSugerenciasPOS.Items.Count > 0 Then lstSugerenciasPOS.SelectedIndex = 0
+                e.Handled = True
+            ElseIf e.KeyCode = Keys.Enter Then
+                e.SuppressKeyPress = True
+                If lstSugerenciasPOS.Visible AndAlso lstSugerenciasPOS.SelectedIndex >= 0 Then
+                    ConfirmarSugerenciaPOS()
+                Else
+                    lstSugerenciasPOS.Visible = False
+                    BuscarArticulo()
+                End If
+            ElseIf e.KeyCode = Keys.Escape Then
+                lstSugerenciasPOS.Visible = False
+            End If
+        End Sub
+
+        Private Sub LstSugerenciasPOS_Click(sender As Object, e As EventArgs)
+            ConfirmarSugerenciaPOS()
+        End Sub
+
+        Private Sub LstSugerenciasPOS_KeyDown(sender As Object, e As KeyEventArgs)
+            If e.KeyCode = Keys.Enter Then
+                e.SuppressKeyPress = True
+                ConfirmarSugerenciaPOS()
+            ElseIf e.KeyCode = Keys.Escape Then
+                lstSugerenciasPOS.Visible = False
+                txtBuscarArticulo.Focus()
+            End If
+        End Sub
+
+        Private Sub ConfirmarSugerenciaPOS()
+            Dim item = TryCast(lstSugerenciasPOS.SelectedItem, SugerenciaPOSItem)
+            If item IsNot Nothing Then
+                lstSugerenciasPOS.Visible = False
+                Dim prodCompleto = catalogService.GetProductoPorCodigo(item.Producto.CodigoBarra)
+                If prodCompleto IsNot Nothing Then
+                    MostrarPrendaSeleccionada(prodCompleto)
+                Else
+                    MostrarPrendaSeleccionada(item.Producto)
+                End If
+                txtBuscarArticulo.Text = item.Producto.Nombre
+                txtBuscarArticulo.SelectAll()
+            End If
+        End Sub
+
+        Private Class SugerenciaPOSItem
+            Public Property Producto As Producto
+
+            Public Sub New(p As Producto)
+                Me.Producto = p
+            End Sub
+
+            Public Overrides Function ToString() As String
+                Return $"{Producto.Nombre}  |  Cód: {Producto.CodigoBarra}  |  {Producto.PrecioVenta:C2}"
+            End Function
+        End Class
+
         Private Sub BtnBuscarArticulo_Click(sender As Object, e As EventArgs)
+            lstSugerenciasPOS.Visible = False
             BuscarArticulo()
         End Sub
 
         Private Sub BuscarArticulo()
+            lstSugerenciasPOS.Visible = False
             Dim term As String = txtBuscarArticulo.Text.Trim()
             If String.IsNullOrWhiteSpace(term) Then Return
 

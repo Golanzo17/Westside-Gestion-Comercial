@@ -40,6 +40,7 @@ Namespace Forms
         Private Sub InitializeUI()
             Me.Text = "Catálogo de Prendas y Matriz de Talles"
             Me.Size = New Size(1050, 650)
+            Me.MinimumSize = New Size(860, 560)
             Me.StartPosition = FormStartPosition.CenterScreen
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
@@ -150,37 +151,75 @@ Namespace Forms
 
         Private Sub ConfigurarColumnas()
             dgvProductos.Columns.Clear()
+            dgvProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
+            ' ── ID (oculto) ──
             dgvProductos.Columns.Add("Id", "ID")
-            dgvProductos.Columns("Id").Width = 60
+            dgvProductos.Columns("Id").FillWeight = 4
+            dgvProductos.Columns("Id").MinimumWidth = 45
+            dgvProductos.Columns("Id").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvProductos.Columns("Id").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Código de Barra (centrado) ──
             dgvProductos.Columns.Add("Codigo", "Código Barra")
-            dgvProductos.Columns("Codigo").Width = 120
+            dgvProductos.Columns("Codigo").FillWeight = 9
+            dgvProductos.Columns("Codigo").MinimumWidth = 90
+            dgvProductos.Columns("Codigo").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvProductos.Columns("Codigo").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Nombre (relleno, izquierda) ──
             dgvProductos.Columns.Add("Nombre", "Nombre de Prenda")
-            dgvProductos.Columns("Nombre").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvProductos.Columns("Nombre").FillWeight = 22
+            dgvProductos.Columns("Nombre").MinimumWidth = 130
+            dgvProductos.Columns("Nombre").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+            dgvProductos.Columns("Nombre").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
 
+            ' ── Categoría (izquierda) ──
             dgvProductos.Columns.Add("Categoria", "Categoría")
-            dgvProductos.Columns("Categoria").Width = 140
+            dgvProductos.Columns("Categoria").FillWeight = 11
+            dgvProductos.Columns("Categoria").MinimumWidth = 90
+            dgvProductos.Columns("Categoria").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+            dgvProductos.Columns("Categoria").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
 
+            ' ── Precio Costo (derecha, solo gerente) ──
             dgvProductos.Columns.Add("PrecioCosto", "Costo")
-            dgvProductos.Columns("PrecioCosto").Width = 100
+            dgvProductos.Columns("PrecioCosto").FillWeight = 8
+            dgvProductos.Columns("PrecioCosto").MinimumWidth = 75
             dgvProductos.Columns("PrecioCosto").DefaultCellStyle.Format = "C2"
+            dgvProductos.Columns("PrecioCosto").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvProductos.Columns("PrecioCosto").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
             dgvProductos.Columns("PrecioCosto").Visible = AuthService.IsAdminOrManager
 
+            ' ── Precio Venta (derecha) ──
             dgvProductos.Columns.Add("PrecioVenta", "Precio Venta")
-            dgvProductos.Columns("PrecioVenta").Width = 110
+            dgvProductos.Columns("PrecioVenta").FillWeight = 9
+            dgvProductos.Columns("PrecioVenta").MinimumWidth = 85
             dgvProductos.Columns("PrecioVenta").DefaultCellStyle.Format = "C2"
+            dgvProductos.Columns("PrecioVenta").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvProductos.Columns("PrecioVenta").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
+            ' ── Margen % (centrado, solo gerente) ──
             dgvProductos.Columns.Add("Margen", "Margen %")
-            dgvProductos.Columns("Margen").Width = 85
+            dgvProductos.Columns("Margen").FillWeight = 7
+            dgvProductos.Columns("Margen").MinimumWidth = 65
             dgvProductos.Columns("Margen").DefaultCellStyle.Format = "0.0'%'"
+            dgvProductos.Columns("Margen").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvProductos.Columns("Margen").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
             dgvProductos.Columns("Margen").Visible = AuthService.IsAdminOrManager
 
+            ' ── Stock Total (centrado) ──
             dgvProductos.Columns.Add("TotalStock", "Stock Total")
-            dgvProductos.Columns("TotalStock").Width = 90
+            dgvProductos.Columns("TotalStock").FillWeight = 7
+            dgvProductos.Columns("TotalStock").MinimumWidth = 70
+            dgvProductos.Columns("TotalStock").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvProductos.Columns("TotalStock").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Estado (centrado) ──
             dgvProductos.Columns.Add("Activo", "Estado")
-            dgvProductos.Columns("Activo").Width = 85
+            dgvProductos.Columns("Activo").FillWeight = 7
+            dgvProductos.Columns("Activo").MinimumWidth = 65
+            dgvProductos.Columns("Activo").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvProductos.Columns("Activo").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
         End Sub
 
         Private Sub LoadCategorias()

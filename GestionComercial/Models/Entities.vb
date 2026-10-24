@@ -140,6 +140,25 @@ Namespace Models
         Public Property Diferencia As Nullable(Of Decimal)
         Public Property Estado As String = "Abierta" ' Abierta, Cerrada
         Public Property Observaciones As String = String.Empty
+
+        Public ReadOnly Property TotalVentasTotal As Decimal
+            Get
+                Return TotalVentasEfectivo + TotalVentasDigital
+            End Get
+        End Property
+
+        Public ReadOnly Property DuracionTexto As String
+            Get
+                If Not FechaCierre.HasValue Then Return "En curso"
+                Dim duracion = FechaCierre.Value - FechaApertura
+                If duracion.TotalMinutes < 60 Then
+                    Return $"{Math.Max(1, CInt(duracion.TotalMinutes))} min"
+                End If
+                Dim horas = CInt(Math.Floor(duracion.TotalHours))
+                Dim minutos = Math.Abs(duracion.Minutes)
+                Return $"{horas}h {minutos}m"
+            End Get
+        End Property
     End Class
 
     ' Movimiento manual de caja (ingresos o egresos extraordinarios como retiros o gastos operativos).

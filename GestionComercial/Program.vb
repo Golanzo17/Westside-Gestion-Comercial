@@ -110,6 +110,16 @@ Friend Module Program
             Dim ventaErr As String = ""
             Dim okVenta = ventaSvc.ProcesarVenta(venta, ventaErr)
             Console.WriteLine("TEST_VENTA:" & okVenta.ToString() & ":Ticket=" & venta.NumeroTicket & ":Err=" & ventaErr)
+
+            ' 10. Probamos las funciones de auditoría gerencial de cajas
+            Dim listCajas = cajaSvc.GetHistorialCajasAvanzado(DateTime.Today.AddDays(-60), DateTime.Today, Nothing, Nothing, Nothing)
+            Console.WriteLine("TEST_HISTORIAL_CAJAS:" & listCajas.Count.ToString())
+            If listCajas.Count > 0 Then
+                Dim cid = listCajas(0).Id
+                Dim vtasCaja = cajaSvc.GetVentasPorCaja(cid)
+                Dim dtMedios = cajaSvc.GetResumenMediosPagoCaja(cid)
+                Console.WriteLine("TEST_VENTAS_CAJA:" & vtasCaja.Count.ToString() & ":MEDIOS=" & dtMedios.Rows.Count.ToString())
+            End If
             Return
         End If
 

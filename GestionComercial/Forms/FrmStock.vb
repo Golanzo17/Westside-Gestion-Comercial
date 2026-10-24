@@ -125,53 +125,117 @@ Namespace Forms
 
         Private Sub ConfigurarColumnasAlertas()
             dgvAlertas.Columns.Clear()
+            dgvAlertas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
+            ' ── Código Barra (centrado) ──
             dgvAlertas.Columns.Add("Codigo", "Código Barra")
-            dgvAlertas.Columns("Codigo").Width = 120
+            dgvAlertas.Columns("Codigo").FillWeight = 10
+            dgvAlertas.Columns("Codigo").MinimumWidth = 85
+            dgvAlertas.Columns("Codigo").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvAlertas.Columns("Codigo").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Prenda / Artículo (relleno, izquierda) ──
             dgvAlertas.Columns.Add("Nombre", "Prenda / Artículo")
-            dgvAlertas.Columns("Nombre").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvAlertas.Columns("Nombre").FillWeight = 30
+            dgvAlertas.Columns("Nombre").MinimumWidth = 130
+            dgvAlertas.Columns("Nombre").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+            dgvAlertas.Columns("Nombre").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
 
+            ' ── Talle (centrado) ──
             dgvAlertas.Columns.Add("Talle", "Talle")
-            dgvAlertas.Columns("Talle").Width = 90
+            dgvAlertas.Columns("Talle").FillWeight = 7
+            dgvAlertas.Columns("Talle").MinimumWidth = 60
+            dgvAlertas.Columns("Talle").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvAlertas.Columns("Talle").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Color (centrado) ──
             dgvAlertas.Columns.Add("Color", "Color")
-            dgvAlertas.Columns("Color").Width = 120
+            dgvAlertas.Columns("Color").FillWeight = 10
+            dgvAlertas.Columns("Color").MinimumWidth = 80
+            dgvAlertas.Columns("Color").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvAlertas.Columns("Color").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Stock Actual (derecha) ──
             dgvAlertas.Columns.Add("StockActual", "Stock Actual")
-            dgvAlertas.Columns("StockActual").Width = 110
+            dgvAlertas.Columns("StockActual").FillWeight = 9
+            dgvAlertas.Columns("StockActual").MinimumWidth = 75
+            dgvAlertas.Columns("StockActual").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvAlertas.Columns("StockActual").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
+            ' ── Stock Mínimo (derecha) ──
             dgvAlertas.Columns.Add("StockMinimo", "Stock Mínimo")
-            dgvAlertas.Columns("StockMinimo").Width = 110
+            dgvAlertas.Columns("StockMinimo").FillWeight = 9
+            dgvAlertas.Columns("StockMinimo").MinimumWidth = 75
+            dgvAlertas.Columns("StockMinimo").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvAlertas.Columns("StockMinimo").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
+            ' ── Estado (centrado) ──
             dgvAlertas.Columns.Add("Estado", "Estado")
-            dgvAlertas.Columns("Estado").Width = 140
+            dgvAlertas.Columns("Estado").FillWeight = 13
+            dgvAlertas.Columns("Estado").MinimumWidth = 100
+            dgvAlertas.Columns("Estado").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvAlertas.Columns("Estado").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
         End Sub
 
         Private Sub ConfigurarColumnasMovimientos()
             dgvMovimientos.Columns.Clear()
+            dgvMovimientos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
+            ' ── Fecha y Hora (centrado) ──
             dgvMovimientos.Columns.Add("Fecha", "Fecha y Hora")
-            dgvMovimientos.Columns("Fecha").Width = 150
+            dgvMovimientos.Columns("Fecha").FillWeight = 12
+            dgvMovimientos.Columns("Fecha").MinimumWidth = 110
+            dgvMovimientos.Columns("Fecha").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvMovimientos.Columns("Fecha").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Tipo Movimiento (centrado) ──
             dgvMovimientos.Columns.Add("Tipo", "Tipo Movimiento")
-            dgvMovimientos.Columns("Tipo").Width = 140
+            dgvMovimientos.Columns("Tipo").FillWeight = 11
+            dgvMovimientos.Columns("Tipo").MinimumWidth = 100
+            dgvMovimientos.Columns("Tipo").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvMovimientos.Columns("Tipo").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Prenda (relleno, izquierda) ──
             dgvMovimientos.Columns.Add("Prenda", "Prenda")
-            dgvMovimientos.Columns("Prenda").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvMovimientos.Columns("Prenda").FillWeight = 22
+            dgvMovimientos.Columns("Prenda").MinimumWidth = 120
+            dgvMovimientos.Columns("Prenda").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+            dgvMovimientos.Columns("Prenda").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
 
+            ' ── Talle (centrado) ──
             dgvMovimientos.Columns.Add("Talle", "Talle")
-            dgvMovimientos.Columns("Talle").Width = 80
+            dgvMovimientos.Columns("Talle").FillWeight = 6
+            dgvMovimientos.Columns("Talle").MinimumWidth = 55
+            dgvMovimientos.Columns("Talle").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvMovimientos.Columns("Talle").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Cantidad (derecha) ──
             dgvMovimientos.Columns.Add("Cantidad", "Cantidad")
-            dgvMovimientos.Columns("Cantidad").Width = 90
+            dgvMovimientos.Columns("Cantidad").FillWeight = 7
+            dgvMovimientos.Columns("Cantidad").MinimumWidth = 65
+            dgvMovimientos.Columns("Cantidad").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvMovimientos.Columns("Cantidad").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
+            ' ── Stock Anterior (derecha) ──
             dgvMovimientos.Columns.Add("StockAnt", "Stock Ant.")
-            dgvMovimientos.Columns("StockAnt").Width = 90
+            dgvMovimientos.Columns("StockAnt").FillWeight = 7
+            dgvMovimientos.Columns("StockAnt").MinimumWidth = 65
+            dgvMovimientos.Columns("StockAnt").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvMovimientos.Columns("StockAnt").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
+            ' ── Stock Nuevo (derecha) ──
             dgvMovimientos.Columns.Add("StockPost", "Stock Nuevo")
-            dgvMovimientos.Columns("StockPost").Width = 90
+            dgvMovimientos.Columns("StockPost").FillWeight = 7
+            dgvMovimientos.Columns("StockPost").MinimumWidth = 65
+            dgvMovimientos.Columns("StockPost").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvMovimientos.Columns("StockPost").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
+            ' ── Motivo / Comprobante (relleno, izquierda) ──
             dgvMovimientos.Columns.Add("Motivo", "Motivo / Comprobante")
-            dgvMovimientos.Columns("Motivo").Width = 200
+            dgvMovimientos.Columns("Motivo").FillWeight = 16
+            dgvMovimientos.Columns("Motivo").MinimumWidth = 130
+            dgvMovimientos.Columns("Motivo").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+            dgvMovimientos.Columns("Motivo").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
         End Sub
 
         ''' <summary>
@@ -234,18 +298,24 @@ Namespace Forms
     ''' <summary>
     ''' Diálogo modal para registrar ingresos de mercadería (compras a proveedores)
     ''' o ajustes manuales de stock (roturas, devoluciones extraordinarias, mermas).
-    ''' 
-    ''' DECISIÓN DE AUDITORÍA:
-    ''' Exigimos obligatoriamente un 'Motivo' y registramos el usuario responsable
-    ''' para evitar discrepancias inexplicables en el balance de inventario.
+    ''' Cuenta con búsqueda por teclado y sugerencias en tiempo real, más selección controlada de color.
     ''' </summary>
     Public Class FrmAjusteStock
         Inherits Form
 
         Private catalogService As New CatalogService()
-        Private cboPrendas As ComboBox
+        Private todosLosProductos As New List(Of Producto)()
+        Private productoSeleccionado As Producto = Nothing
+
+        ' Controles de Búsqueda
+        Private txtBuscarPrenda As TextBox
+        Private lstSugerencias As ListBox
+        Private lblPrendaSeleccionada As Label
+
+        ' Variantes y Datos de Stock
         Private cboTalles As ComboBox
-        Private txtColor As TextBox
+        Private cboColor As ComboBox
+        Private btnNuevoColor As Button
         Private numCantidad As NumericUpDown
         Private txtMotivo As TextBox
         Private btnGuardar As Button
@@ -253,12 +323,13 @@ Namespace Forms
 
         Public Sub New()
             InitializeUI()
-            LoadPrendas()
+            CargarCatalogo()
+            CargarColores()
         End Sub
 
         Private Sub InitializeUI()
-            Me.Text = "Ingreso de Mercadería / Ajuste de Stock"
-            Me.Size = New Size(500, 420)
+            Me.Text = "Ingreso de Mercadería / Reposición de Stock"
+            Me.Size = New Size(560, 560)
             Me.StartPosition = FormStartPosition.CenterParent
             Me.FormBorderStyle = FormBorderStyle.FixedDialog
             Me.MaximizeBox = False
@@ -266,28 +337,86 @@ Namespace Forms
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
 
-            Dim lblP As New Label() With {.Text = "Prenda / Artículo:", .Font = UITheme.FontBold, .Location = New Point(30, 20), .AutoSize = True}
-            cboPrendas = New ComboBox() With {.Location = New Point(30, 50), .Size = New Size(420, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
-            UITheme.StyleComboBox(cboPrendas)
-            AddHandler cboPrendas.SelectedIndexChanged, AddressOf CboPrendas_SelectedIndexChanged
+            ' ─── Fila 1: Búsqueda por teclado en tiempo real ───
+            Dim lblP As New Label() With {
+                .Text = "Buscar Prenda por Teclado (Nombre o Código):",
+                .Font = UITheme.FontBold,
+                .ForeColor = UITheme.ColorPrimaryDark,
+                .Location = New Point(30, 20),
+                .AutoSize = True
+            }
 
-            Dim lblT As New Label() With {.Text = "Talle:", .Font = UITheme.FontBold, .Location = New Point(30, 95), .AutoSize = True}
-            cboTalles = New ComboBox() With {.Location = New Point(30, 120), .Size = New Size(190, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            txtBuscarPrenda = New TextBox() With {
+                .Location = New Point(30, 46),
+                .Size = New Size(480, 28),
+                .Font = New Font("Segoe UI", 10.0F, FontStyle.Regular)
+            }
+            UITheme.StyleTextBox(txtBuscarPrenda)
+            AddHandler txtBuscarPrenda.TextChanged, AddressOf TxtBuscarPrenda_TextChanged
+            AddHandler txtBuscarPrenda.KeyDown, AddressOf TxtBuscarPrenda_KeyDown
+
+            ' Tarjeta destacada de la prenda elegida
+            lblPrendaSeleccionada = New Label() With {
+                .Text = "Escriba arriba para buscar y seleccionar una prenda.",
+                .Font = UITheme.FontBold,
+                .ForeColor = UITheme.ColorTextSecondary,
+                .BackColor = UITheme.ColorSurfaceAccent,
+                .Location = New Point(30, 80),
+                .Size = New Size(480, 42),
+                .TextAlign = ContentAlignment.MiddleLeft,
+                .Padding = New Padding(10, 0, 10, 0)
+            }
+            UITheme.ApplyRoundedRegion(lblPrendaSeleccionada, 6)
+
+            ' Lista flotante de sugerencias en tiempo real
+            lstSugerencias = New ListBox() With {
+                .Location = New Point(30, 76),
+                .Size = New Size(480, 150),
+                .Font = UITheme.FontRegular,
+                .Visible = False,
+                .IntegralHeight = False
+            }
+            AddHandler lstSugerencias.Click, AddressOf LstSugerencias_Click
+            AddHandler lstSugerencias.KeyDown, AddressOf LstSugerencias_KeyDown
+
+            ' ─── Fila 2: Talle y Color ───
+            Dim lblT As New Label() With {.Text = "Talle disponible:", .Font = UITheme.FontBold, .Location = New Point(30, 135), .AutoSize = True}
+            cboTalles = New ComboBox() With {.Location = New Point(30, 160), .Size = New Size(220, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
             UITheme.StyleComboBox(cboTalles)
 
-            Dim lblC As New Label() With {.Text = "Color:", .Font = UITheme.FontBold, .Location = New Point(250, 95), .AutoSize = True}
-            txtColor = New TextBox() With {.Location = New Point(250, 120), .Size = New Size(200, 26), .Text = "Único"}
-            UITheme.StyleTextBox(txtColor)
+            Dim lblC As New Label() With {.Text = "Color de la Prenda:", .Font = UITheme.FontBold, .Location = New Point(280, 135), .AutoSize = True}
+            cboColor = New ComboBox() With {.Location = New Point(280, 160), .Size = New Size(140, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboColor)
+            AddHandler cboColor.SelectedIndexChanged, AddressOf CboColor_SelectedIndexChanged
 
-            Dim lblCant As New Label() With {.Text = "Cantidad a Ingresar / Ajustar:", .Font = UITheme.FontBold, .Location = New Point(30, 165), .AutoSize = True}
-            numCantidad = New NumericUpDown() With {.Location = New Point(30, 190), .Size = New Size(190, 26), .Minimum = -9999, .Maximum = 9999, .Value = 1}
+            btnNuevoColor = New Button() With {
+                .Text = "+ Nuevo",
+                .Location = New Point(425, 158),
+                .Size = New Size(85, 29),
+                .Font = UITheme.FontSmallBold
+            }
+            UITheme.StyleButton(btnNuevoColor, "Secondary")
+            AddHandler btnNuevoColor.Click, Sub() CrearNuevoColor()
 
-            Dim lblM As New Label() With {.Text = "Motivo (Ej: Factura Proveedor, Reposición):", .Font = UITheme.FontBold, .Location = New Point(30, 235), .AutoSize = True}
-            txtMotivo = New TextBox() With {.Location = New Point(30, 260), .Size = New Size(420, 26), .Text = "Ingreso de mercadería"}
+            ' ─── Fila 3: Cantidad a Ingresar ───
+            Dim lblCant As New Label() With {.Text = "Cantidad de Unidades a Ingresar:", .Font = UITheme.FontBold, .Location = New Point(30, 205), .AutoSize = True}
+            numCantidad = New NumericUpDown() With {
+                .Location = New Point(30, 230),
+                .Size = New Size(220, 26),
+                .Minimum = -9999,
+                .Maximum = 9999,
+                .Value = 1,
+                .Font = UITheme.FontBold
+            }
+
+            ' ─── Fila 4: Motivo / Justificación ───
+            Dim lblM As New Label() With {.Text = "Motivo (Ej: Factura Proveedor, Reposición de Taller):", .Font = UITheme.FontBold, .Location = New Point(30, 275), .AutoSize = True}
+            txtMotivo = New TextBox() With {.Location = New Point(30, 300), .Size = New Size(480, 26), .Text = "Ingreso de mercadería / Proveedor"}
             UITheme.StyleTextBox(txtMotivo)
 
+            ' ─── Panel Inferior de Botones ───
             Dim pnlBottom As New Panel() With {.Dock = DockStyle.Bottom, .Height = 55, .BackColor = UITheme.ColorSurfaceMuted, .Padding = New Padding(20, 10, 20, 10)}
-            btnGuardar = New Button() With {.Text = "✔ Registrar Ajuste", .Dock = DockStyle.Right, .Width = 160}
+            btnGuardar = New Button() With {.Text = "✔ Registrar Ingreso", .Dock = DockStyle.Right, .Width = 180}
             UITheme.StyleButton(btnGuardar, "Success")
             AddHandler btnGuardar.Click, AddressOf BtnGuardar_Click
 
@@ -297,46 +426,219 @@ Namespace Forms
 
             pnlBottom.Controls.AddRange({btnGuardar, btnCancelar})
 
-            Me.Controls.AddRange({lblP, cboPrendas, lblT, cboTalles, lblC, txtColor, lblCant, numCantidad, lblM, txtMotivo, pnlBottom})
+            Me.Controls.AddRange({
+                lblP, txtBuscarPrenda, lblPrendaSeleccionada, lstSugerencias,
+                lblT, cboTalles, lblC, cboColor, btnNuevoColor,
+                lblCant, numCantidad, lblM, txtMotivo, pnlBottom
+            })
+            lstSugerencias.BringToFront()
         End Sub
 
-        Private Sub LoadPrendas()
-            cboPrendas.Items.Clear()
-            Dim prods = catalogService.GetProductos("", 0, True)
-            For Each p In prods
-                cboPrendas.Items.Add(p)
-            Next
-            cboPrendas.DisplayMember = "Nombre"
-            If cboPrendas.Items.Count > 0 Then cboPrendas.SelectedIndex = 0
-        End Sub
-
-        Private Sub CboPrendas_SelectedIndexChanged(sender As Object, e As EventArgs)
-            cboTalles.Items.Clear()
-            Dim prod = TryCast(cboPrendas.SelectedItem, Producto)
-            If prod IsNot Nothing Then
-                Dim talles = catalogService.GetTalles()
-                For Each t In talles
-                    cboTalles.Items.Add(t)
-                Next
-                cboTalles.DisplayMember = "Nombre"
-                If cboTalles.Items.Count > 0 Then cboTalles.SelectedIndex = 0
+        Private Sub CargarCatalogo()
+            todosLosProductos = catalogService.GetProductos("", 0, True)
+            If todosLosProductos.Count > 0 Then
+                SeleccionarPrenda(todosLosProductos(0))
             End If
         End Sub
 
-        ''' <summary>
-        ''' Validación y persistencia transaccional del ajuste manual.
-        ''' Invoca CatalogService.AjustarStockManual que registra el movimiento en kardex y
-        ''' actualiza la matriz producto_talles atómicamente.
-        ''' </summary>
+        Private Sub CargarColores()
+            cboColor.Items.Clear()
+            Dim colores = catalogService.GetColoresDisponibles()
+            For Each col In colores
+                cboColor.Items.Add(col)
+            Next
+            cboColor.Items.Add("✨ [+ Crear nuevo color...]")
+
+            If cboColor.Items.Count > 0 Then
+                cboColor.SelectedIndex = 0
+            End If
+        End Sub
+
+        Private Sub TxtBuscarPrenda_TextChanged(sender As Object, e As EventArgs)
+            Dim term = txtBuscarPrenda.Text.Trim()
+            If String.IsNullOrWhiteSpace(term) Then
+                lstSugerencias.Visible = False
+                Return
+            End If
+
+            Dim coincidentes = todosLosProductos.Where(Function(p) _
+                p.Nombre.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0 OrElse _
+                p.CodigoBarra.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0).ToList()
+
+            lstSugerencias.Items.Clear()
+            If coincidentes.Count > 0 Then
+                For Each p In coincidentes
+                    lstSugerencias.Items.Add(New PrendaItem(p))
+                Next
+                lstSugerencias.Visible = True
+                lstSugerencias.BringToFront()
+            Else
+                lstSugerencias.Visible = False
+            End If
+        End Sub
+
+        Private Sub TxtBuscarPrenda_KeyDown(sender As Object, e As KeyEventArgs)
+            If e.KeyCode = Keys.Down AndAlso lstSugerencias.Visible Then
+                lstSugerencias.Focus()
+                If lstSugerencias.Items.Count > 0 Then lstSugerencias.SelectedIndex = 0
+                e.Handled = True
+            ElseIf e.KeyCode = Keys.Enter Then
+                e.SuppressKeyPress = True
+                If lstSugerencias.Visible AndAlso lstSugerencias.SelectedIndex >= 0 Then
+                    ConfirmarSeleccionSugerencia()
+                ElseIf lstSugerencias.Visible AndAlso lstSugerencias.Items.Count > 0 Then
+                    lstSugerencias.SelectedIndex = 0
+                    ConfirmarSeleccionSugerencia()
+                End If
+            ElseIf e.KeyCode = Keys.Escape Then
+                lstSugerencias.Visible = False
+            End If
+        End Sub
+
+        Private Sub LstSugerencias_Click(sender As Object, e As EventArgs)
+            ConfirmarSeleccionSugerencia()
+        End Sub
+
+        Private Sub LstSugerencias_KeyDown(sender As Object, e As KeyEventArgs)
+            If e.KeyCode = Keys.Enter Then
+                e.SuppressKeyPress = True
+                ConfirmarSeleccionSugerencia()
+            ElseIf e.KeyCode = Keys.Escape Then
+                lstSugerencias.Visible = False
+                txtBuscarPrenda.Focus()
+            End If
+        End Sub
+
+        Private Sub ConfirmarSeleccionSugerencia()
+            Dim item = TryCast(lstSugerencias.SelectedItem, PrendaItem)
+            If item IsNot Nothing Then
+                SeleccionarPrenda(item.Producto)
+                lstSugerencias.Visible = False
+                txtBuscarPrenda.Text = item.Producto.Nombre
+                txtBuscarPrenda.SelectAll()
+            End If
+        End Sub
+
+        Private Sub SeleccionarPrenda(prod As Producto)
+            productoSeleccionado = prod
+            lblPrendaSeleccionada.Text = $"✔ Seleccionada: {prod.Nombre} (Cód: {prod.CodigoBarra})"
+            lblPrendaSeleccionada.ForeColor = UITheme.ColorPrimaryDark
+
+            ' Cargar talles disponibles
+            cboTalles.Items.Clear()
+            Dim talles = catalogService.GetTalles()
+            For Each t In talles
+                cboTalles.Items.Add(t)
+            Next
+            cboTalles.DisplayMember = "Nombre"
+            If cboTalles.Items.Count > 0 Then cboTalles.SelectedIndex = 0
+        End Sub
+
+        Private Sub CboColor_SelectedIndexChanged(sender As Object, e As EventArgs)
+            If cboColor.SelectedItem IsNot Nothing AndAlso cboColor.SelectedItem.ToString().Contains("[+ Crear nuevo color...]") Then
+                CrearNuevoColor()
+            End If
+        End Sub
+
+        Private Sub CrearNuevoColor()
+            Using dlgPrompt As New Form()
+                dlgPrompt.Text = "Registrar Nuevo Color de Prenda"
+                dlgPrompt.Size = New Size(400, 180)
+                dlgPrompt.StartPosition = FormStartPosition.CenterParent
+                dlgPrompt.FormBorderStyle = FormBorderStyle.FixedDialog
+                dlgPrompt.MaximizeBox = False
+                dlgPrompt.MinimizeBox = False
+                dlgPrompt.BackColor = UITheme.ColorBackground
+
+                Dim lblPrompt As New Label() With {
+                    .Text = "Escriba el nombre del nuevo color (ej: Terracota, Bordo):",
+                    .Font = UITheme.FontBold,
+                    .Location = New Point(20, 15),
+                    .AutoSize = True
+                }
+
+                Dim txtNuevoCol As New TextBox() With {
+                    .Location = New Point(20, 45),
+                    .Size = New Size(345, 26),
+                    .Font = UITheme.FontRegular
+                }
+                UITheme.StyleTextBox(txtNuevoCol)
+
+                Dim btnOk As New Button() With {.Text = "Guardar", .Location = New Point(180, 90), .Size = New Size(95, 32)}
+                UITheme.StyleButton(btnOk, "Success")
+                Dim btnCancel As New Button() With {.Text = "Cancelar", .Location = New Point(285, 90), .Size = New Size(80, 32)}
+                UITheme.StyleButton(btnCancel, "Secondary")
+
+                AddHandler btnOk.Click, Sub()
+                                            Dim colName = txtNuevoCol.Text.Trim()
+                                            If String.IsNullOrWhiteSpace(colName) Then
+                                                MessageBox.Show("Por favor escriba el nombre del color.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                                                Return
+                                            End If
+
+                                            ' Formatear tipo título (primera letra mayúscula)
+                                            colName = Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(colName.ToLower())
+
+                                            ' Verificar si ya existe en el combo
+                                            Dim idxExistente = -1
+                                            For i = 0 To cboColor.Items.Count - 1
+                                                If cboColor.Items(i).ToString().Equals(colName, StringComparison.OrdinalIgnoreCase) Then
+                                                    idxExistente = i
+                                                    Exit For
+                                                End If
+                                            Next
+
+                                            If idxExistente >= 0 Then
+                                                cboColor.SelectedIndex = idxExistente
+                                            Else
+                                                ' Insertar antes de la opción "+ Crear nuevo color..."
+                                                Dim insertIdx = Math.Max(0, cboColor.Items.Count - 1)
+                                                cboColor.Items.Insert(insertIdx, colName)
+                                                cboColor.SelectedIndex = insertIdx
+                                            End If
+
+                                            dlgPrompt.DialogResult = DialogResult.OK
+                                            dlgPrompt.Close()
+                                        End Sub
+
+                AddHandler btnCancel.Click, Sub() dlgPrompt.Close()
+
+                dlgPrompt.Controls.AddRange({lblPrompt, txtNuevoCol, btnOk, btnCancel})
+                dlgPrompt.ShowDialog(Me)
+            End Using
+
+            ' Si canceló o sigue seleccionada la opción de crear, volver a la primera opción
+            If cboColor.SelectedItem IsNot Nothing AndAlso cboColor.SelectedItem.ToString().Contains("[+ Crear nuevo color...]") Then
+                If cboColor.Items.Count > 1 Then cboColor.SelectedIndex = 0
+            End If
+        End Sub
+
+        Private Class PrendaItem
+            Public Property Producto As Producto
+
+            Public Sub New(p As Producto)
+                Me.Producto = p
+            End Sub
+
+            Public Overrides Function ToString() As String
+                Return $"{Producto.Nombre}  |  Cód: {Producto.CodigoBarra}  |  Cat: {Producto.CategoriaNombre}  |  Stock: {Producto.TotalStock}"
+            End Function
+        End Class
+
         Private Sub BtnGuardar_Click(sender As Object, e As EventArgs)
             If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Guardar movimientos de stock manuales requiere permisos de Administrador o Gerente.") Then
                 Return
             End If
 
-            Dim prod = TryCast(cboPrendas.SelectedItem, Producto)
+            If productoSeleccionado Is Nothing Then
+                MessageBox.Show("Por favor busque y seleccione una prenda del catálogo.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                txtBuscarPrenda.Focus()
+                Return
+            End If
+
             Dim talle = TryCast(cboTalles.SelectedItem, Talle)
-            If prod Is Nothing OrElse talle Is Nothing Then
-                MessageBox.Show("Seleccione la prenda y el talle.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            If talle Is Nothing Then
+                MessageBox.Show("Seleccione el talle correspondiente.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 Return
             End If
 
@@ -346,13 +648,15 @@ Namespace Forms
                 Return
             End If
 
-            Dim color As String = If(String.IsNullOrWhiteSpace(txtColor.Text), "Único", txtColor.Text.Trim())
+            Dim colorFinal = If(cboColor.SelectedItem IsNot Nothing, cboColor.SelectedItem.ToString().Trim(), "Único")
+            If colorFinal.Contains("[+ Crear nuevo color...]") Then colorFinal = "Único"
+
             Dim motivo As String = txtMotivo.Text.Trim()
             Dim userId As Integer = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.Id, 1)
 
             Dim errMsg As String = ""
-            If catalogService.AjustarStockManual(prod.Id, talle.Id, color, cant, motivo, userId, errMsg) Then
-                UITheme.ShowToast(Me, "Stock ajustado correctamente.", "Success")
+            If catalogService.AjustarStockManual(productoSeleccionado.Id, talle.Id, colorFinal, cant, motivo, userId, errMsg) Then
+                UITheme.ShowToast(Me, "Stock ingresado y registrado correctamente.", "Success")
                 Me.DialogResult = DialogResult.OK
                 Me.Close()
             Else

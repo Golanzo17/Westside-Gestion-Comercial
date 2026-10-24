@@ -119,6 +119,7 @@ Namespace Forms
             Dim btnStock = CreateNavButton("Stock y reposición", AddressOf Nav_Stock)
             Dim btnClientes = CreateNavButton("Clientes", AddressOf Nav_Clientes)
             Dim btnCaja = CreateNavButton("Caja diaria y arqueo", AddressOf Nav_Caja)
+            Dim btnControlCajas = CreateNavButton("Cierres y arqueos", AddressOf Nav_ControlCajas)
             Dim btnReportes = CreateNavButton("Reportes y ventas", AddressOf Nav_Reportes)
             Dim btnUsuarios = CreateNavButton("Usuarios y equipo", AddressOf Nav_Usuarios)
             Dim btnBackup = CreateNavButton("Copias de seguridad", AddressOf Nav_Backup)
@@ -127,8 +128,9 @@ Namespace Forms
             ' Configuración de accesos del menú lateral según el rol activo
             btnPos.Visible = AuthService.IsVendor
             btnStock.Visible = AuthService.IsManager
-            btnProductos.Visible = Not AuthService.IsAdmin
+            btnProductos.Visible = AuthService.IsVendor
             btnCaja.Visible = AuthService.IsVendor
+            btnControlCajas.Visible = AuthService.IsManager
             btnReportes.Visible = AuthService.IsManager OrElse AuthService.IsVendor
             btnUsuarios.Visible = AuthService.IsAdmin
             btnBackup.Visible = AuthService.IsAdmin
@@ -147,13 +149,14 @@ Namespace Forms
             secOperaciones.Visible = AuthService.IsVendor
 
             ' Orden de docking: se agregan en orden inverso (Bottom-up)
-            ' Resultado visual: Home > [Operaciones: POS, Caja, Clientes] > [Gestión: Catálogo, Stock, Reportes] > [Sistema: Usuarios, Backup, Config]
+            ' Resultado visual: Home > [Operaciones: POS, Caja, Clientes] > [Gestión: Catálogo, Stock, Cierres y arqueos, Reportes] > [Sistema: Usuarios, Backup, Config]
             pnlNavMenu.Controls.Add(btnConfig)
             pnlNavMenu.Controls.Add(btnBackup)
             pnlNavMenu.Controls.Add(btnUsuarios)
             pnlNavMenu.Controls.Add(secSistema)
             pnlNavMenu.Controls.Add(divSistema)
             pnlNavMenu.Controls.Add(btnReportes)
+            pnlNavMenu.Controls.Add(btnControlCajas)
             pnlNavMenu.Controls.Add(btnStock)
             pnlNavMenu.Controls.Add(btnProductos)
             pnlNavMenu.Controls.Add(secGestion)
@@ -424,19 +427,6 @@ Namespace Forms
 
             ' Operaciones de Gestión (Admin y Gerente)
             If AuthService.IsAdminOrManager Then
-                If AuthService.IsManager Then
-                    Dim btnAccionPrenda As New Button() With {
-                        .Text = "Cargar Nueva Prenda",
-                        .Height = 44,
-                        .AutoSize = True,
-                        .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                        .Padding = New Padding(16, 0, 16, 0),
-                        .Margin = New Padding(0, 0, 10, 8)
-                    }
-                    UITheme.StyleButton(btnAccionPrenda, "Success")
-                    AddHandler btnAccionPrenda.Click, AddressOf Nav_Productos
-                    flpAcciones.Controls.Add(btnAccionPrenda)
-                End If
 
                 If AuthService.IsManager Then
                     Dim btnAccionStock As New Button() With {
@@ -450,6 +440,18 @@ Namespace Forms
                     UITheme.StyleButton(btnAccionStock, "Secondary")
                     AddHandler btnAccionStock.Click, AddressOf Nav_Stock
                     flpAcciones.Controls.Add(btnAccionStock)
+
+                    Dim btnAccionAuditoriaCajas As New Button() With {
+                        .Text = "Auditoría de Cierres de Caja",
+                        .Height = 44,
+                        .AutoSize = True,
+                        .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                        .Padding = New Padding(16, 0, 16, 0),
+                        .Margin = New Padding(0, 0, 10, 8)
+                    }
+                    UITheme.StyleButton(btnAccionAuditoriaCajas, "Secondary")
+                    AddHandler btnAccionAuditoriaCajas.Click, AddressOf Nav_ControlCajas
+                    flpAcciones.Controls.Add(btnAccionAuditoriaCajas)
                 End If
             End If
 
@@ -595,6 +597,10 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_Productos(sender As Object, e As EventArgs)
+            If AuthService.IsManager Then
+                MessageBox.Show("El acceso al catálogo de prendas está restringido para el rol de Gerente.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
             If AuthService.IsAdmin Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmProductos())
@@ -615,6 +621,15 @@ Namespace Forms
             If Not AuthService.IsVendor Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmCaja())
+        End Sub
+
+        Private Sub Nav_ControlCajas(sender As Object, e As EventArgs)
+            If Not AuthService.IsManager Then
+                MessageBox.Show("El control de cierres y arqueos de caja está reservado exclusivamente para el rol de Gerente.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+            If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
+            OpenChildForm(New FrmControlCajas())
         End Sub
 
         Private Sub Nav_Reportes(sender As Object, e As EventArgs)

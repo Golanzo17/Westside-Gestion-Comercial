@@ -471,55 +471,110 @@ Namespace Forms
 
         Private Sub ConfigurarColumnasHistorial()
             dgvHistorial.Columns.Clear()
+            ' Modo Fill: las columnas se distribuyen proporcionalmente al ancho disponible
+            dgvHistorial.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
+            ' ── Nº Turno (centrado) ──
             dgvHistorial.Columns.Add("Id", "# Turno")
-            dgvHistorial.Columns("Id").Width = 80
+            dgvHistorial.Columns("Id").FillWeight = 5
+            dgvHistorial.Columns("Id").MinimumWidth = 55
+            dgvHistorial.Columns("Id").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvHistorial.Columns("Id").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Vendedor Responsable (izquierda) ──
             dgvHistorial.Columns.Add("Usuario", "Vendedor Responsable")
-            dgvHistorial.Columns("Usuario").Width = 160
+            dgvHistorial.Columns("Usuario").FillWeight = 12
+            dgvHistorial.Columns("Usuario").MinimumWidth = 120
+            dgvHistorial.Columns("Usuario").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+            dgvHistorial.Columns("Usuario").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
 
+            ' ── Fecha Apertura (centrado) ──
             dgvHistorial.Columns.Add("Apertura", "Fecha Apertura")
-            dgvHistorial.Columns("Apertura").Width = 135
+            dgvHistorial.Columns("Apertura").FillWeight = 10
+            dgvHistorial.Columns("Apertura").MinimumWidth = 105
+            dgvHistorial.Columns("Apertura").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvHistorial.Columns("Apertura").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Fecha Cierre (centrado) ──
             dgvHistorial.Columns.Add("Cierre", "Fecha Cierre")
-            dgvHistorial.Columns("Cierre").Width = 135
+            dgvHistorial.Columns("Cierre").FillWeight = 10
+            dgvHistorial.Columns("Cierre").MinimumWidth = 105
+            dgvHistorial.Columns("Cierre").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvHistorial.Columns("Cierre").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
+            ' ── Monto Inicial (derecha) ──
             dgvHistorial.Columns.Add("Inicial", "Monto Inicial")
-            dgvHistorial.Columns("Inicial").Width = 110
+            dgvHistorial.Columns("Inicial").FillWeight = 8
+            dgvHistorial.Columns("Inicial").MinimumWidth = 85
             dgvHistorial.Columns("Inicial").DefaultCellStyle.Format = "C2"
+            dgvHistorial.Columns("Inicial").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvHistorial.Columns("Inicial").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
+            ' ── Ventas Efectivo (derecha) ──
             dgvHistorial.Columns.Add("VentasEfec", "Ventas Efec.")
-            dgvHistorial.Columns("VentasEfec").Width = 110
+            dgvHistorial.Columns("VentasEfec").FillWeight = 8
+            dgvHistorial.Columns("VentasEfec").MinimumWidth = 85
             dgvHistorial.Columns("VentasEfec").DefaultCellStyle.Format = "C2"
+            dgvHistorial.Columns("VentasEfec").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvHistorial.Columns("VentasEfec").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
+            ' ── Tarjetas/QR (derecha) ──
             dgvHistorial.Columns.Add("VentasDig", "Tarjetas/QR")
-            dgvHistorial.Columns("VentasDig").Width = 110
+            dgvHistorial.Columns("VentasDig").FillWeight = 8
+            dgvHistorial.Columns("VentasDig").MinimumWidth = 85
             dgvHistorial.Columns("VentasDig").DefaultCellStyle.Format = "C2"
+            dgvHistorial.Columns("VentasDig").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvHistorial.Columns("VentasDig").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
+            ' ── Ingresos (derecha) ──
             dgvHistorial.Columns.Add("Ingresos", "Ingresos")
-            dgvHistorial.Columns("Ingresos").Width = 100
+            dgvHistorial.Columns("Ingresos").FillWeight = 7
+            dgvHistorial.Columns("Ingresos").MinimumWidth = 75
             dgvHistorial.Columns("Ingresos").DefaultCellStyle.Format = "C2"
+            dgvHistorial.Columns("Ingresos").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvHistorial.Columns("Ingresos").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
+            ' ── Egresos (derecha) ──
             dgvHistorial.Columns.Add("Egresos", "Egresos")
-            dgvHistorial.Columns("Egresos").Width = 100
+            dgvHistorial.Columns("Egresos").FillWeight = 7
+            dgvHistorial.Columns("Egresos").MinimumWidth = 75
             dgvHistorial.Columns("Egresos").DefaultCellStyle.Format = "C2"
+            dgvHistorial.Columns("Egresos").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvHistorial.Columns("Egresos").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
+            ' ── Monto Esperado (derecha, solo gerente) ──
             dgvHistorial.Columns.Add("Esperado", "Monto Esperado")
-            dgvHistorial.Columns("Esperado").Width = 120
+            dgvHistorial.Columns("Esperado").FillWeight = 9
+            dgvHistorial.Columns("Esperado").MinimumWidth = 90
             dgvHistorial.Columns("Esperado").DefaultCellStyle.Format = "C2"
+            dgvHistorial.Columns("Esperado").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvHistorial.Columns("Esperado").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
             dgvHistorial.Columns("Esperado").Visible = AuthService.IsAdminOrManager
 
+            ' ── Efectivo Real (derecha, negrita) ──
             dgvHistorial.Columns.Add("Real", "Efectivo Real")
-            dgvHistorial.Columns("Real").Width = 110
+            dgvHistorial.Columns("Real").FillWeight = 8
+            dgvHistorial.Columns("Real").MinimumWidth = 85
             dgvHistorial.Columns("Real").DefaultCellStyle.Format = "C2"
+            dgvHistorial.Columns("Real").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvHistorial.Columns("Real").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
             dgvHistorial.Columns("Real").DefaultCellStyle.Font = UITheme.FontBold
 
+            ' ── Diferencia Arqueo (derecha, negrita, solo gerente) ──
             dgvHistorial.Columns.Add("Diferencia", "Diferencia Arqueo")
-            dgvHistorial.Columns("Diferencia").Width = 120
+            dgvHistorial.Columns("Diferencia").FillWeight = 9
+            dgvHistorial.Columns("Diferencia").MinimumWidth = 90
             dgvHistorial.Columns("Diferencia").DefaultCellStyle.Format = "C2"
+            dgvHistorial.Columns("Diferencia").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvHistorial.Columns("Diferencia").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
             dgvHistorial.Columns("Diferencia").Visible = AuthService.IsAdminOrManager
 
+            ' ── Observaciones (relleno restante, izquierda) ──
             dgvHistorial.Columns.Add("Observaciones", "Observaciones")
-            dgvHistorial.Columns("Observaciones").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvHistorial.Columns("Observaciones").FillWeight = 10
+            dgvHistorial.Columns("Observaciones").MinimumWidth = 80
+            dgvHistorial.Columns("Observaciones").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
+            dgvHistorial.Columns("Observaciones").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
         End Sub
 
         Public Sub LoadHistorialData()

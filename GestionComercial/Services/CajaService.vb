@@ -169,28 +169,138 @@ Namespace Services
             Return list
         End Function
 
-        Public Function GetHistorialCajas(fechaDesde As DateTime, fechaHasta As DateTime) As List(Of Caja)
-            Dim list As New List(Of Caja)()
+        Public Function GetCajaById(id As Integer) As Caja
             Try
                 Dim query As String = "SELECT c.*, u.nombre_completo AS usuario_nombre " &
                                      "FROM `cajas` c " &
                                      "INNER JOIN `usuarios` u ON c.usuario_id = u.id " &
-                                     "WHERE DATE(c.fecha_apertura) >= @desde AND DATE(c.fecha_apertura) <= @hasta " &
-                                     "ORDER BY c.id DESC;"
+                                     "WHERE c.id = @id LIMIT 1;"
+                Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, New Dictionary(Of String, Object) From {{"@id", id}})
+                If dt.Rows.Count = 0 Then Return Nothing
+                Return MapCaja(dt.Rows(0))
+            Catch ex As Exception
+                Return Nothing
+            End Try
+        End Function
+
+        Public Function GetHistorialCajas(fechaDesde As DateTime, fechaHasta As DateTime) As List(Of Caja)
+            Return GetHistorialCajasAvanzado(fechaDesde, fechaHasta, Nothing, Nothing, Nothing)
+        End Function
+
+        ''' <summary>
+        ''' Búsqueda y filtrado exhaustivo de turnos de caja para la auditoría gerencial.
+        ''' Permite filtrar por rango de fechas, vendedor individual, estado de apertura y tipo de diferencia de arqueo.
+        ''' </summary>
+        Public Function GetHistorialCajasAvanzado(fechaDesde As DateTime, fechaHasta As DateTime, usuarioId As Nullable(Of Integer), estado As String, filtroDiferencia As String) As List(Of Caja)
+            Dim list As New List(Of Caja)()
+            Try
+                Dim sql As New System.Text.StringBuilder()
+                sql.Append("SELECT c.*, u.nombre_completo AS usuario_nombre ")
+                sql.Append("FROM `cajas` c ")
+                sql.Append("INNER JOIN `usuarios` u ON c.usuario_id = u.id ")
+                sql.Append("WHERE DATE(c.fecha_apertura) >= @desde AND DATE(c.fecha_apertura) <= @hasta ")
 
                 Dim params As New Dictionary(Of String, Object) From {
                     {"@desde", fechaDesde.ToString("yyyy-MM-dd")},
                     {"@hasta", fechaHasta.ToString("yyyy-MM-dd")}
                 }
 
-                Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, params)
+                If usuarioId.HasValue AndAlso usuarioId.Value > 0 Then
+                    sql.Append("AND c.usuario_id = @usuarioId ")
+                    params.Add("@usuarioId", usuarioId.Value)
+                End If
+
+                If Not String.IsNullOrWhiteSpace(estado) AndAlso Not estado.Equals("Todos", StringComparison.OrdinalIgnoreCase) Then
+                    sql.Append("AND c.estado = @estado ")
+                    params.Add("@estado", estado)
+                End If
+
+                If Not String.IsNullOrWhiteSpace(filtroDiferencia) Then
+                    Select Case filtroDiferencia.ToUpperInvariant()
+                        Case "CON_DESCUADRE", "DESCUADRE"
+                            sql.Append("AND c.diferencia IS NOT NULL AND c.diferencia <> 0 ")
+                        Case "FALTANTE", "CON_FALTANTE"
+                            sql.Append("AND c.diferencia IS NOT NULL AND c.diferencia < 0 ")
+                        Case "SOBRANTE", "CON_SOBRANTE"
+                            sql.Append("AND c.diferencia IS NOT NULL AND c.diferencia > 0 ")
+                        Case "EXACTO", "EXACTAS"
+                            sql.Append("AND c.diferencia IS NOT NULL AND c.diferencia = 0 ")
+                        Case "ABIERTAS"
+                            sql.Append("AND c.estado = 'Abierta' ")
+                    End Select
+                End If
+
+                sql.Append("ORDER BY c.id DESC;")
+
+                Dim dt As DataTable = DatabaseHelper.ExecuteQuery(sql.ToString(), params)
                 For Each row As DataRow In dt.Rows
                     list.Add(MapCaja(row))
                 Next
             Catch ex As Exception
-                ' Retorna lista vacía si hay error
+                System.Diagnostics.Debug.WriteLine("Error en GetHistorialCajasAvanzado: " & ex.Message)
             End Try
             Return list
+        End Function
+
+        ''' <summary>
+        ''' Recupera todas las ventas y tickets facturados en un turno de caja específico.
+        ''' </summary>
+        Public Function GetVentasPorCaja(cajaId As Integer) As List(Of Venta)
+            Dim list As New List(Of Venta)()
+            Try
+                Dim query As String = "SELECT v.*, u.nombre_completo AS usuario_nombre, c.nombre_completo AS cliente_nombre " &
+                                     "FROM `ventas` v " &
+                                     "INNER JOIN `usuarios` u ON v.usuario_id = u.id " &
+                                     "INNER JOIN `clientes` c ON v.cliente_id = c.id " &
+                                     "WHERE v.caja_id = @cajaId " &
+                                     "ORDER BY v.fecha DESC;"
+
+                Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, New Dictionary(Of String, Object) From {{"@cajaId", cajaId}})
+                For Each row As DataRow In dt.Rows
+                    list.Add(New Venta() With {
+                        .Id = Convert.ToInt32(row("id")),
+                        .NumeroTicket = row("numero_ticket").ToString(),
+                        .Fecha = Convert.ToDateTime(row("fecha")),
+                        .UsuarioId = Convert.ToInt32(row("usuario_id")),
+                        .UsuarioNombre = row("usuario_nombre").ToString(),
+                        .ClienteId = Convert.ToInt32(row("cliente_id")),
+                        .ClienteNombre = row("cliente_nombre").ToString(),
+                        .CajaId = Convert.ToInt32(row("caja_id")),
+                        .TipoComprobante = row("tipo_comprobante").ToString(),
+                        .MetodoPago = row("metodo_pago").ToString(),
+                        .Subtotal = Convert.ToDecimal(row("subtotal")),
+                        .DescuentoPorcentaje = Convert.ToDecimal(row("descuento_porcentaje")),
+                        .DescuentoMonto = Convert.ToDecimal(row("descuento_monto")),
+                        .RecargoMonto = Convert.ToDecimal(row("recargo_monto")),
+                        .Total = Convert.ToDecimal(row("total")),
+                        .MontoAbonado = Convert.ToDecimal(row("monto_abonado")),
+                        .Vuelto = Convert.ToDecimal(row("vuelto")),
+                        .Estado = row("estado").ToString(),
+                        .Observaciones = If(Convert.IsDBNull(row("observaciones")), "", row("observaciones").ToString())
+                    })
+                Next
+            Catch ex As Exception
+                System.Diagnostics.Debug.WriteLine("Error en GetVentasPorCaja: " & ex.Message)
+            End Try
+            Return list
+        End Function
+
+        ''' <summary>
+        ''' Genera una conciliación de totales cobrados por cada medio de pago durante el turno auditado.
+        ''' </summary>
+        Public Function GetResumenMediosPagoCaja(cajaId As Integer) As DataTable
+            Try
+                Dim query As String = "SELECT `metodo_pago` AS MetodoPago, COUNT(*) AS CantidadTickets, " &
+                                     "SUM(`total`) AS TotalCobrado " &
+                                     "FROM `ventas` " &
+                                     "WHERE `caja_id` = @cajaId AND `estado` <> 'Anulada' " &
+                                     "GROUP BY `metodo_pago` " &
+                                     "ORDER BY TotalCobrado DESC;"
+
+                Return DatabaseHelper.ExecuteQuery(query, New Dictionary(Of String, Object) From {{"@cajaId", cajaId}})
+            Catch ex As Exception
+                Return New DataTable()
+            End Try
         End Function
 
         Private Function MapCaja(row As DataRow) As Caja
