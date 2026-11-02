@@ -173,6 +173,25 @@ Namespace Services
             Return list
         End Function
 
+        Public Function GetVentaPorId(ventaId As Integer) As Venta
+            If ventaId <= 0 Then
+                Return Nothing
+            End If
+
+            Dim query = "SELECT v.*, u.nombre_completo AS usuario_nombre, (c.apellido || ', ' || c.nombre) AS cliente_nombre " &
+                        "FROM `ventas` v " &
+                        "INNER JOIN `usuarios` u ON v.usuario_id = u.id " &
+                        "INNER JOIN `clientes` c ON v.cliente_id = c.id " &
+                        "WHERE v.id = @vId LIMIT 1;"
+            Dim params = New Dictionary(Of String, Object) From {{"@vId", ventaId}}
+            Dim dt = DatabaseHelper.ExecuteQuery(query, params)
+            If dt.Rows.Count = 0 Then
+                Return Nothing
+            End If
+
+            Return MapVenta(dt.Rows(0))
+        End Function
+
         ' Anulación Segura de Venta con Reversa Transaccional.
         ' Si un cliente devuelve prendas o hubo un error de cobro:
         ' 1. Verificamos que la venta exista y no haya sido anulada previamente.

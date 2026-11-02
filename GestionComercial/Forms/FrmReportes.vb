@@ -1,4 +1,5 @@
 Imports System.Drawing
+Imports System.Drawing.Printing
 Imports System.Windows.Forms
 Imports GestionComercial.Models
 Imports GestionComercial.Services
@@ -24,6 +25,7 @@ Namespace Forms
         Private ventaService As New VentaService()
         Private reporteService As New ReporteService()
         Private clienteService As New ClienteService()
+        Private configService As New ConfiguracionService()
 
         Private dtpDesde As DateTimePicker
         Private dtpHasta As DateTimePicker
@@ -716,11 +718,18 @@ Namespace Forms
         End Sub
 
         Private Sub MostrarModalDetalleVenta(ventaId As Integer, ticketNumero As String)
+            Dim venta = ventaService.GetVentaPorId(ventaId)
+            If venta Is Nothing Then
+                MessageBox.Show("No se encontró la venta seleccionada.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
             Dim detalles = ventaService.GetDetalleVenta(ventaId)
             If detalles Is Nothing OrElse detalles.Count = 0 Then
                 MessageBox.Show("No se encontraron renglones de artículos para este ticket.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
                 Return
             End If
+            venta.Detalles = detalles
 
             Dim modal As New Form() With {
                 .Text = $"Detalle del Comprobante #{ticketNumero}",
@@ -784,9 +793,17 @@ Namespace Forms
                 .Location = New Point(modal.ClientSize.Width - 120, 9),
                 .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
             }
+            Dim btnGuardarPdf As New Button() With {
+                .Text = "Guardar ticket en PDF",
+                .Size = New Size(155, 32),
+                .Location = New Point(modal.ClientSize.Width - 285, 9),
+                .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
+            }
             UITheme.StyleButton(btnCerrar, "Secondary")
+            UITheme.StyleButton(btnGuardarPdf, "Primary")
             AddHandler btnCerrar.Click, Sub() modal.Close()
-            pnlBottom.Controls.Add(btnCerrar)
+            AddHandler btnGuardarPdf.Click, Sub() GuardarTicketEnPdf(venta)
+            pnlBottom.Controls.AddRange({btnGuardarPdf, btnCerrar})
 
             modal.Controls.Add(dgvModal)
             modal.Controls.Add(pnlBottom)
@@ -794,6 +811,154 @@ Namespace Forms
 
             modal.ShowDialog(Me)
         End Sub
+
+        Private Sub GuardarTicketEnPdf(venta As Venta)
+            If venta Is Nothing OrElse venta.Detalles Is Nothing OrElse venta.Detalles.Count = 0 Then
+                MessageBox.Show("No hay información suficiente para imprimir el ticket.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            Dim nombreImpresoraPdf As String = String.Empty
+            For Each nombreImpresora As String In PrinterSettings.InstalledPrinters
+                If nombreImpresora.Equals("Microsoft Print to PDF", StringComparison.OrdinalIgnoreCase) Then
+                    nombreImpresoraPdf = nombreImpresora
+                    Exit For
+                End If
+            Next
+
+            If String.IsNullOrWhiteSpace(nombreImpresoraPdf) Then
+                MessageBox.Show("No está instalada la impresora «Microsoft Print to PDF». Habilítela en las características de Windows para guardar el ticket.", "Impresora PDF no disponible", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            Dim nombreArchivo = "Ticket-" & venta.NumeroTicket & ".pdf"
+            For Each caracter In IO.Path.GetInvalidFileNameChars()
+                nombreArchivo = nombreArchivo.Replace(caracter, "-"c)
+            Next
+
+            Using dialogoGuardar As New SaveFileDialog()
+                dialogoGuardar.Title = "Guardar ticket de compra en PDF"
+                dialogoGuardar.Filter = "Documento PDF (*.pdf)|*.pdf"
+                dialogoGuardar.FileName = nombreArchivo
+                dialogoGuardar.DefaultExt = "pdf"
+                dialogoGuardar.AddExtension = True
+                dialogoGuardar.OverwritePrompt = True
+
+                If dialogoGuardar.ShowDialog(Me) <> DialogResult.OK Then
+                    Return
+                End If
+
+                Try
+                    Dim lineasTicket = ConstruirLineasTicket(venta, configService.GetConfiguracion())
+                    Dim indiceLinea As Integer = 0
+                    Using documento As New PrintDocument()
+                        documento.DocumentName = nombreArchivo
+                        documento.PrinterSettings.PrinterName = nombreImpresoraPdf
+                        documento.PrinterSettings.PrintToFile = True
+                        documento.PrinterSettings.PrintFileName = dialogoGuardar.FileName
+                        documento.OriginAtMargins = True
+                        documento.DefaultPageSettings.Margins = New Margins(45, 45, 45, 45)
+
+                        AddHandler documento.PrintPage,
+                            Sub(sender, args)
+                                Using fuente As New Font("Courier New", 9.0F, FontStyle.Regular)
+                                    Dim altoLinea = fuente.GetHeight(args.Graphics) + 2.0F
+                                    Dim posicionY = CSng(args.MarginBounds.Top)
+
+                                    While indiceLinea < lineasTicket.Count AndAlso posicionY + altoLinea <= args.MarginBounds.Bottom
+                                        args.Graphics.DrawString(lineasTicket(indiceLinea), fuente, Brushes.Black, args.MarginBounds.Left, posicionY)
+                                        posicionY += altoLinea
+                                        indiceLinea += 1
+                                    End While
+
+                                    args.HasMorePages = indiceLinea < lineasTicket.Count
+                                End Using
+                            End Sub
+
+                        documento.Print()
+                    End Using
+
+                    MessageBox.Show("El ticket se guardó correctamente en PDF.", "Ticket guardado", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Catch ex As Exception
+                    MessageBox.Show("No se pudo guardar el ticket en PDF: " & ex.Message, "Error de impresión", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                End Try
+            End Using
+        End Sub
+
+        Private Shared Function ConstruirLineasTicket(venta As Venta, configuracion As ConfiguracionComercio) As List(Of String)
+            Dim contenido As New System.Text.StringBuilder()
+            contenido.AppendLine("==========================================")
+            contenido.AppendLine(configuracion.NombreComercio.ToUpper())
+            contenido.AppendLine($"CUIT: {configuracion.Cuit} - {configuracion.CondicionIva}")
+            contenido.AppendLine($"Dirección: {configuracion.Direccion}")
+            contenido.AppendLine($"Teléfono: {configuracion.Telefono}")
+            contenido.AppendLine("==========================================")
+            contenido.AppendLine($"TICKET Nº: {venta.NumeroTicket}")
+            contenido.AppendLine($"Fecha: {venta.Fecha:dd/MM/yyyy HH:mm:ss}")
+            contenido.AppendLine($"Vendedor: {venta.UsuarioNombre}")
+            contenido.AppendLine($"Cliente: {venta.ClienteNombre}")
+            contenido.AppendLine($"Medio de pago: {venta.MetodoPago}")
+            If venta.Estado.Equals("Anulada", StringComparison.OrdinalIgnoreCase) Then
+                contenido.AppendLine("ESTADO: ANULADA")
+            End If
+            contenido.AppendLine("------------------------------------------")
+            contenido.AppendLine("CANT.  DESCRIPCIÓN / TALLE       SUBTOTAL")
+            contenido.AppendLine("------------------------------------------")
+
+            For Each detalle In venta.Detalles
+                contenido.AppendLine($"{detalle.Cantidad,4}   {detalle.DescripcionArticulo} - {detalle.TalleNombre}")
+                contenido.AppendLine($"      {detalle.PrecioUnitario:C2} c/u{detalle.Subtotal,25:C2}")
+            Next
+
+            contenido.AppendLine("------------------------------------------")
+            contenido.AppendLine($"SUBTOTAL: {venta.Subtotal:C2}")
+            If venta.DescuentoMonto > 0D Then
+                contenido.AppendLine($"DESCUENTO ({venta.DescuentoPorcentaje:N2}%): -{venta.DescuentoMonto:C2}")
+            End If
+            If venta.RecargoMonto > 0D Then
+                contenido.AppendLine($"RECARGO: {venta.RecargoMonto:C2}")
+            End If
+            contenido.AppendLine($"TOTAL A PAGAR: {venta.Total:C2}")
+            contenido.AppendLine($"PAGADO: {venta.MontoAbonado:C2}")
+            contenido.AppendLine($"VUELTO: {venta.Vuelto:C2}")
+            contenido.AppendLine("==========================================")
+            contenido.AppendLine(configuracion.MensajeTicket)
+            contenido.AppendLine("==========================================")
+
+            Dim lineasOriginales = contenido.ToString().Split({vbCrLf}, StringSplitOptions.RemoveEmptyEntries)
+            Dim lineasTicket As New List(Of String)()
+            Const anchoMaximo As Integer = 85
+
+            For Each linea In lineasOriginales
+                Dim lineaActual As String = String.Empty
+                For Each palabra In linea.Split(" "c)
+                    Dim fragmento = palabra
+                    While fragmento.Length > anchoMaximo
+                        If lineaActual.Length > 0 Then
+                            lineasTicket.Add(lineaActual)
+                            lineaActual = String.Empty
+                        End If
+                        lineasTicket.Add(fragmento.Substring(0, anchoMaximo))
+                        fragmento = fragmento.Substring(anchoMaximo)
+                    End While
+
+                    If lineaActual.Length = 0 Then
+                        lineaActual = fragmento
+                    ElseIf lineaActual.Length + fragmento.Length + 1 <= anchoMaximo Then
+                        lineaActual &= " " & fragmento
+                    Else
+                        lineasTicket.Add(lineaActual)
+                        lineaActual = fragmento
+                    End If
+                Next
+
+                If lineaActual.Length > 0 Then
+                    lineasTicket.Add(lineaActual)
+                End If
+            Next
+
+            Return lineasTicket
+        End Function
 
         ''' <summary>
         ''' Anulación de venta con reversión de inventario y auditoría.
