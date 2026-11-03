@@ -1,4 +1,4 @@
-' ARCHIVO: FrmLogin.vb
+﻿' ARCHIVO: FrmLogin.vb
 ' PROPÓSITO: Formulario de inicio de sesión y autenticación de usuarios.
 ' Es la primera ventana que ve el usuario al ejecutar el sistema:
 ' 1. Construcción 100% por Código: Paneles, etiquetas, cajas de texto y botones en InitializeUI() aplicando los tokens de UITheme.vb.

@@ -1,4 +1,4 @@
-Imports System.IO
+﻿Imports System.IO
 Imports Microsoft.Data.Sqlite
 Imports GestionComercial.Config
 Imports GestionComercial.Data
@@ -125,8 +125,10 @@ Namespace Services
                     End Using
                 End Using
 
+                AppLogger.LogAudit("BackupService.CrearBackup", $"Respaldo generado exitosamente en '{rutaFinal}'.")
                 Return rutaFinal
             Catch ex As Exception
+                AppLogger.LogError("BackupService.CrearBackup", ex)
                 mensajeError = ex.Message
                 Return String.Empty
             End Try
@@ -139,8 +141,6 @@ Namespace Services
                     mensajeError = "El archivo de respaldo seleccionado no existe."
                     Return False
                 End If
-
-                Dim origenPath = AppConfig.Settings.GetSqlitePath()
 
                 ' Limpiamos todos los pools de conexiones activas en la aplicación
                 SqliteConnection.ClearAllPools()
@@ -155,8 +155,10 @@ Namespace Services
                     End Using
                 End Using
 
+                AppLogger.LogAudit("BackupService.RestaurarBackup", $"Base de datos restaurada exitosamente desde '{rutaBackup}'.")
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("BackupService.RestaurarBackup", ex)
                 mensajeError = ex.Message
                 Return False
             End Try
@@ -179,7 +181,7 @@ Namespace Services
                 Dim queryVentas = "SELECT COUNT(*) FROM ventas;"
                 info.CantidadVentas = Convert.ToInt32(DatabaseHelper.ExecuteScalar(queryVentas))
             Catch ex As Exception
-                ' Valores por defecto
+                AppLogger.LogError("BackupService.ObtenerInfoBaseDatosActual", ex)
             End Try
             Return info
         End Function

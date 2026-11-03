@@ -1,4 +1,4 @@
-' ARCHIVO: Entities.vb
+﻿' ARCHIVO: Entities.vb
 ' PROPÓSITO: Modelos de dominio y DTOs (Data Transfer Objects) del sistema.
 ' En este archivo definimos las clases que representan la información de nuestro local
 ' en memoria. Cada clase se corresponde con una tabla de la base de datos:
@@ -167,6 +167,7 @@ Namespace Models
         Public Property CajaId As Integer
         Public Property UsuarioId As Integer
         Public Property UsuarioNombre As String = String.Empty
+        Public Property AutorizadoPorId As Nullable(Of Integer)
         Public Property Fecha As DateTime = DateTime.Now
         Public Property Tipo As String = "Ingreso" ' Ingreso, Egreso
         Public Property Concepto As String = String.Empty
@@ -181,6 +182,7 @@ Namespace Models
         Public Property Fecha As DateTime = DateTime.Now
         Public Property UsuarioId As Integer
         Public Property UsuarioNombre As String = String.Empty
+        Public Property AutorizadoPorId As Nullable(Of Integer)
         Public Property ClienteId As Integer = 1
         Public Property ClienteNombre As String = "Consumidor Final"
         Public Property CajaId As Integer
@@ -191,6 +193,7 @@ Namespace Models
         Public Property DescuentoMonto As Decimal = 0D
         Public Property RecargoMonto As Decimal = 0D
         Public Property Total As Decimal = 0D
+        Public Property MontoEfectivo As Nullable(Of Decimal)
         Public Property MontoAbonado As Decimal = 0D
         Public Property Vuelto As Decimal = 0D
         Public Property Estado As String = "Completada" ' Completada, Anulada

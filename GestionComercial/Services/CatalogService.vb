@@ -1,4 +1,4 @@
-' ARCHIVO: CatalogService.vb
+﻿' ARCHIVO: CatalogService.vb
 ' PROPÓSITO: Lógica de catálogo de indumentaria, talles, categorías y matriz de stock.
 ' Este servicio resuelve la estructura comercial de las prendas de ropa:
 ' 1. Matriz de Variantes: Una prenda no tiene una única cantidad fija; tiene múltiples
@@ -58,6 +58,7 @@ Namespace Services
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("CatalogService.GuardarCategoria", ex)
                 errorMessage = ex.Message
                 Return False
             End Try
@@ -102,6 +103,7 @@ Namespace Services
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("CatalogService.GuardarTalle", ex)
                 errorMessage = ex.Message
                 Return False
             End Try
@@ -123,6 +125,7 @@ Namespace Services
                     End If
                 Next
             Catch ex As Exception
+                AppLogger.LogError("CatalogService.GetColoresDisponibles", ex)
             End Try
 
             Dim baseColores As String() = {"Único", "Negro", "Blanco", "Gris", "Azul", "Azul Marino", "Rojo", "Verde", "Beige", "Bordo", "Rosa", "Marrón", "Amarillo"}
@@ -237,6 +240,10 @@ Namespace Services
                 Return False
             End If
 
+            prod.PrecioCosto = Math.Round(prod.PrecioCosto, 2, MidpointRounding.AwayFromZero)
+            prod.PrecioVenta = Math.Round(prod.PrecioVenta, 2, MidpointRounding.AwayFromZero)
+            prod.PorcentajeGanancia = Math.Round(prod.PorcentajeGanancia, 2, MidpointRounding.AwayFromZero)
+
             Try
                 Using conn = DatabaseHelper.GetConnection()
                     conn.Open()
@@ -260,7 +267,7 @@ Namespace Services
                                 DatabaseHelper.AddParam(cmdProd, "@costo", prod.PrecioCosto)
                                 DatabaseHelper.AddParam(cmdProd, "@venta", prod.PrecioVenta)
                                 DatabaseHelper.AddParam(cmdProd, "@gan", prod.PorcentajeGanancia)
-                                DatabaseHelper.AddParam(cmdProd, "@img", If(String.IsNullOrEmpty(prod.ImagenRuta), DBNull.Value, prod.ImagenRuta))
+                                DatabaseHelper.AddParam(cmdProd, "@img", If(String.IsNullOrEmpty(prod.ImagenRuta), CObj(DBNull.Value), prod.ImagenRuta))
                                 DatabaseHelper.AddParam(cmdProd, "@activo", If(prod.Activo, 1, 0))
                                 If prod.Id > 0 Then
                                     DatabaseHelper.AddParam(cmdProd, "@id", prod.Id)
@@ -282,12 +289,14 @@ Namespace Services
                             Return True
                         Catch exTrans As Exception
                             trans.Rollback()
+                            AppLogger.LogError("CatalogService.GuardarProducto.Trans", exTrans)
                             errorMessage = "Error en transacción de producto: " & exTrans.Message
                             Return False
                         End Try
                     End Using
                 End Using
             Catch ex As Exception
+                AppLogger.LogError("CatalogService.GuardarProducto", ex)
                 errorMessage = ex.Message
                 Return False
             End Try
@@ -314,16 +323,19 @@ Namespace Services
                             RegistrarAuditoriaStock(conn, trans, productoId, talleId, colorLimpio, cantidadDelta, stockActual, nuevoStock, motivo, usuarioId)
 
                             trans.Commit()
+                            AppLogger.LogAudit("CatalogService.AjustarStockManual", $"Producto {productoId} (Talle {talleId}, Color {colorLimpio}) ajustado en {cantidadDelta}. Stock: {stockActual} -> {nuevoStock}. Motivo: {motivo}", usuarioId)
                             errorMessage = String.Empty
                             Return True
                         Catch exTrans As Exception
                             trans.Rollback()
+                            AppLogger.LogError("CatalogService.AjustarStockManual.Trans", exTrans)
                             errorMessage = exTrans.Message
                             Return False
                         End Try
                     End Using
                 End Using
             Catch ex As Exception
+                AppLogger.LogError("CatalogService.AjustarStockManual", ex)
                 errorMessage = ex.Message
                 Return False
             End Try
@@ -342,6 +354,7 @@ Namespace Services
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("CatalogService.EliminarProducto", ex)
                 errorMessage = ex.Message
                 Return False
             End Try
@@ -363,6 +376,7 @@ Namespace Services
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("CatalogService.ToggleActivo", ex)
                 errorMessage = ex.Message
                 Return False
             End Try

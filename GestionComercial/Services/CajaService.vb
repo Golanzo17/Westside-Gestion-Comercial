@@ -1,4 +1,4 @@
-' ARCHIVO: CajaService.vb
+﻿' ARCHIVO: CajaService.vb
 ' PROPÓSITO: Lógica de negocio de turnos de caja, arqueo de efectivo y control de gastos.
 ' En este servicio resolvemos el control financiero diario del salón de ventas:
 ' 1. Apertura de Turno: Exige registrar el fondo inicial para cambio antes de vender.
@@ -9,6 +9,7 @@
 '    dejando registro transparente de si hubo sobrante o faltante de dinero en el turno.
 
 Imports System.Data
+Imports System.Data.Common
 Imports GestionComercial.Data
 Imports GestionComercial.Models
 
@@ -16,23 +17,34 @@ Namespace Services
     Public Class CajaService
 
         ' Busca si existe una caja con estado "Abierta".
+        ' Si se indica usuarioId (> 0), prioriza la caja abierta por ese usuario y, si no tiene una propia,
+        ' devuelve la caja abierta activa del salón comercial.
+        Public Function GetCajaAbierta(Optional usuarioId As Integer = 0) As Caja
+            If usuarioId > 0 Then
+                Dim queryUsuario As String = "SELECT c.*, u.nombre_completo AS usuario_nombre " &
+                                             "FROM `cajas` c " &
+                                             "INNER JOIN `usuarios` u ON c.usuario_id = u.id " &
+                                             "WHERE c.estado = 'Abierta' AND c.usuario_id = @uid " &
+                                             "ORDER BY c.id DESC LIMIT 1;"
+                Dim dtUser = DatabaseHelper.ExecuteQuery(queryUsuario, New Dictionary(Of String, Object) From {{"@uid", usuarioId}})
+                If dtUser.Rows.Count > 0 Then
+                    Return MapCaja(dtUser.Rows(0))
+                End If
+            End If
 
-        Public Function GetCajaAbierta(usuarioId As Integer) As Caja
             Dim query As String = "SELECT c.*, u.nombre_completo AS usuario_nombre " &
-                                 "FROM `cajas` c " &
-                                 "INNER JOIN `usuarios` u ON c.usuario_id = u.id " &
-                                 "WHERE c.estado = 'Abierta' " &
-                                 "ORDER BY c.id DESC LIMIT 1;"
+                                  "FROM `cajas` c " &
+                                  "INNER JOIN `usuarios` u ON c.usuario_id = u.id " &
+                                  "WHERE c.estado = 'Abierta' " &
+                                  "ORDER BY c.id DESC LIMIT 1;"
 
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query)
             If dt.Rows.Count = 0 Then Return Nothing
 
-            Dim row As DataRow = dt.Rows(0)
-            Return MapCaja(row)
+            Return MapCaja(dt.Rows(0))
         End Function
 
         ' Abre un nuevo turno de caja con el monto de cambio inicial.
-
         Public Function AbrirCaja(usuarioId As Integer, montoInicial As Decimal, ByRef errorMessage As String) As Caja
             Try
                 Dim cajaExistente As Caja = GetCajaAbierta(usuarioId)
@@ -41,18 +53,21 @@ Namespace Services
                     Return Nothing
                 End If
 
+                Dim montoRedondeado = Math.Round(montoInicial, 2)
                 Dim query As String = "INSERT INTO `cajas` (`usuario_id`, `fecha_apertura`, `monto_inicial`, `monto_esperado`, `estado`) " &
                                      "VALUES (@userId, NOW(), @montoIni, @montoIni, 'Abierta');"
 
                 Dim params As New Dictionary(Of String, Object) From {
                     {"@userId", usuarioId},
-                    {"@montoIni", montoInicial}
+                    {"@montoIni", montoRedondeado}
                 }
 
                 DatabaseHelper.ExecuteNonQuery(query, params)
+                AppLogger.LogAudit("CAJA_ABIERTA", $"UsuarioId={usuarioId} | MontoInicial={montoRedondeado:F2}")
                 errorMessage = String.Empty
                 Return GetCajaAbierta(usuarioId)
             Catch ex As Exception
+                AppLogger.LogError("Error en AbrirCaja", ex)
                 errorMessage = ex.Message
                 Return Nothing
             End Try
@@ -61,44 +76,51 @@ Namespace Services
         ' Movimientos Manuales con Transacción Atómica.
         ' Si el vendedor paga un flete o saca cambio, guardamos el comprobante en
         ' movimientos_caja y recalculamos monto_esperado en cajas dentro de la misma transacción.
-        Public Function RegistrarMovimiento(cajaId As Integer, usuarioId As Integer, tipo As String, concepto As String, monto As Decimal, referencia As String, ByRef errorMessage As String) As Boolean
+        Public Function RegistrarMovimiento(cajaId As Integer, usuarioId As Integer, tipo As String, concepto As String, monto As Decimal, referencia As String, ByRef errorMessage As String, Optional autorizadoPorId As Nullable(Of Integer) = Nothing) As Boolean
             Try
-                Using conn As Common.DbConnection = DatabaseHelper.GetConnection()
+                Dim montoRedondeado = Math.Round(monto, 2)
+                Using conn As DbConnection = DatabaseHelper.GetConnection()
                     conn.Open()
-                    Using trans As Common.DbTransaction = conn.BeginTransaction()
+                    Using trans As DbTransaction = conn.BeginTransaction()
                         Try
-                            Dim queryMov As String = "INSERT INTO `movimientos_caja` (`caja_id`, `usuario_id`, `fecha`, `tipo`, `concepto`, `monto`, `referencia`) " &
-                                                    "VALUES (@cajaId, @userId, NOW(), @tipo, @concepto, @monto, @ref);"
+                            Dim queryMov As String = "INSERT INTO `movimientos_caja` (`caja_id`, `usuario_id`, `autorizado_por_id`, `fecha`, `tipo`, `concepto`, `monto`, `referencia`) " &
+                                                    "VALUES (@cajaId, @userId, @autId, NOW(), @tipo, @concepto, @monto, @ref);"
                             Using cmdMov = DatabaseHelper.CreateCommand(conn, queryMov, trans)
                                 DatabaseHelper.AddParam(cmdMov, "@cajaId", cajaId)
                                 DatabaseHelper.AddParam(cmdMov, "@userId", usuarioId)
+                                DatabaseHelper.AddParam(cmdMov, "@autId", If(autorizadoPorId.HasValue, CObj(autorizadoPorId.Value), DBNull.Value))
                                 DatabaseHelper.AddParam(cmdMov, "@tipo", tipo)
                                 DatabaseHelper.AddParam(cmdMov, "@concepto", concepto)
-                                DatabaseHelper.AddParam(cmdMov, "@monto", monto)
+                                DatabaseHelper.AddParam(cmdMov, "@monto", montoRedondeado)
                                 DatabaseHelper.AddParam(cmdMov, "@ref", referencia)
                                 cmdMov.ExecuteNonQuery()
                             End Using
 
                             ' Actualizamos los acumuladores y el dinero esperado en la caja
-                            Dim updateCol As String = If(tipo = "Ingreso", "`total_ingresos` = `total_ingresos` + @monto", "`total_egresos` = `total_egresos` + @monto")
-                            Dim updateCaja As String = $"UPDATE `cajas` SET {updateCol}, `monto_esperado` = `monto_inicial` + `total_ventas_efectivo` + `total_ingresos` - `total_egresos` WHERE `id` = @cajaId;"
+                            Dim updateCol As String = If(tipo.Equals("Ingreso", StringComparison.OrdinalIgnoreCase),
+                                                         "`total_ingresos` = ROUND(`total_ingresos` + @monto, 2)",
+                                                         "`total_egresos` = ROUND(`total_egresos` + @monto, 2)")
+                            Dim updateCaja As String = $"UPDATE `cajas` SET {updateCol}, `monto_esperado` = ROUND(`monto_inicial` + `total_ventas_efectivo` + `total_ingresos` - `total_egresos`, 2) WHERE `id` = @cajaId;"
                             Using cmdCaja = DatabaseHelper.CreateCommand(conn, updateCaja, trans)
-                                DatabaseHelper.AddParam(cmdCaja, "@monto", monto)
+                                DatabaseHelper.AddParam(cmdCaja, "@monto", montoRedondeado)
                                 DatabaseHelper.AddParam(cmdCaja, "@cajaId", cajaId)
                                 cmdCaja.ExecuteNonQuery()
                             End Using
 
                             trans.Commit()
+                            AppLogger.LogAudit("MOVIMIENTO_CAJA", $"CajaId={cajaId} | Tipo={tipo} | Monto={montoRedondeado:F2} | UsuarioId={usuarioId} | AutorizadoPor={If(autorizadoPorId.HasValue, autorizadoPorId.Value.ToString(), "-")}")
                             errorMessage = String.Empty
                             Return True
                         Catch exTrans As Exception
                             trans.Rollback()
+                            AppLogger.LogError("Error en transacción RegistrarMovimiento", exTrans)
                             errorMessage = exTrans.Message
                             Return False
                         End Try
                     End Using
                 End Using
             Catch ex As Exception
+                AppLogger.LogError("Error de conexión en RegistrarMovimiento", ex)
                 errorMessage = ex.Message
                 Return False
             End Try
@@ -118,28 +140,31 @@ Namespace Services
                 End If
 
                 Dim row As DataRow = dt.Rows(0)
-                Dim inicial As Decimal = Convert.ToDecimal(row("monto_inicial"))
-                Dim ventasEfec As Decimal = Convert.ToDecimal(row("total_ventas_efectivo"))
-                Dim ingresos As Decimal = Convert.ToDecimal(row("total_ingresos"))
-                Dim egresos As Decimal = Convert.ToDecimal(row("total_egresos"))
-                Dim esperado As Decimal = inicial + ventasEfec + ingresos - egresos
-                Dim diferencia As Decimal = montoReal - esperado
+                Dim inicial As Decimal = Math.Round(Convert.ToDecimal(row("monto_inicial")), 2)
+                Dim ventasEfec As Decimal = Math.Round(Convert.ToDecimal(row("total_ventas_efectivo")), 2)
+                Dim ingresos As Decimal = Math.Round(Convert.ToDecimal(row("total_ingresos")), 2)
+                Dim egresos As Decimal = Math.Round(Convert.ToDecimal(row("total_egresos")), 2)
+                Dim esperado As Decimal = Math.Round(inicial + ventasEfec + ingresos - egresos, 2)
+                Dim realRedondeado As Decimal = Math.Round(montoReal, 2)
+                Dim diferencia As Decimal = Math.Round(realRedondeado - esperado, 2)
 
                 Dim queryClose As String = "UPDATE `cajas` SET `fecha_cierre` = NOW(), `monto_esperado` = @esp, `monto_real` = @real, " &
                                           "`diferencia` = @dif, `estado` = 'Cerrada', `observaciones` = @obs WHERE `id` = @cajaId;"
 
                 Dim params As New Dictionary(Of String, Object) From {
                     {"@esp", esperado},
-                    {"@real", montoReal},
+                    {"@real", realRedondeado},
                     {"@dif", diferencia},
                     {"@obs", observaciones},
                     {"@cajaId", cajaId}
                 }
 
                 DatabaseHelper.ExecuteNonQuery(queryClose, params)
+                AppLogger.LogAudit("CAJA_CERRADA", $"CajaId={cajaId} | Esperado={esperado:F2} | Real={realRedondeado:F2} | Diferencia={diferencia:F2}")
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("Error en CerrarCaja", ex)
                 errorMessage = ex.Message
                 Return False
             End Try
@@ -154,16 +179,22 @@ Namespace Services
 
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, New Dictionary(Of String, Object) From {{"@cajaId", cajaId}})
             For Each row As DataRow In dt.Rows
+                Dim autId As Nullable(Of Integer) = Nothing
+                If row.Table.Columns.Contains("autorizado_por_id") AndAlso Not Convert.IsDBNull(row("autorizado_por_id")) Then
+                    autId = Convert.ToInt32(row("autorizado_por_id"))
+                End If
+
                 list.Add(New MovimientoCaja() With {
                     .Id = Convert.ToInt32(row("id")),
                     .CajaId = Convert.ToInt32(row("caja_id")),
                     .UsuarioId = Convert.ToInt32(row("usuario_id")),
                     .UsuarioNombre = row("usuario_nombre").ToString(),
+                    .AutorizadoPorId = autId,
                     .Fecha = Convert.ToDateTime(row("fecha")),
                     .Tipo = row("tipo").ToString(),
                     .Concepto = row("concepto").ToString(),
-                    .Monto = Convert.ToDecimal(row("monto")),
-                    .Referencia = If(IsDBNull(row("referencia")), "", row("referencia").ToString())
+                    .Monto = Math.Round(Convert.ToDecimal(row("monto")), 2),
+                    .Referencia = If(Convert.IsDBNull(row("referencia")), "", row("referencia").ToString())
                 })
             Next
             Return list
@@ -179,6 +210,7 @@ Namespace Services
                 If dt.Rows.Count = 0 Then Return Nothing
                 Return MapCaja(dt.Rows(0))
             Catch ex As Exception
+                AppLogger.LogError("Error en GetCajaById", ex)
                 Return Nothing
             End Try
         End Function
@@ -237,7 +269,7 @@ Namespace Services
                     list.Add(MapCaja(row))
                 Next
             Catch ex As Exception
-                System.Diagnostics.Debug.WriteLine("Error en GetHistorialCajasAvanzado: " & ex.Message)
+                AppLogger.LogError("Error en GetHistorialCajasAvanzado", ex)
             End Try
             Return list
         End Function
@@ -248,7 +280,7 @@ Namespace Services
         Public Function GetVentasPorCaja(cajaId As Integer) As List(Of Venta)
             Dim list As New List(Of Venta)()
             Try
-                Dim query As String = "SELECT v.*, u.nombre_completo AS usuario_nombre, c.nombre_completo AS cliente_nombre " &
+                Dim query As String = "SELECT v.*, u.nombre_completo AS usuario_nombre, (c.apellido || ', ' || c.nombre) AS cliente_nombre " &
                                      "FROM `ventas` v " &
                                      "INNER JOIN `usuarios` u ON v.usuario_id = u.id " &
                                      "INNER JOIN `clientes` c ON v.cliente_id = c.id " &
@@ -257,7 +289,7 @@ Namespace Services
 
                 Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, New Dictionary(Of String, Object) From {{"@cajaId", cajaId}})
                 For Each row As DataRow In dt.Rows
-                    list.Add(New Venta() With {
+                    list.Add( New Venta() With {
                         .Id = Convert.ToInt32(row("id")),
                         .NumeroTicket = row("numero_ticket").ToString(),
                         .Fecha = Convert.ToDateTime(row("fecha")),
@@ -268,19 +300,19 @@ Namespace Services
                         .CajaId = Convert.ToInt32(row("caja_id")),
                         .TipoComprobante = row("tipo_comprobante").ToString(),
                         .MetodoPago = row("metodo_pago").ToString(),
-                        .Subtotal = Convert.ToDecimal(row("subtotal")),
-                        .DescuentoPorcentaje = Convert.ToDecimal(row("descuento_porcentaje")),
-                        .DescuentoMonto = Convert.ToDecimal(row("descuento_monto")),
-                        .RecargoMonto = Convert.ToDecimal(row("recargo_monto")),
-                        .Total = Convert.ToDecimal(row("total")),
-                        .MontoAbonado = Convert.ToDecimal(row("monto_abonado")),
-                        .Vuelto = Convert.ToDecimal(row("vuelto")),
+                        .Subtotal = Math.Round(Convert.ToDecimal(row("subtotal")), 2),
+                        .DescuentoPorcentaje = Math.Round(Convert.ToDecimal(row("descuento_porcentaje")), 2),
+                        .DescuentoMonto = Math.Round(Convert.ToDecimal(row("descuento_monto")), 2),
+                        .RecargoMonto = Math.Round(Convert.ToDecimal(row("recargo_monto")), 2),
+                        .Total = Math.Round(Convert.ToDecimal(row("total")), 2),
+                        .MontoAbonado = Math.Round(Convert.ToDecimal(row("monto_abonado")), 2),
+                        .Vuelto = Math.Round(Convert.ToDecimal(row("vuelto")), 2),
                         .Estado = row("estado").ToString(),
                         .Observaciones = If(Convert.IsDBNull(row("observaciones")), "", row("observaciones").ToString())
                     })
                 Next
             Catch ex As Exception
-                System.Diagnostics.Debug.WriteLine("Error en GetVentasPorCaja: " & ex.Message)
+                AppLogger.LogError("Error en GetVentasPorCaja", ex)
             End Try
             Return list
         End Function
@@ -291,7 +323,7 @@ Namespace Services
         Public Function GetResumenMediosPagoCaja(cajaId As Integer) As DataTable
             Try
                 Dim query As String = "SELECT `metodo_pago` AS MetodoPago, COUNT(*) AS CantidadTickets, " &
-                                     "SUM(`total`) AS TotalCobrado " &
+                                     "ROUND(SUM(`total`), 2) AS TotalCobrado " &
                                      "FROM `ventas` " &
                                      "WHERE `caja_id` = @cajaId AND `estado` <> 'Anulada' " &
                                      "GROUP BY `metodo_pago` " &
@@ -299,27 +331,43 @@ Namespace Services
 
                 Return DatabaseHelper.ExecuteQuery(query, New Dictionary(Of String, Object) From {{"@cajaId", cajaId}})
             Catch ex As Exception
+                AppLogger.LogError("Error en GetResumenMediosPagoCaja", ex)
                 Return New DataTable()
             End Try
         End Function
 
         Private Function MapCaja(row As DataRow) As Caja
+            Dim fechaCierreVal As Nullable(Of DateTime) = Nothing
+            If Not Convert.IsDBNull(row("fecha_cierre")) Then
+                fechaCierreVal = Convert.ToDateTime(row("fecha_cierre"))
+            End If
+
+            Dim montoRealVal As Nullable(Of Decimal) = Nothing
+            If Not Convert.IsDBNull(row("monto_real")) Then
+                montoRealVal = Math.Round(Convert.ToDecimal(row("monto_real")), 2)
+            End If
+
+            Dim difVal As Nullable(Of Decimal) = Nothing
+            If Not Convert.IsDBNull(row("diferencia")) Then
+                difVal = Math.Round(Convert.ToDecimal(row("diferencia")), 2)
+            End If
+
             Return New Caja() With {
                 .Id = Convert.ToInt32(row("id")),
                 .UsuarioId = Convert.ToInt32(row("usuario_id")),
                 .UsuarioNombre = row("usuario_nombre").ToString(),
                 .FechaApertura = Convert.ToDateTime(row("fecha_apertura")),
-                .FechaCierre = If(IsDBNull(row("fecha_cierre")), Nothing, Convert.ToDateTime(row("fecha_cierre"))),
-                .MontoInicial = Convert.ToDecimal(row("monto_inicial")),
-                .TotalVentasEfectivo = Convert.ToDecimal(row("total_ventas_efectivo")),
-                .TotalVentasDigital = Convert.ToDecimal(row("total_ventas_digital")),
-                .TotalIngresos = Convert.ToDecimal(row("total_ingresos")),
-                .TotalEgresos = Convert.ToDecimal(row("total_egresos")),
-                .MontoEsperado = Convert.ToDecimal(row("monto_esperado")),
-                .MontoReal = If(IsDBNull(row("monto_real")), Nothing, Convert.ToDecimal(row("monto_real"))),
-                .Diferencia = If(IsDBNull(row("diferencia")), Nothing, Convert.ToDecimal(row("diferencia"))),
+                .FechaCierre = fechaCierreVal,
+                .MontoInicial = Math.Round(Convert.ToDecimal(row("monto_inicial")), 2),
+                .TotalVentasEfectivo = Math.Round(Convert.ToDecimal(row("total_ventas_efectivo")), 2),
+                .TotalVentasDigital = Math.Round(Convert.ToDecimal(row("total_ventas_digital")), 2),
+                .TotalIngresos = Math.Round(Convert.ToDecimal(row("total_ingresos")), 2),
+                .TotalEgresos = Math.Round(Convert.ToDecimal(row("total_egresos")), 2),
+                .MontoEsperado = Math.Round(Convert.ToDecimal(row("monto_esperado")), 2),
+                .MontoReal = montoRealVal,
+                .Diferencia = difVal,
                 .Estado = row("estado").ToString(),
-                .Observaciones = If(IsDBNull(row("observaciones")), "", row("observaciones").ToString())
+                .Observaciones = If(Convert.IsDBNull(row("observaciones")), "", row("observaciones").ToString())
             }
         End Function
 

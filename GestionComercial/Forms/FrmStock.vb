@@ -61,26 +61,29 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Toolbar con FlowLayoutPanel para garantizar que los botones no se recorten en pantallas de baja resolución
+            ' Toolbar con FlowLayoutPanel responsivo para garantizar que los botones no se recorten en pantallas de baja resolución
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 55,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 54),
                 .BackColor = UITheme.ColorSurface
             }
             Dim flpToolbar As New FlowLayoutPanel() With {
-                .Dock = DockStyle.Fill,
-                .Padding = New Padding(10, 10, 10, 10),
-                .WrapContents = False
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(12, 10, 12, 6),
+                .WrapContents = True
             }
 
             ' Botón de ingreso/ajuste: Solo visible inicialmente si el usuario actual es Admin/Gerente,
             ' pero si un vendedor lo presiona se invoca el diálogo de autorización.
-            btnIngresoMercaderia = New Button() With {.Text = "+ Ingreso de Mercadería / Ajuste", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0)}
+            btnIngresoMercaderia = New Button() With {.Text = "+ Ingreso de Mercadería / Ajuste", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(0, 0, 8, 4)}
             UITheme.StyleButton(btnIngresoMercaderia, "Success")
             btnIngresoMercaderia.Visible = AuthService.IsAdminOrManager
             AddHandler btnIngresoMercaderia.Click, AddressOf BtnIngresoMercaderia_Click
 
-            btnRefrescar = New Button() With {.Text = "Actualizar", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(8, 0, 0, 0)}
+            btnRefrescar = New Button() With {.Text = "Actualizar", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(0, 0, 12, 4)}
             UITheme.StyleButton(btnRefrescar, "Secondary")
             AddHandler btnRefrescar.Click, Sub() LoadStockData()
 
@@ -89,7 +92,7 @@ Namespace Forms
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorWarning,
                 .AutoSize = True,
-                .Margin = New Padding(20, 8, 0, 0)
+                .Margin = New Padding(8, 8, 0, 4)
             }
 
             flpToolbar.Controls.AddRange({btnIngresoMercaderia, btnRefrescar, lblResumenAlertas})

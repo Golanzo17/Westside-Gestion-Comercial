@@ -6,7 +6,7 @@
 '   2. Cambios de tema o colores corporativos se propagan instantáneamente modificando las constantes aquí.
 ' - Características Incorporadas:
 '   - Paleta cromática Slate e Indigo limpia y descansada para la vista.
-'   - Bordes redondeados dinámicos mediante regiones GDI+ (GraphicsPath).
+'   - Bordes redondeados dinámicos mediante regiones GDI+ (GraphicsPath) con liberación segura de handles.
 '   - Tablas DataGridView con hover interactivo de filas y cabeceras contrastadas.
 '   - Sistema de Toasts flotantes no invasivos para notificaciones inmediatas.
 '   - Sombras sutiles en tarjetas para crear profundidad visual moderna.
@@ -69,6 +69,8 @@ Namespace UI
         Public ReadOnly FontButton As New Font("Segoe UI", 9.5F, FontStyle.Bold)
         Public ReadOnly FontNavItem As New Font("Segoe UI", 10.0F, FontStyle.Regular)
         Public ReadOnly FontNavSection As New Font("Segoe UI", 7.5F, FontStyle.Bold)
+        Public ReadOnly FontToastClose As New Font("Segoe UI", 14.0F, FontStyle.Bold)
+        Public ReadOnly FontGridHeader As New Font("Segoe UI", 9.0F, FontStyle.Bold)
 
         ' Botones con estilo plano y bordes redondeados
 
@@ -77,10 +79,13 @@ Namespace UI
             btn.FlatAppearance.BorderSize = 0
             btn.Cursor = Cursors.Hand
             btn.Font = FontButton
-            btn.Height = Math.Max(btn.Height, 38)
+            If btn.Height < 28 Then
+                btn.Height = 36
+            End If
             btn.TextAlign = ContentAlignment.MiddleCenter
+            btn.UseCompatibleTextRendering = False
 
-            Select Case btnType.ToUpper()
+            Select Case btnType.ToUpperInvariant()
                 Case "PRIMARY"
                     btn.BackColor = ColorPrimary
                     btn.ForeColor = Color.White
@@ -123,28 +128,49 @@ Namespace UI
                     btn.ForeColor = Color.White
             End Select
 
-            If rounded AndAlso btn.Width > 0 AndAlso btn.Height > 0 Then
-                ApplyRoundedRegion(btn, 8)
-                AddHandler btn.Resize, Sub(s, ev)
-                                           Dim b = CType(s, Button)
-                                           If b.Width > 0 AndAlso b.Height > 0 Then ApplyRoundedRegion(b, 8)
-                                       End Sub
+            If rounded Then
+                If btn.Width > 0 AndAlso btn.Height > 0 Then
+                    ApplyRoundedRegion(btn, 8)
+                End If
+                Dim updateRegion As EventHandler = Sub(s, ev)
+                                                       Dim b = CType(s, Button)
+                                                       If b.Width > 0 AndAlso b.Height > 0 Then
+                                                           ApplyRoundedRegion(b, 8)
+                                                       End If
+                                                   End Sub
+                AddHandler btn.SizeChanged, updateRegion
+                AddHandler btn.HandleCreated, updateRegion
             End If
         End Sub
 
         ''' <summary>
-        ''' Aplica esquinas redondeadas modernas a cualquier control WinForms mediante GraphicsPath.
+        ''' Aplica esquinas redondeadas modernas a cualquier control WinForms mediante GraphicsPath,
+        ''' liberando los objetos GDI+ previos para evitar fugas de memoria o handles.
         ''' </summary>
         Public Sub ApplyRoundedRegion(ctrl As Control, radius As Integer)
+            If ctrl Is Nothing OrElse ctrl.IsDisposed OrElse ctrl.Width <= 0 OrElse ctrl.Height <= 0 Then
+                Return
+            End If
+
             Try
-                Dim path As New GraphicsPath()
                 Dim r = radius * 2
-                path.AddArc(0, 0, r, r, 180, 90)
-                path.AddArc(ctrl.Width - r, 0, r, r, 270, 90)
-                path.AddArc(ctrl.Width - r, ctrl.Height - r, r, r, 0, 90)
-                path.AddArc(0, ctrl.Height - r, r, r, 90, 90)
-                path.CloseFigure()
-                ctrl.Region = New Region(path)
+                If ctrl.Width < r OrElse ctrl.Height < r Then
+                    Return
+                End If
+
+                Using path As New GraphicsPath()
+                    path.AddArc(0, 0, r, r, 180, 90)
+                    path.AddArc(ctrl.Width - r, 0, r, r, 270, 90)
+                    path.AddArc(ctrl.Width - r, ctrl.Height - r, r, r, 0, 90)
+                    path.AddArc(0, ctrl.Height - r, r, r, 90, 90)
+                    path.CloseFigure()
+
+                    Dim oldRegion = ctrl.Region
+                    ctrl.Region = New Region(path)
+                    If oldRegion IsNot Nothing Then
+                        oldRegion.Dispose()
+                    End If
+                End Using
             Catch
                 ' Si el control aún no tiene tamaño renderizado, se ignora de forma segura
             End Try
@@ -174,7 +200,7 @@ Namespace UI
             dgv.ColumnHeadersDefaultCellStyle.ForeColor = ColorTextSecondary
             dgv.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(241, 245, 249)
             dgv.ColumnHeadersDefaultCellStyle.SelectionForeColor = ColorTextSecondary
-            dgv.ColumnHeadersDefaultCellStyle.Font = New Font("Segoe UI", 9.0F, FontStyle.Bold)
+            dgv.ColumnHeadersDefaultCellStyle.Font = FontGridHeader
             dgv.ColumnHeadersDefaultCellStyle.Padding = New Padding(8, 0, 8, 0)
             dgv.ColumnHeadersHeight = 50
             dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
@@ -234,9 +260,13 @@ Namespace UI
         ''' Los toasts confirman operaciones en 3 segundos sin bloquear el teclado ni el lector.
         ''' </summary>
         Public Sub ShowToast(parentControl As Control, message As String, Optional toastType As String = "Success", Optional durationMs As Integer = 3000)
+            If parentControl Is Nothing OrElse parentControl.IsDisposed Then
+                Return
+            End If
+
             Dim backColor As Color
             Dim icon As String
-            Select Case toastType.ToUpper()
+            Select Case toastType.ToUpperInvariant()
                 Case "SUCCESS"
                     backColor = ColorSuccess
                     icon = "✔  "
@@ -268,17 +298,36 @@ Namespace UI
             }
             toast.Controls.Add(lblMsg)
 
+            Dim t As New Timer() With {.Interval = durationMs}
+
+            Dim disposeToast As Action = Sub()
+                                             Try
+                                                 t.Stop()
+                                                 t.Dispose()
+                                             Catch
+                                             End Try
+                                             Try
+                                                 If Not parentControl.IsDisposed AndAlso parentControl.Controls.Contains(toast) Then
+                                                     parentControl.Controls.Remove(toast)
+                                                 End If
+                                                 If Not toast.IsDisposed Then
+                                                     toast.Dispose()
+                                                 End If
+                                             Catch
+                                             End Try
+                                         End Sub
+
             ' Botón para cerrar manualmente antes de que expire el temporizador
             Dim btnClose As New Label() With {
                 .Text = "×",
-                .Font = New Font("Segoe UI", 14.0F, FontStyle.Bold),
+                .Font = FontToastClose,
                 .ForeColor = Color.White,
                 .Dock = DockStyle.Right,
                 .Width = 30,
                 .TextAlign = ContentAlignment.MiddleCenter,
                 .Cursor = Cursors.Hand
             }
-            AddHandler btnClose.Click, Sub() parentControl.Controls.Remove(toast)
+            AddHandler btnClose.Click, Sub(s, ev) disposeToast()
             toast.Controls.Add(btnClose)
 
             parentControl.Controls.Add(toast)
@@ -286,17 +335,7 @@ Namespace UI
             ApplyRoundedRegion(toast, 10)
 
             ' Temporizador para autodestrucción suave
-            Dim t As New Timer() With {.Interval = durationMs}
-            AddHandler t.Tick, Sub()
-                                   t.Stop()
-                                   Try
-                                       If parentControl.Controls.Contains(toast) Then
-                                           parentControl.Controls.Remove(toast)
-                                       End If
-                                       toast.Dispose()
-                                   Catch
-                                   End Try
-                               End Sub
+            AddHandler t.Tick, Sub(s, ev) disposeToast()
             t.Start()
         End Sub
 
@@ -324,7 +363,7 @@ Namespace UI
             pnl.Controls.Add(strip)
 
             Dim lblTitle As New Label() With {
-                .Text = title.ToUpper(),
+                .Text = title.ToUpperInvariant(),
                 .Font = FontCaption,
                 .ForeColor = ColorTextSecondary,
                 .Location = New Point(16, 12),
@@ -350,7 +389,8 @@ Namespace UI
             }
             pnl.Controls.Add(lblSub)
 
-            ' Borde sutil y elegante de 1px usando Paint
+            ' Borde sutil y elegante de 1px usando Paint y repintado al redimensionar
+            AddHandler pnl.Resize, Sub(s, ev) pnl.Invalidate()
             AddHandler pnl.Paint, Sub(s, ev)
                                       Using pen As New Pen(ColorBorder, 1)
                                           ev.Graphics.DrawRectangle(pen, 0, 0, pnl.Width - 1, pnl.Height - 1)
@@ -394,7 +434,7 @@ Namespace UI
             }
 
             Dim lbl As New Label() With {
-                .Text = sectionTitle.ToUpper(),
+                .Text = sectionTitle.ToUpperInvariant(),
                 .Font = FontNavSection,
                 .ForeColor = ColorSidebarSection,
                 .Dock = DockStyle.Fill,

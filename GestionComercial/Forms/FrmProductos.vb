@@ -61,50 +61,53 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Barra de Filtros y Acciones con FlowLayoutPanel para evitar recorte
+            ' Barra de Filtros y Acciones con FlowLayoutPanel responsivo para evitar recorte
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 95,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 54),
                 .BackColor = UITheme.ColorSurface
             }
             Dim flpToolbar As New FlowLayoutPanel() With {
-                .Dock = DockStyle.Fill,
-                .Padding = New Padding(10, 15, 10, 10),
-                .WrapContents = False
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(12, 10, 12, 6),
+                .WrapContents = True
             }
 
-            Dim lblB As New Label() With {.Text = "Buscar:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 5, 4, 0)}
-            txtBuscar = New TextBox() With {.Size = New Size(200, 26), .Margin = New Padding(0, 2, 0, 0)}
+            Dim lblB As New Label() With {.Text = "Buscar:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 4, 4)}
+            txtBuscar = New TextBox() With {.Size = New Size(190, 26), .Margin = New Padding(0, 3, 0, 4)}
             UITheme.StyleTextBox(txtBuscar)
             AddHandler txtBuscar.KeyDown, Sub(s, e)
                                               If e.KeyCode = Keys.Enter Then LoadProductos()
                                           End Sub
 
-            Dim lblC As New Label() With {.Text = "Categoría:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 5, 4, 0)}
-            cboFiltroCategoria = New ComboBox() With {.Size = New Size(170, 26), .DropDownStyle = ComboBoxStyle.DropDownList, .Margin = New Padding(0, 2, 0, 0)}
+            Dim lblC As New Label() With {.Text = "Categoría:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 4, 4)}
+            cboFiltroCategoria = New ComboBox() With {.Size = New Size(165, 26), .DropDownStyle = ComboBoxStyle.DropDownList, .Margin = New Padding(0, 3, 0, 4)}
             UITheme.StyleComboBox(cboFiltroCategoria)
             AddHandler cboFiltroCategoria.SelectedIndexChanged, Sub() LoadProductos()
 
-            btnBuscar = New Button() With {.Text = "Filtrar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
+            btnBuscar = New Button() With {.Text = "Filtrar", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 1, 0, 4)}
             UITheme.StyleButton(btnBuscar, "Primary")
             AddHandler btnBuscar.Click, Sub() LoadProductos()
 
-            btnNuevo = New Button() With {.Text = "+ Nueva Prenda", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
+            btnNuevo = New Button() With {.Text = "+ Nueva Prenda", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 1, 0, 4)}
             UITheme.StyleButton(btnNuevo, "Success")
             btnNuevo.Visible = AuthService.IsAdminOrManager
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-            btnEditar = New Button() With {.Text = "Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
+            btnEditar = New Button() With {.Text = "Editar", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 1, 0, 4)}
             UITheme.StyleButton(btnEditar, "Secondary")
             btnEditar.Visible = AuthService.IsAdminOrManager
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
-            btnToggleActivo = New Button() With {.Text = "🚫 Activar / Desactivar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
+            btnToggleActivo = New Button() With {.Text = "🚫 Activar / Desactivar", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 1, 0, 4)}
             UITheme.StyleButton(btnToggleActivo, "Danger")
             btnToggleActivo.Visible = AuthService.IsAdminOrManager
             AddHandler btnToggleActivo.Click, AddressOf BtnToggleActivo_Click
 
-            chkMostrarInactivos = New CheckBox() With {.Text = "Mostrar inactivos", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 0, 0)}
+            chkMostrarInactivos = New CheckBox() With {.Text = "Mostrar inactivos", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 0, 4)}
             AddHandler chkMostrarInactivos.CheckedChanged, Sub() LoadProductos()
 
             flpToolbar.Controls.AddRange({lblB, txtBuscar, lblC, cboFiltroCategoria, btnBuscar, btnNuevo, btnEditar, btnToggleActivo, chkMostrarInactivos})
@@ -358,9 +361,10 @@ Namespace Forms
         Private Sub InitializeUI()
             Me.Text = If(_productoId = 0, "Nueva Prenda de Ropa", "Editar Prenda de Ropa")
             Me.Size = New Size(720, 640)
+            Me.MinimumSize = New Size(720, 600)
             Me.StartPosition = FormStartPosition.CenterParent
-            Me.FormBorderStyle = FormBorderStyle.FixedDialog
-            Me.MaximizeBox = False
+            Me.FormBorderStyle = FormBorderStyle.Sizable
+            Me.MaximizeBox = True
             Me.MinimizeBox = False
             Me.BackColor = UITheme.ColorBackground
             Me.Font = UITheme.FontRegular
@@ -372,7 +376,8 @@ Namespace Forms
                 .Size = New Size(665, 230),
                 .BackColor = UITheme.ColorSurface,
                 .Font = UITheme.FontBold,
-                .ForeColor = UITheme.ColorPrimaryDark
+                .ForeColor = UITheme.ColorPrimaryDark,
+                .Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
             }
 
             Dim lblCod As New Label() With {.Text = "Código de Barra / SKU:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(20, 25), .AutoSize = True}
@@ -380,14 +385,14 @@ Namespace Forms
             UITheme.StyleTextBox(txtCodigo)
 
             Dim lblNom As New Label() With {.Text = "Nombre de la Prenda:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(240, 25), .AutoSize = True}
-            txtNombre = New TextBox() With {.Location = New Point(240, 45), .Size = New Size(405, 26)}
+            txtNombre = New TextBox() With {.Location = New Point(240, 45), .Size = New Size(405, 26), .Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right}
             UITheme.StyleTextBox(txtNombre)
 
             Dim lblCat As New Label() With {.Text = "Categoría:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(20, 80), .AutoSize = True}
             cboCategoria = New ComboBox() With {.Location = New Point(20, 100), .Size = New Size(200, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
 
             Dim lblDesc As New Label() With {.Text = "Descripción / Detalles:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextPrimary, .Location = New Point(240, 80), .AutoSize = True}
-            txtDescripcion = New TextBox() With {.Location = New Point(240, 100), .Size = New Size(405, 26)}
+            txtDescripcion = New TextBox() With {.Location = New Point(240, 100), .Size = New Size(405, 26), .Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right}
             UITheme.StyleTextBox(txtDescripcion)
 
             ' Precios (solo visibles y editables por Administrador)
@@ -412,14 +417,16 @@ Namespace Forms
                 .Size = New Size(665, 275),
                 .BackColor = UITheme.ColorSurface,
                 .Font = UITheme.FontBold,
-                .ForeColor = UITheme.ColorPrimaryDark
+                .ForeColor = UITheme.ColorPrimaryDark,
+                .Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
             }
 
             dgvTalles = New DataGridView() With {
                 .Location = New Point(15, 25),
                 .Size = New Size(635, 235),
                 .AllowUserToAddRows = False,
-                .AllowUserToDeleteRows = False
+                .AllowUserToDeleteRows = False,
+                .Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
             }
             UITheme.StyleDataGrid(dgvTalles, readOnlyGrid:=False)
             ConfigurarColumnasTalles()

@@ -1,4 +1,4 @@
-' ARCHIVO: ConfiguracionService.vb
+﻿' ARCHIVO: ConfiguracionService.vb
 ' PROPÓSITO: Persistencia de datos institucionales de la empresa y pie de ticket.
 ' Administra los datos del comercio que luego se imprimen en los comprobantes (Nombre,
 ' CUIT, Dirección, Teléfono, Condición de IVA y mensaje de cambio de prendas).
@@ -33,7 +33,7 @@ Namespace Services
                     config.MonedaSimbolo = row("moneda_simbolo").ToString()
                 End If
             Catch ex As Exception
-                ' Retorna defaults
+                AppLogger.LogError("ConfiguracionService.GetConfiguracion", ex)
             End Try
             Return config
         End Function
@@ -59,9 +59,11 @@ Namespace Services
                 }
 
                 DatabaseHelper.ExecuteNonQuery(query, params)
+                AppLogger.LogAudit("ConfiguracionService.GuardarConfiguracion", $"Configuración del comercio actualizada ({cfg.NombreComercio}).")
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("ConfiguracionService.GuardarConfiguracion", ex)
                 errorMessage = ex.Message
                 Return False
             End Try

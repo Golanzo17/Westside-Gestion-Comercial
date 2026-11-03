@@ -204,7 +204,13 @@ Namespace Forms
             UITheme.StyleButton(btnCerrar, "Secondary")
             AddHandler btnCerrar.Click, Sub() Me.Close()
 
-            pnlBottom.Controls.AddRange({btnGuardarTodo, btnIrUsuarios, btnCerrar})
+            Dim pnlSpacerBtns As New Panel() With {
+                .Dock = DockStyle.Right,
+                .Width = 10,
+                .BackColor = Color.Transparent
+            }
+
+            pnlBottom.Controls.AddRange({btnIrUsuarios, pnlSpacerBtns, btnGuardarTodo, btnCerrar})
             Me.Controls.Add(pnlBottom)
         End Sub
 

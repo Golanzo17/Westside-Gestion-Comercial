@@ -76,63 +76,90 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Tarjetas KPI de Estado de Caja
+            ' Tarjetas KPI de Estado de Caja (responsivas en 4 columnas iguales)
             Dim pnlKpis As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 125,
                 .BackColor = UITheme.ColorSurface,
-                .Padding = New Padding(15, 5, 15, 5)
+                .Padding = New Padding(12, 5, 12, 5)
             }
+
+            Dim tlpKpis As New TableLayoutPanel() With {
+                .Dock = DockStyle.Fill,
+                .ColumnCount = 4,
+                .RowCount = 1,
+                .BackColor = Color.Transparent
+            }
+            tlpKpis.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpKpis.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpKpis.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpKpis.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpKpis.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
 
             ' Tarjeta 1: Estado
             Dim cardEstado = UITheme.CreateKpiCard("ESTADO DE CAJA", "CERRADA", "Turno actual", UITheme.ColorDanger)
-            cardEstado.Location = New Point(15, 5)
+            cardEstado.Dock = DockStyle.Fill
+            cardEstado.Margin = New Padding(3, 3, 6, 3)
             lblEstadoCaja = CType(cardEstado.Controls(2), Label)
-            pnlKpis.Controls.Add(cardEstado)
+            tlpKpis.Controls.Add(cardEstado, 0, 0)
 
             ' Tarjeta 2: Ventas Efectivo
             Dim cardEfec = UITheme.CreateKpiCard("VENTAS EFECTIVO", "$ 0,00", "+ Monto inicial", UITheme.ColorSuccess)
-            cardEfec.Location = New Point(250, 5)
+            cardEfec.Dock = DockStyle.Fill
+            cardEfec.Margin = New Padding(6, 3, 6, 3)
             lblVentasEfectivo = CType(cardEfec.Controls(2), Label)
-            pnlKpis.Controls.Add(cardEfec)
+            tlpKpis.Controls.Add(cardEfec, 1, 0)
 
             ' Tarjeta 3: Ventas Digitales
             Dim cardDig = UITheme.CreateKpiCard("TARJETAS / QR", "$ 0,00", "Débito, crédito, transf.", UITheme.ColorInfo)
-            cardDig.Location = New Point(485, 5)
+            cardDig.Dock = DockStyle.Fill
+            cardDig.Margin = New Padding(6, 3, 6, 3)
             lblVentasDigital = CType(cardDig.Controls(2), Label)
-            pnlKpis.Controls.Add(cardDig)
+            tlpKpis.Controls.Add(cardDig, 2, 0)
 
             ' Tarjeta 4: Efectivo Esperado
             Dim cardTotal = UITheme.CreateKpiCard("EFECTIVO EN CAJA", "$ 0,00", "Total esperado a rendir", UITheme.ColorPrimary)
-            cardTotal.Location = New Point(720, 5)
+            cardTotal.Dock = DockStyle.Fill
+            cardTotal.Margin = New Padding(6, 3, 3, 3)
             lblEfectivoEsperado = CType(cardTotal.Controls(2), Label)
-            pnlKpis.Controls.Add(cardTotal)
+            tlpKpis.Controls.Add(cardTotal, 3, 0)
 
-            ' Barra de Acciones
+            pnlKpis.Controls.Add(tlpKpis)
+
+            ' Barra de Acciones responsiva
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 55,
-                .BackColor = UITheme.ColorSurfaceMuted,
-                .Padding = New Padding(15, 10, 15, 10)
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 54),
+                .BackColor = UITheme.ColorSurfaceMuted
+            }
+            Dim flpToolbar As New FlowLayoutPanel() With {
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .WrapContents = True,
+                .Padding = New Padding(15, 10, 15, 6),
+                .BackColor = Color.Transparent
             }
 
-            btnAbrirCaja = New Button() With {.Text = "Abrir caja de turno", .Location = New Point(15, 10), .Size = New Size(180, 34)}
+            btnAbrirCaja = New Button() With {.Text = "Abrir caja de turno", .Size = New Size(180, 34), .Margin = New Padding(0, 0, 10, 4)}
             UITheme.StyleButton(btnAbrirCaja, "Primary")
             AddHandler btnAbrirCaja.Click, AddressOf BtnAbrirCaja_Click
 
-            btnNuevoMovimiento = New Button() With {.Text = "Ingreso / retiro de efectivo", .Location = New Point(205, 10), .Size = New Size(230, 34)}
+            btnNuevoMovimiento = New Button() With {.Text = "Ingreso / retiro de efectivo", .Size = New Size(230, 34), .Margin = New Padding(0, 0, 10, 4)}
             UITheme.StyleButton(btnNuevoMovimiento, "Secondary")
             AddHandler btnNuevoMovimiento.Click, AddressOf BtnNuevoMovimiento_Click
 
-            btnCerrarCaja = New Button() With {.Text = "Arqueo y cierre de caja", .Location = New Point(445, 10), .Size = New Size(210, 34)}
+            btnCerrarCaja = New Button() With {.Text = "Arqueo y cierre de caja", .Size = New Size(210, 34), .Margin = New Padding(0, 0, 10, 4)}
             UITheme.StyleButton(btnCerrarCaja, "Danger")
             AddHandler btnCerrarCaja.Click, AddressOf BtnCerrarCaja_Click
 
-            btnRefrescar = New Button() With {.Text = "Actualizar", .Location = New Point(665, 10), .Size = New Size(120, 34)}
+            btnRefrescar = New Button() With {.Text = "Actualizar", .Size = New Size(120, 34), .Margin = New Padding(0, 0, 0, 4)}
             UITheme.StyleButton(btnRefrescar, "Secondary")
             AddHandler btnRefrescar.Click, Sub() LoadCajaData()
 
-            pnlToolbar.Controls.AddRange({btnAbrirCaja, btnNuevoMovimiento, btnCerrarCaja, btnRefrescar})
+            flpToolbar.Controls.AddRange({btnAbrirCaja, btnNuevoMovimiento, btnCerrarCaja, btnRefrescar})
+            pnlToolbar.Controls.Add(flpToolbar)
 
             ' Grilla de Movimientos de Turno Actual
             Dim pnlGrid As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(15)}
@@ -159,26 +186,35 @@ Namespace Forms
 
             Dim pnlFilterHistorial As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 55,
-                .BackColor = UITheme.ColorSurface,
-                .Padding = New Padding(15, 10, 15, 10)
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 52),
+                .BackColor = UITheme.ColorSurface
+            }
+            Dim flpFilterHistorial As New FlowLayoutPanel() With {
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .WrapContents = True,
+                .Padding = New Padding(15, 10, 15, 6),
+                .BackColor = Color.Transparent
             }
 
-            Dim lblD As New Label() With {.Text = "Desde:", .Font = UITheme.FontBold, .Location = New Point(15, 16), .AutoSize = True}
-            dtpDesdeHistorial = New DateTimePicker() With {.Location = New Point(70, 14), .Size = New Size(125, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddDays(-30)}
+            Dim lblD As New Label() With {.Text = "Desde:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 6, 4)}
+            dtpDesdeHistorial = New DateTimePicker() With {.Size = New Size(125, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddDays(-30), .Margin = New Padding(0, 3, 14, 4)}
 
-            Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .Location = New Point(210, 16), .AutoSize = True}
-            dtpHastaHistorial = New DateTimePicker() With {.Location = New Point(265, 14), .Size = New Size(125, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today}
+            Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 6, 4)}
+            dtpHastaHistorial = New DateTimePicker() With {.Size = New Size(125, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today, .Margin = New Padding(0, 3, 16, 4)}
 
-            btnFiltrarHistorial = New Button() With {.Text = "Filtrar cajas", .Location = New Point(410, 12), .Size = New Size(130, 30)}
+            btnFiltrarHistorial = New Button() With {.Text = "Filtrar cajas", .Size = New Size(135, 32), .Margin = New Padding(0, 0, 10, 4)}
             UITheme.StyleButton(btnFiltrarHistorial, "Primary")
             AddHandler btnFiltrarHistorial.Click, Sub() LoadHistorialData()
 
-            btnVerDetalleCaja = New Button() With {.Text = "Ver movimientos del turno", .Location = New Point(555, 12), .Size = New Size(220, 30)}
+            btnVerDetalleCaja = New Button() With {.Text = "Ver movimientos del turno", .Size = New Size(220, 32), .Margin = New Padding(0, 0, 0, 4)}
             UITheme.StyleButton(btnVerDetalleCaja, "Secondary")
             AddHandler btnVerDetalleCaja.Click, AddressOf BtnVerDetalleCaja_Click
 
-            pnlFilterHistorial.Controls.AddRange({lblD, dtpDesdeHistorial, lblH, dtpHastaHistorial, btnFiltrarHistorial, btnVerDetalleCaja})
+            flpFilterHistorial.Controls.AddRange({lblD, dtpDesdeHistorial, lblH, dtpHastaHistorial, btnFiltrarHistorial, btnVerDetalleCaja})
+            pnlFilterHistorial.Controls.Add(flpFilterHistorial)
 
             Dim pnlGridHistorial As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(15)}
             dgvHistorial = New DataGridView() With {.Dock = DockStyle.Fill}
@@ -360,7 +396,8 @@ Namespace Forms
 
                 Dim userId As Integer = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.Id, 1)
                 Dim errMsg As String = ""
-                If cajaService.RegistrarMovimiento(cajaActual.Id, userId, cboTipo.SelectedItem.ToString(), txtConcepto.Text.Trim(), numMonto.Value, "", errMsg) Then
+                Dim autorizadoPorId As Nullable(Of Integer) = If(tipoMov.Equals("Egreso", StringComparison.OrdinalIgnoreCase) AndAlso AuthService.LastAuthorizingSupervisor IsNot Nothing, New Nullable(Of Integer)(AuthService.LastAuthorizingSupervisor.Id), Nothing)
+                If cajaService.RegistrarMovimiento(cajaActual.Id, userId, cboTipo.SelectedItem.ToString(), txtConcepto.Text.Trim(), numMonto.Value, "", errMsg, autorizadoPorId) Then
                     MessageBox.Show("Movimiento de caja registrado.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information)
                     LoadCajaData()
                 Else
@@ -587,8 +624,8 @@ Namespace Forms
 
             For Each c In lista
                 Dim cierreStr = If(c.FechaCierre.HasValue, c.FechaCierre.Value.ToString("dd/MM/yyyy HH:mm"), "Sin cerrar")
-                Dim difVal As Object = If(c.Diferencia.HasValue, c.Diferencia.Value, Nothing)
-                Dim realVal As Object = If(c.MontoReal.HasValue, c.MontoReal.Value, Nothing)
+                Dim difVal As Object = If(c.Diferencia.HasValue, CObj(c.Diferencia.Value), Nothing)
+                Dim realVal As Object = If(c.MontoReal.HasValue, CObj(c.MontoReal.Value), Nothing)
 
                 dgvHistorial.Rows.Add(
                     c.Id,
@@ -693,7 +730,7 @@ Namespace Forms
                     Next
 
                     Dim pnlBot As New Panel() With {.Dock = DockStyle.Bottom, .Height = 50, .BackColor = UITheme.ColorSurfaceMuted}
-                    Dim btnCerrar As New Button() With {.Text = "Cerrar", .Location = New Point(620, 10), .Size = New Size(100, 32)}
+                    Dim btnCerrar As New Button() With {.Text = "Cerrar", .Location = New Point(620, 9), .Size = New Size(100, 32), .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right}
                     UITheme.StyleButton(btnCerrar, "Secondary")
                     AddHandler btnCerrar.Click, Sub() dlg.Close()
                     pnlBot.Controls.Add(btnCerrar)

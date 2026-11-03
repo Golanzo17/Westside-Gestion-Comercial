@@ -103,9 +103,10 @@ Namespace Forms
             ' Panel derecho: totales y cobro
             Dim pnlCobro As New Panel() With {
                 .Dock = DockStyle.Right,
-                .Width = 360,
+                .Width = 345,
                 .BackColor = UITheme.ColorSurface,
-                .Padding = New Padding(15)
+                .Padding = New Padding(15),
+                .AutoScroll = True
             }
 
             Dim lblCobroHeader As New Label() With {
@@ -118,9 +119,9 @@ Namespace Forms
 
             ' Selección de Cliente
             Dim lblCli As New Label() With {.Text = "Cliente:", .Font = UITheme.FontBold, .Location = New Point(15, 50), .AutoSize = True}
-            cboClientes = New ComboBox() With {.Location = New Point(15, 70), .Size = New Size(260, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            cboClientes = New ComboBox() With {.Location = New Point(15, 70), .Size = New Size(255, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
             UITheme.StyleComboBox(cboClientes)
-            btnNuevoCliente = New Button() With {.Text = "+", .Location = New Point(280, 69), .Size = New Size(35, 27)}
+            btnNuevoCliente = New Button() With {.Text = "+", .Location = New Point(276, 68), .Size = New Size(38, 28)}
             UITheme.StyleButton(btnNuevoCliente, "Secondary")
             AddHandler btnNuevoCliente.Click, AddressOf BtnNuevoCliente_Click
 
@@ -204,7 +205,7 @@ Namespace Forms
             AddHandler txtBuscarArticulo.KeyDown, AddressOf TxtBuscarArticulo_KeyDown
             AddHandler txtBuscarArticulo.TextChanged, AddressOf TxtBuscarArticulo_TextChanged
 
-            btnBuscarArticulo = New Button() With {.Text = "Buscar", .Location = New Point(405, 51), .Size = New Size(95, 30)}
+            btnBuscarArticulo = New Button() With {.Text = "Buscar", .Location = New Point(405, 50), .Size = New Size(95, 30)}
             UITheme.StyleButton(btnBuscarArticulo, "Primary")
             AddHandler btnBuscarArticulo.Click, AddressOf BtnBuscarArticulo_Click
 
@@ -242,28 +243,67 @@ Namespace Forms
                 .Location = New Point(15, 148),
                 .Size = New Size(560, 42),
                 .AutoScroll = True,
-                .WrapContents = False,
-                .Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+                .WrapContents = False
             }
 
-            ' Fila 4: Color, Cantidad y Botón Agregar al Carrito (bien espaciado, sin cortes)
+            ' Fila 4: Color, Cantidad y Botón Agregar al Carrito (responsivos y sin cortes)
             Dim lblCol As New Label() With {.Text = "Color:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextSecondary, .Location = New Point(15, 203), .AutoSize = True}
-            cboColor = New ComboBox() With {.Location = New Point(60, 200), .Size = New Size(110, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            cboColor = New ComboBox() With {.Location = New Point(58, 200), .Size = New Size(105, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
             UITheme.StyleComboBox(cboColor)
 
-            Dim lblCant As New Label() With {.Text = "Cant:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextSecondary, .Location = New Point(185, 203), .AutoSize = True}
-            numCantidad = New NumericUpDown() With {.Location = New Point(225, 200), .Size = New Size(65, 26), .Minimum = 1, .Maximum = 999, .Value = 1}
+            Dim lblCant As New Label() With {.Text = "Cant:", .Font = UITheme.FontRegular, .ForeColor = UITheme.ColorTextSecondary, .Location = New Point(172, 203), .AutoSize = True}
+            numCantidad = New NumericUpDown() With {.Location = New Point(212, 200), .Size = New Size(60, 26), .Minimum = 1, .Maximum = 999, .Value = 1}
 
-            ' Botón agregar al carrito: amplio, destacado y con margen amplio respecto al borde derecho
+            ' Botón agregar al carrito: amplio, destacado y adaptable al ancho disponible
             btnAgregarAlCarrito = New Button() With {
                 .Text = "+ AGREGAR AL CARRITO",
-                .Location = New Point(310, 196),
+                .Location = New Point(284, 195),
                 .Size = New Size(210, 36),
-                .Font = New Font("Segoe UI", 10.0F, FontStyle.Bold)
+                .Font = New Font("Segoe UI", 9.5F, FontStyle.Bold)
             }
             UITheme.StyleButton(btnAgregarAlCarrito, "Success")
             btnAgregarAlCarrito.Enabled = False
             AddHandler btnAgregarAlCarrito.Click, AddressOf BtnAgregarAlCarrito_Click
+
+            Dim ajustarLayoutArticulo As Action = Sub()
+                                                      Dim w = grpArticulo.ClientSize.Width
+                                                      If w <= 100 Then Return
+                                                      Dim rightEdge = w - 15
+                                                      btnBuscarArticulo.Location = New Point(rightEdge - btnBuscarArticulo.Width, 50)
+                                                      txtBuscarArticulo.Width = Math.Max(140, btnBuscarArticulo.Left - 25)
+                                                      lstSugerenciasPOS.Width = Math.Max(240, rightEdge - 15)
+
+                                                      If lblPrecioUnitario.Width > 0 Then
+                                                          lblPrecioUnitario.Location = New Point(rightEdge - lblPrecioUnitario.Width, 90)
+                                                          lblProductoSeleccionado.Width = Math.Max(140, lblPrecioUnitario.Left - 25)
+                                                      Else
+                                                          lblProductoSeleccionado.Width = Math.Max(140, rightEdge - 15)
+                                                      End If
+
+                                                      pnlTallesContainer.Width = Math.Max(200, rightEdge - 15)
+
+                                                      Dim availBtnW = rightEdge - 284
+                                                      If availBtnW >= 195 Then
+                                                          cboColor.Location = New Point(58, 200)
+                                                          cboColor.Width = 105
+                                                          lblCant.Location = New Point(172, 203)
+                                                          numCantidad.Location = New Point(212, 200)
+                                                          numCantidad.Width = 60
+                                                          btnAgregarAlCarrito.Location = New Point(284, 195)
+                                                          btnAgregarAlCarrito.Width = Math.Min(230, availBtnW)
+                                                      Else
+                                                          cboColor.Location = New Point(56, 200)
+                                                          cboColor.Width = 82
+                                                          lblCant.Location = New Point(144, 203)
+                                                          numCantidad.Location = New Point(182, 200)
+                                                          numCantidad.Width = 50
+                                                          Dim compactLeft = 240
+                                                          btnAgregarAlCarrito.Location = New Point(compactLeft, 195)
+                                                          btnAgregarAlCarrito.Width = Math.Max(165, rightEdge - compactLeft)
+                                                      End If
+                                                  End Sub
+            AddHandler grpArticulo.Resize, Sub(s, ev) ajustarLayoutArticulo()
+            AddHandler lblPrecioUnitario.SizeChanged, Sub(s, ev) ajustarLayoutArticulo()
 
             grpArticulo.Controls.AddRange({
                 lblBuscar, txtBuscarArticulo, btnBuscarArticulo, lstSugerenciasPOS,
@@ -288,14 +328,14 @@ Namespace Forms
             ' Barra de acciones del carrito
             Dim pnlAccionesCarrito As New Panel() With {
                 .Dock = DockStyle.Bottom,
-                .Height = 45,
-                .Padding = New Padding(0, 8, 0, 0)
+                .Height = 48,
+                .Padding = New Padding(0, 10, 0, 0)
             }
-            btnQuitarItem = New Button() With {.Text = "✖ Quitar Ítem Seleccionado", .Dock = DockStyle.Left, .Width = 200}
+            btnQuitarItem = New Button() With {.Text = "✖ Quitar Ítem Seleccionado", .Dock = DockStyle.Left, .Width = 215, .Height = 38}
             UITheme.StyleButton(btnQuitarItem, "Danger")
             AddHandler btnQuitarItem.Click, AddressOf BtnQuitarItem_Click
 
-            btnVaciarCarrito = New Button() With {.Text = "Vaciar Carrito", .Dock = DockStyle.Right, .Width = 130}
+            btnVaciarCarrito = New Button() With {.Text = "Vaciar Carrito", .Dock = DockStyle.Right, .Width = 140, .Height = 38}
             UITheme.StyleButton(btnVaciarCarrito, "Secondary")
             AddHandler btnVaciarCarrito.Click, AddressOf BtnVaciarCarrito_Click
 
@@ -620,7 +660,7 @@ Namespace Forms
             End If
         End Sub
 
-        Private Sub RecalcularTotales()
+        Private Sub RecalcularTotales(Optional sender As Object = Nothing, Optional e As EventArgs = Nothing)
             Dim subtotal As Decimal = ventaActual.Detalles.Sum(Function(d) d.Subtotal)
             Dim descPorc As Decimal = numDescuentoPorc.Value
             Dim descMonto As Decimal = Math.Round(subtotal * (descPorc / 100D), 2)
@@ -659,6 +699,7 @@ Namespace Forms
             If numDescuentoPorc.Value > 15 AndAlso Not _descuentoAutorizado Then
                 If AuthService.SolicitarAutorizacionAdminOManager(Me, $"Un descuento del {numDescuentoPorc.Value}% supera el tope de vendedor (15%). Requiere autorización de un Administrador o Gerente.") Then
                     _descuentoAutorizado = True
+                    ventaActual.AutorizadoPorId = If(AuthService.LastAuthorizingSupervisor IsNot Nothing, New Nullable(Of Integer)(AuthService.LastAuthorizingSupervisor.Id), Nothing)
                     Return True
                 Else
                     numDescuentoPorc.Value = 15
@@ -729,6 +770,13 @@ Namespace Forms
             Decimal.TryParse(txtMontoAbonado.Text.Trim(), ventaActual.MontoAbonado)
             If ventaActual.MontoAbonado < ventaActual.Total AndAlso ventaActual.MetodoPago = "Efectivo" Then
                 ventaActual.MontoAbonado = ventaActual.Total
+            End If
+            If ventaActual.MetodoPago = "Múltiple" Then
+                ventaActual.MontoEfectivo = Math.Max(0D, Math.Min(ventaActual.MontoAbonado, ventaActual.Total))
+            ElseIf ventaActual.MetodoPago = "Efectivo" Then
+                ventaActual.MontoEfectivo = ventaActual.Total
+            Else
+                ventaActual.MontoEfectivo = 0D
             End If
             ventaActual.Vuelto = Math.Max(0D, ventaActual.MontoAbonado - ventaActual.Total)
 

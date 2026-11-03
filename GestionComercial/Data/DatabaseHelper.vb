@@ -1,4 +1,4 @@
-' ARCHIVO: DatabaseHelper.vb
+﻿' ARCHIVO: DatabaseHelper.vb
 ' PROPÓSITO: Capa de Acceso a Datos (DAL), utilidades de base de datos y seguridad criptográfica.
 ' Aquí centralizamos la persistencia y la seguridad del sistema:
 ' 1. Adaptador de Persistencia (SQLite):
@@ -23,9 +23,13 @@ Imports System.Security.Cryptography
 Imports System.Text
 Imports Microsoft.Data.Sqlite
 Imports GestionComercial.Config
+Imports GestionComercial.Services
 
 Namespace Data
     Public Module DatabaseHelper
+
+        Private Const GerenteDefaultPbkdf2Hash As String = "PBKDF2$SHA256$100000$a606/LnGvERCjMeOWvEduQ==$KbsU0/h6RLoTTtqBps8fg16jvCN2SoxpP+OrX51GS6E="
+        Private Const GerenteLegacySha256Hash As String = "ecfba551324356e5bd27b548adf36b728783f60d9b573d142caac7baad62be49"
 
         ' Bandera booleana rápida que confirma que trabajamos con SQLite como motor de persistencia.
         Public ReadOnly Property IsSQLite As Boolean
@@ -72,6 +76,11 @@ Namespace Data
                 Using conn As DbConnection = GetConnection()
                     conn.Open()
 
+                    Using cmdPragma = conn.CreateCommand()
+                        cmdPragma.CommandText = "PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;"
+                        cmdPragma.ExecuteNonQuery()
+                    End Using
+
                     ' Si aún no tiene la tabla usuarios, sembramos las tablas
                     Using cmdCheck = conn.CreateCommand()
                         cmdCheck.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='usuarios';"
@@ -89,6 +98,7 @@ Namespace Data
                     Return True
                 End Using
             Catch ex As Exception
+                AppLogger.LogError("Fallo en TestConnection", ex)
                 errorMessage = ex.Message
                 Return False
             End Try
@@ -217,7 +227,8 @@ Namespace Data
                         Return CryptographicOperations.FixedTimeEquals(actualKey, expectedKey)
                     End If
                 End If
-            Catch
+            Catch ex As Exception
+                AppLogger.LogWarning("Error al verificar hash de contraseña.", ex)
                 Return False
             End Try
 
@@ -294,20 +305,23 @@ Namespace Data
                                 End If
                             End If
                         End Using
+
+                        EnsureSchemaUpdates(conn)
                     End If
                 End Using
 
                 outMessage = "Base de datos SQLite local inicializada exitosamente."
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("Error en InitializeDatabaseAndTables", ex)
                 outMessage = "Error al inicializar la base de datos: " & ex.Message
                 Return False
             End Try
         End Function
 
         ' Migraciones automáticas de esquema (Auto-Migrations):
-        ' Detecta si faltan columnas de datos personales de usuarios o fecha de nacimiento
-        ' de clientes y las agrega con ALTER TABLE sin perder los registros existentes.
+        ' Detecta si faltan columnas de datos personales de usuarios, fecha de nacimiento
+        ' de clientes o campos de auditoría de autorizaciones y las agrega con ALTER TABLE.
         Private Sub EnsureSchemaUpdates(conn As DbConnection)
             Try
                 Using cmd = conn.CreateCommand()
@@ -316,7 +330,7 @@ Namespace Data
                     If Not hasTable Then Return
 
                     ' Columnas a asegurar en usuarios
-                    Dim requiredCols As String() = {
+                    Dim requiredUserCols As String() = {
                         "nombre TEXT NOT NULL DEFAULT ''",
                         "apellido TEXT NOT NULL DEFAULT ''",
                         "telefono TEXT NULL",
@@ -328,25 +342,8 @@ Namespace Data
                         "dni TEXT NULL"
                     }
 
-                    For Each colDef In requiredCols
-                        Dim colName = colDef.Split(" "c)(0)
-                        cmd.CommandText = "PRAGMA table_info(usuarios);"
-                        Dim exists As Boolean = False
-                        Using reader = cmd.ExecuteReader()
-                            While reader.Read()
-                                If reader("name").ToString().Equals(colName, StringComparison.OrdinalIgnoreCase) Then
-                                    exists = True
-                                    Exit While
-                                End If
-                            End While
-                        End Using
-
-                        If Not exists Then
-                            Using cmdAlter = conn.CreateCommand()
-                                cmdAlter.CommandText = $"ALTER TABLE usuarios ADD COLUMN {colDef};"
-                                cmdAlter.ExecuteNonQuery()
-                            End Using
-                        End If
+                    For Each colDef In requiredUserCols
+                        EnsureColumnExists(conn, "usuarios", colDef)
                     Next
 
                     ' Migración de datos existentes
@@ -360,34 +357,52 @@ Namespace Data
                     cmd.ExecuteNonQuery()
 
                     ' Columna en clientes
-                    cmd.CommandText = "PRAGMA table_info(clientes);"
-                    Dim hasFnacCli As Boolean = False
-                    Using readerCli = cmd.ExecuteReader()
-                        While readerCli.Read()
-                            If readerCli("name").ToString().Equals("fecha_nacimiento", StringComparison.OrdinalIgnoreCase) Then
-                                hasFnacCli = True
-                                Exit While
-                            End If
-                        End While
-                    End Using
+                    EnsureColumnExists(conn, "clientes", "fecha_nacimiento TEXT NULL")
 
-                    If Not hasFnacCli Then
-                        Using cmdAlter = conn.CreateCommand()
-                            cmdAlter.CommandText = "ALTER TABLE clientes ADD COLUMN fecha_nacimiento TEXT NULL;"
-                            cmdAlter.ExecuteNonQuery()
-                        End Using
-                    End If
+                    ' Columnas de auditoría de supervisor y pago mixto en ventas y movimientos_caja
+                    EnsureColumnExists(conn, "ventas", "autorizado_por_id INTEGER NULL")
+                    EnsureColumnExists(conn, "ventas", "monto_efectivo REAL NULL")
+                    EnsureColumnExists(conn, "movimientos_caja", "autorizado_por_id INTEGER NULL")
 
-                    ' Agregar el gerente inicial a bases creadas con una semilla anterior.
+                    ' Agregar el gerente inicial con hash PBKDF2 válido a bases creadas con una semilla anterior
                     cmd.CommandText = "INSERT INTO usuarios (username, dni, password_hash, nombre, apellido, nombre_completo, rol, activo) " &
-                                       "SELECT 'gerente', '10000003', 'ecfba551324356e5bd27b548adf36b728783f60d9b573d142caac7baad62be49', " &
-                                       "'Gerente', 'General', 'Gerente General', 'Gerente', 1 " &
-                                       "WHERE NOT EXISTS (SELECT 1 FROM usuarios WHERE username = 'gerente');"
+                                      $"SELECT 'gerente', '10000003', '{GerenteDefaultPbkdf2Hash}', " &
+                                      "'Gerente', 'General', 'Gerente General', 'Gerente', 1 " &
+                                      "WHERE NOT EXISTS (SELECT 1 FROM usuarios WHERE username = 'gerente');"
+                    cmd.ExecuteNonQuery()
+
+                    ' Corregir hash legacy SHA-256 plano de 'gerente' si existía por migración previa
+                    cmd.CommandText = $"UPDATE usuarios SET password_hash = '{GerenteDefaultPbkdf2Hash}' " &
+                                      $"WHERE username = 'gerente' AND password_hash = '{GerenteLegacySha256Hash}';"
                     cmd.ExecuteNonQuery()
                 End Using
             Catch ex As Exception
-                ' Error silencioso en auto-migración para no impedir inicio si ya fue aplicado
+                AppLogger.LogWarning("Aviso durante EnsureSchemaUpdates.", ex)
             End Try
+        End Sub
+
+        Private Sub EnsureColumnExists(conn As DbConnection, tableName As String, colDefinition As String)
+            Dim colName = colDefinition.Split(" "c)(0)
+            Dim exists As Boolean = False
+
+            Using cmdInfo = conn.CreateCommand()
+                cmdInfo.CommandText = $"PRAGMA table_info({tableName});"
+                Using reader = cmdInfo.ExecuteReader()
+                    While reader.Read()
+                        If reader("name").ToString().Equals(colName, StringComparison.OrdinalIgnoreCase) Then
+                            exists = True
+                            Exit While
+                        End If
+                    End While
+                End Using
+            End Using
+
+            If Not exists Then
+                Using cmdAlter = conn.CreateCommand()
+                    cmdAlter.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {colDefinition};"
+                    cmdAlter.ExecuteNonQuery()
+                End Using
+            End If
         End Sub
 
     End Module

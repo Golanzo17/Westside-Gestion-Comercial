@@ -234,6 +234,7 @@ Namespace Forms
             Dim btnQuickPOS As New Button() With {
                 .Text = "+ NUEVA VENTA (F1)",
                 .Size = New Size(195, 36),
+                .Margin = New Padding(8, 12, 8, 12),
                 .Anchor = AnchorStyles.None,
                 .Visible = AuthService.IsVendor
             }
@@ -246,7 +247,8 @@ Namespace Forms
                 .Font = UITheme.FontRegular,
                 .ForeColor = UITheme.ColorTextSecondary,
                 .Dock = DockStyle.Fill,
-                .TextAlign = ContentAlignment.MiddleRight
+                .TextAlign = ContentAlignment.MiddleRight,
+                .AutoEllipsis = True
             }
 
             tlpTopBar.Controls.Add(lblUserSession, 0, 0)
@@ -291,12 +293,14 @@ Namespace Forms
                                       Dim b = CType(s, Button)
                                       If b Is activeNavBtn Then
                                           ' Indicador activo: franja izquierda + fondo gradiente sutil
-                                          ev.Graphics.FillRectangle(New SolidBrush(UITheme.ColorPrimary), 0, 0, 4, b.Height)
+                                          Using brush As New SolidBrush(UITheme.ColorPrimary)
+                                              ev.Graphics.FillRectangle(brush, 0, 0, 4, b.Height)
+                                          End Using
                                           b.ForeColor = Color.White
                                           b.BackColor = UITheme.ColorSidebarActive
                                           b.Font = UITheme.FontBold
                                       Else
-                                           b.ForeColor = UITheme.ColorTextOnDark
+                                          b.ForeColor = UITheme.ColorTextOnDark
                                           b.BackColor = Color.Transparent
                                           b.Font = UITheme.FontNavItem
                                       End If
@@ -321,41 +325,65 @@ Namespace Forms
             pnlDashboardHome = New Panel() With {
                 .Dock = DockStyle.Fill,
                 .AutoScroll = True,
-                .Padding = New Padding(30)
+                .Padding = New Padding(30, 22, 30, 30)
+            }
+
+            Dim pnlHeaderDash As New Panel() With {
+                .Dock = DockStyle.Top,
+                .Height = 72,
+                .BackColor = Color.Transparent
             }
 
             Dim lblDashTitle As New Label() With {
                 .Text = "Panel de Control",
                 .Font = UITheme.FontHeadingLarge,
                 .ForeColor = UITheme.ColorTextPrimary,
-                .Location = New Point(30, 20),
-                .AutoSize = True
+                .Dock = DockStyle.Top,
+                .Height = 38,
+                .TextAlign = ContentAlignment.MiddleLeft
             }
 
             Dim lblDashSub As New Label() With {
                 .Text = "Métricas en tiempo real de ventas, inventario y movimientos del local.",
                 .Font = UITheme.FontRegular,
                 .ForeColor = UITheme.ColorTextSecondary,
-                .Location = New Point(32, 58),
-                .AutoSize = True
+                .Dock = DockStyle.Top,
+                .Height = 24,
+                .TextAlign = ContentAlignment.MiddleLeft,
+                .AutoEllipsis = True
             }
 
-            pnlDashboardHome.Controls.AddRange({lblDashTitle, lblDashSub})
+            pnlHeaderDash.Controls.Add(lblDashSub)
+            pnlHeaderDash.Controls.Add(lblDashTitle)
 
-            ' Fila de 4 KPI Cards
-            Dim pnlCardsRow As New FlowLayoutPanel() With {
-                .Location = New Point(22, 100),
-                .Size = New Size(980, 140),
-                .AutoSize = True
+            ' Fila responsiva de 4 KPI Cards (25% por columna)
+            Dim tlpCardsRow As New TableLayoutPanel() With {
+                .Dock = DockStyle.Top,
+                .Height = 130,
+                .ColumnCount = 4,
+                .RowCount = 1,
+                .BackColor = Color.Transparent,
+                .Margin = New Padding(0)
             }
+            tlpCardsRow.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpCardsRow.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpCardsRow.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpCardsRow.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpCardsRow.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
 
             Dim card1 = UITheme.CreateKpiCard("VENTAS DE HOY", "$ 0,00", "Total facturado en el día", UITheme.ColorSuccess)
+            card1.Dock = DockStyle.Fill
+            card1.Margin = New Padding(0, 4, 10, 8)
             lblKpiVentasHoy = CType(card1.Controls(2), Label)
 
             Dim card2 = UITheme.CreateKpiCard("TICKETS EMITIDOS", "0", "Ventas completadas", UITheme.ColorPrimary)
+            card2.Dock = DockStyle.Fill
+            card2.Margin = New Padding(6, 4, 6, 8)
             lblKpiTicketsHoy = CType(card2.Controls(2), Label)
 
             Dim card3 = UITheme.CreateKpiCard("PRENDAS STOCK CRÍTICO", "0", "Artículos a reponer", UITheme.ColorWarning)
+            card3.Dock = DockStyle.Fill
+            card3.Margin = New Padding(6, 4, 6, 8)
             lblKpiStockCritico = CType(card3.Controls(2), Label)
 
             ' KPI Card 4: Adaptado por rol (Administrador ve 'USUARIOS REGISTRADOS', Gerente y Vendedor ven 'CAJA DEL TURNO')
@@ -365,18 +393,30 @@ Namespace Forms
             Else
                 card4 = UITheme.CreateKpiCard("CAJA DEL TURNO", "$ 0,00", "Efectivo disponible", UITheme.ColorInfo)
             End If
+            card4.Dock = DockStyle.Fill
+            card4.Margin = New Padding(10, 4, 0, 8)
             lblKpiCajaTurno = CType(card4.Controls(2), Label)
 
-            pnlCardsRow.Controls.AddRange({card1, card2, card3, card4})
-            pnlDashboardHome.Controls.Add(pnlCardsRow)
+            tlpCardsRow.Controls.Add(card1, 0, 0)
+            tlpCardsRow.Controls.Add(card2, 1, 0)
+            tlpCardsRow.Controls.Add(card3, 2, 0)
+            tlpCardsRow.Controls.Add(card4, 3, 0)
+
+            Dim pnlSpacerDash As New Panel() With {
+                .Dock = DockStyle.Top,
+                .Height = 16,
+                .BackColor = Color.Transparent
+            }
 
             ' ─── Tarjetas de Acceso Rápido filtradas estrictamente por rol ───
             Dim pnlAcciones As New Panel() With {
-                .Location = New Point(30, 260),
-                .Size = New Size(960, 115),
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 115),
                 .BackColor = UITheme.ColorSurface,
                 .Padding = New Padding(20, 14, 20, 14)
             }
+            AddHandler pnlAcciones.Resize, Sub(s, ev) pnlAcciones.Invalidate()
             AddHandler pnlAcciones.Paint, Sub(s, ev)
                                               Using pen As New Pen(UITheme.ColorBorder, 1)
                                                   ev.Graphics.DrawRectangle(pen, 0, 0, pnlAcciones.Width - 1, pnlAcciones.Height - 1)
@@ -388,13 +428,15 @@ Namespace Forms
                 .Font = UITheme.FontSectionTitle,
                 .ForeColor = UITheme.ColorTextSecondary,
                 .Dock = DockStyle.Top,
-                .Height = 24
+                .Height = 26
             }
 
             Dim flpAcciones As New FlowLayoutPanel() With {
-                .Dock = DockStyle.Fill,
-                .Padding = New Padding(0, 4, 0, 0),
-                .WrapContents = False,
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(0, 6, 0, 2),
+                .WrapContents = True,
                 .AutoScroll = False
             }
 
@@ -511,9 +553,12 @@ Namespace Forms
 
             pnlAcciones.Controls.Add(flpAcciones)
             pnlAcciones.Controls.Add(lblAccionesTitle)
-            lblAccionesTitle.BringToFront()
-            flpAcciones.BringToFront()
+
+            ' Orden de Docking (de abajo hacia arriba para DockStyle.Top)
             pnlDashboardHome.Controls.Add(pnlAcciones)
+            pnlDashboardHome.Controls.Add(pnlSpacerDash)
+            pnlDashboardHome.Controls.Add(tlpCardsRow)
+            pnlDashboardHome.Controls.Add(pnlHeaderDash)
         End Sub
 
         Private Sub StartClock()
@@ -557,7 +602,7 @@ Namespace Forms
                     End If
                 End If
             Catch ex As Exception
-                ' Si no hay base de datos conectada
+                AppLogger.LogError("FrmMain.LoadDashboardData", ex)
             End Try
         End Sub
 

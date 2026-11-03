@@ -1,4 +1,4 @@
-' ARCHIVO: UsuarioService.vb
+﻿' ARCHIVO: UsuarioService.vb
 ' PROPÓSITO: Administración de cuentas de empleados, roles, DNI único y contraseñas.
 ' En este servicio manejamos el personal del comercio:
 ' 1. Roles Soportados: Vendedor, Gerente y Administrador.
@@ -41,7 +41,7 @@ Namespace Services
                     list.Add(MapUsuario(row))
                 Next
             Catch ex As Exception
-                System.Diagnostics.Debug.WriteLine("Error al cargar usuarios: " & ex.Message)
+                AppLogger.LogError("UsuarioService.GetUsuarios", ex)
             End Try
             Return list
         End Function
@@ -54,6 +54,7 @@ Namespace Services
                     Return MapUsuario(dt.Rows(0))
                 End If
             Catch ex As Exception
+                AppLogger.LogError("UsuarioService.GetUsuarioById", ex)
                 Return Nothing
             End Try
             Return Nothing
@@ -165,14 +166,16 @@ Namespace Services
                     {"@email",   email.Trim()},
                     {"@dir",     direccion.Trim()},
                     {"@ciu",     ciudad.Trim()},
-                    {"@notas",   notas.Trim()},
+                    {"@notas",   If(notas, "").Trim()},
                     {"@fnac",    If(fechaNacimiento.HasValue, CObj(fechaNacimiento.Value.ToString("yyyy-MM-dd")), DBNull.Value)}
                 }
 
                 DatabaseHelper.ExecuteNonQuery(sqlInsert, prms)
+                AppLogger.LogAudit("UsuarioService.CrearUsuario", $"Usuario '{username.Trim().ToLowerInvariant()}' creado con rol '{rol}'.")
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("UsuarioService.CrearUsuario", ex)
                 errorMessage = "Error al crear usuario: " & ex.Message
                 Return False
             End Try
@@ -235,7 +238,7 @@ Namespace Services
                 End If
 
                 ' Si se intenta cambiar de rol al único admin, verificar que quede al menos uno activo
-                If rol <> "Administrador" Then
+                If Not rol.Equals("Administrador", StringComparison.OrdinalIgnoreCase) Then
                     Dim sqlAdmins As String = "SELECT COUNT(*) FROM `usuarios` WHERE `rol` = 'Administrador' AND `activo` = 1 AND `id` <> @id;"
                     Dim otrosAdmins = Convert.ToInt32(DatabaseHelper.ExecuteScalar(sqlAdmins, New Dictionary(Of String, Object) From {{"@id", usuarioId}}))
                     If otrosAdmins = 0 Then
@@ -259,15 +262,17 @@ Namespace Services
                     {"@email",   email.Trim()},
                     {"@dir",     direccion.Trim()},
                     {"@ciu",     ciudad.Trim()},
-                    {"@notas",   notas.Trim()},
+                    {"@notas",   If(notas, "").Trim()},
                     {"@fnac",    If(fechaNacimiento.HasValue, CObj(fechaNacimiento.Value.ToString("yyyy-MM-dd")), DBNull.Value)},
                     {"@id",      usuarioId}
                 }
 
                 DatabaseHelper.ExecuteNonQuery(sqlUpdate, prms)
+                AppLogger.LogAudit("UsuarioService.ActualizarUsuario", $"Usuario ID #{usuarioId} actualizado con rol '{rol}'.")
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("UsuarioService.ActualizarUsuario", ex)
                 errorMessage = "Error al actualizar usuario: " & ex.Message
                 Return False
             End Try
@@ -287,9 +292,11 @@ Namespace Services
                     {"@id", usuarioId}
                 })
 
+                AppLogger.LogAudit("UsuarioService.CambiarPassword", $"Contraseña actualizada para el usuario ID #{usuarioId}.")
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("UsuarioService.CambiarPassword", ex)
                 errorMessage = "Error al cambiar la contraseña: " & ex.Message
                 Return False
             End Try
@@ -321,9 +328,11 @@ Namespace Services
                     {"@id", usuarioId}
                 })
 
+                AppLogger.LogAudit("UsuarioService.ToggleActivo", $"Usuario ID #{usuarioId} ({user.Username}) cambió estado Activo={nuevoEstado}.")
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("UsuarioService.ToggleActivo", ex)
                 errorMessage = "Error al modificar estado: " & ex.Message
                 Return False
             End Try
@@ -341,7 +350,7 @@ Namespace Services
 
         Private Function MapUsuario(row As DataRow) As Usuario
             Dim fnac As Nullable(Of DateTime) = Nothing
-            If row.Table.Columns.Contains("fecha_nacimiento") AndAlso Not IsDBNull(row("fecha_nacimiento")) Then
+            If row.Table.Columns.Contains("fecha_nacimiento") AndAlso Not Convert.IsDBNull(row("fecha_nacimiento")) Then
                 Dim parsed As DateTime
                 If DateTime.TryParse(row("fecha_nacimiento").ToString(), parsed) Then
                     fnac = parsed
@@ -349,49 +358,49 @@ Namespace Services
             End If
 
             Dim dniVal As String = ""
-            If row.Table.Columns.Contains("dni") AndAlso Not IsDBNull(row("dni")) Then
+            If row.Table.Columns.Contains("dni") AndAlso Not Convert.IsDBNull(row("dni")) Then
                 dniVal = row("dni").ToString()
             End If
 
             Dim nomVal As String = ""
-            If row.Table.Columns.Contains("nombre") AndAlso Not IsDBNull(row("nombre")) Then
+            If row.Table.Columns.Contains("nombre") AndAlso Not Convert.IsDBNull(row("nombre")) Then
                 nomVal = row("nombre").ToString()
-            ElseIf row.Table.Columns.Contains("nombre_completo") AndAlso Not IsDBNull(row("nombre_completo")) Then
+            ElseIf row.Table.Columns.Contains("nombre_completo") AndAlso Not Convert.IsDBNull(row("nombre_completo")) Then
                 nomVal = row("nombre_completo").ToString()
             End If
 
             Dim apeVal As String = ""
-            If row.Table.Columns.Contains("apellido") AndAlso Not IsDBNull(row("apellido")) Then
+            If row.Table.Columns.Contains("apellido") AndAlso Not Convert.IsDBNull(row("apellido")) Then
                 apeVal = row("apellido").ToString()
             End If
 
             Dim telVal As String = ""
-            If row.Table.Columns.Contains("telefono") AndAlso Not IsDBNull(row("telefono")) Then
+            If row.Table.Columns.Contains("telefono") AndAlso Not Convert.IsDBNull(row("telefono")) Then
                 telVal = row("telefono").ToString()
             End If
 
             Dim emailVal As String = ""
-            If row.Table.Columns.Contains("email") AndAlso Not IsDBNull(row("email")) Then
+            If row.Table.Columns.Contains("email") AndAlso Not Convert.IsDBNull(row("email")) Then
                 emailVal = row("email").ToString()
             End If
 
             Dim dirVal As String = ""
-            If row.Table.Columns.Contains("direccion") AndAlso Not IsDBNull(row("direccion")) Then
+            If row.Table.Columns.Contains("direccion") AndAlso Not Convert.IsDBNull(row("direccion")) Then
                 dirVal = row("direccion").ToString()
             End If
 
             Dim ciuVal As String = ""
-            If row.Table.Columns.Contains("ciudad") AndAlso Not IsDBNull(row("ciudad")) Then
+            If row.Table.Columns.Contains("ciudad") AndAlso Not Convert.IsDBNull(row("ciudad")) Then
                 ciuVal = row("ciudad").ToString()
             End If
 
             Dim notasVal As String = ""
-            If row.Table.Columns.Contains("notas") AndAlso Not IsDBNull(row("notas")) Then
+            If row.Table.Columns.Contains("notas") AndAlso Not Convert.IsDBNull(row("notas")) Then
                 notasVal = row("notas").ToString()
             End If
 
             Dim ultLogin As Nullable(Of DateTime) = Nothing
-            If row.Table.Columns.Contains("ultimo_login") AndAlso Not IsDBNull(row("ultimo_login")) Then
+            If row.Table.Columns.Contains("ultimo_login") AndAlso Not Convert.IsDBNull(row("ultimo_login")) Then
                 Dim parsedLogin As DateTime
                 If DateTime.TryParse(row("ultimo_login").ToString(), parsedLogin) Then
                     ultLogin = parsedLogin
@@ -399,7 +408,7 @@ Namespace Services
             End If
 
             Dim createdAtVal As DateTime = DateTime.MinValue
-            If row.Table.Columns.Contains("created_at") AndAlso Not IsDBNull(row("created_at")) Then
+            If row.Table.Columns.Contains("created_at") AndAlso Not Convert.IsDBNull(row("created_at")) Then
                 Dim parsedCreated As DateTime
                 If DateTime.TryParse(row("created_at").ToString(), parsedCreated) Then
                     createdAtVal = parsedCreated

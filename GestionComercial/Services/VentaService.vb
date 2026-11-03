@@ -1,4 +1,4 @@
-' ARCHIVO: VentaService.vb
+﻿' ARCHIVO: VentaService.vb
 ' PROPÓSITO: Lógica de negocio de cobros, transacciones atómicas y control de inventario.
 ' Este es el servicio central del circuito comercial:
 ' 1. Transacciones ACID (DbTransaction): Todo el cobro se ejecuta como una sola unidad atómica.
@@ -8,7 +8,7 @@
 ' 3. Auditoría de Stock en Vivo: No solo restamos del inventario, sino que insertamos un
 '    registro en movimientos_stock asociando el ticket y el vendedor que hizo la operación.
 ' 4. Impacto Inmediato en Caja: Actualiza en tiempo real el efectivo o dinero digital
-'    esperado en el turno abierto de caja.
+'    esperado en el turno abierto de caja (incluyendo desglose en pagos mixtos).
 
 Imports System.Data
 Imports System.Data.Common
@@ -63,7 +63,7 @@ Namespace Services
         '   Paso 2: Descontamos las unidades y registramos el movimiento en la auditoría.
         '   Paso 3: Insertamos la cabecera del ticket en la tabla ventas.
         '   Paso 4: Insertamos cada artículo vendido en detalle_ventas.
-        '   Paso 5: Sumamos el importe a la caja activa del vendedor (Efectivo o Digital).
+        '   Paso 5: Sumamos el importe a la caja activa del turno (Efectivo y/o Digital).
         ' Si ocurre cualquier error en el camino, se ejecuta trans.Rollback() y no se guarda nada.
         Public Function ProcesarVenta(venta As Venta, ByRef errorMessage As String) As Boolean
             If venta Is Nothing Then
@@ -81,6 +81,17 @@ Namespace Services
                     conn.Open()
                     Using trans = conn.BeginTransaction()
                         Try
+                            ' Normalizamos redondeo contable a 2 decimales
+                            venta.Subtotal = Math.Round(venta.Subtotal, 2)
+                            venta.DescuentoMonto = Math.Round(venta.DescuentoMonto, 2)
+                            venta.RecargoMonto = Math.Round(venta.RecargoMonto, 2)
+                            venta.Total = Math.Round(venta.Total, 2)
+                            venta.MontoAbonado = Math.Round(venta.MontoAbonado, 2)
+                            venta.Vuelto = Math.Round(venta.Vuelto, 2)
+
+                            Dim montoEfectivo = CalcularMontoEfectivoVenta(venta)
+                            venta.MontoEfectivo = montoEfectivo
+
                             ' Paso 0: Verificamos o generamos el correlativo único del comprobante
                             GarantizarNumeroTicket(conn, trans, venta)
 
@@ -102,21 +113,25 @@ Namespace Services
 
                             ' Paso 5: Impactamos el dinero cobrado en la caja activa del turno
                             If venta.CajaId > 0 Then
-                                ActualizarCajaVenta(conn, trans, venta.CajaId, venta.MetodoPago, venta.Total)
+                                Dim montoDigital = Math.Round(venta.Total - montoEfectivo, 2)
+                                ActualizarCajaVenta(conn, trans, venta.CajaId, montoEfectivo, montoDigital)
                             End If
 
                             ' Si todo salió perfecto, confirmamos la transacción de forma atómica
                             trans.Commit()
+                            AppLogger.LogAudit("VENTA_PROCESADA", $"Ticket={venta.NumeroTicket} | Total={venta.Total:F2} | UsuarioId={venta.UsuarioId}")
                             errorMessage = String.Empty
                             Return True
                         Catch exTrans As Exception
                             trans.Rollback()
+                            AppLogger.LogError("Error en transacción ProcesarVenta", exTrans)
                             errorMessage = "Error al procesar la venta: " & exTrans.Message
                             Return False
                         End Try
                     End Using
                 End Using
             Catch ex As Exception
+                AppLogger.LogError("Error de conexión en ProcesarVenta", ex)
                 errorMessage = "Error de conexión con la base de datos: " & ex.Message
                 Return False
             End Try
@@ -196,7 +211,7 @@ Namespace Services
         ' Si un cliente devuelve prendas o hubo un error de cobro:
         ' 1. Verificamos que la venta exista y no haya sido anulada previamente.
         ' 2. Restituimos el stock físico sumando las unidades a producto_talles.
-        ' 3. Auditamos en movimientos_stock con motivo "Anulacion_Venta" y el usuario supervisor.
+        ' 3. Auditamos en movimientos_stock con stock_anterior y stock_posterior reales.
         ' 4. Marcamos el estado del ticket como "Anulada".
         ' 5. Reversamos el monto en la caja para que el arqueo final coincida con el dinero real.
         Public Function AnularVenta(ventaId As Integer, usuarioId As Integer, motivo As String, ByRef errorMessage As String) As Boolean
@@ -224,39 +239,73 @@ Namespace Services
                                 Return False
                             End If
 
-                            ' Paso 1: Restituir stock físico de cada artículo y auditar en movimientos_stock
-                            Dim detalles = GetDetalleVenta(ventaId)
+                            ' Paso 1: Restituir stock físico de cada artículo dentro de la misma transacción y auditar en movimientos_stock
+                            Dim detalles = ObtenerDetallesVentaEnTransaccion(conn, trans, ventaId)
                             Dim ticket = ventaRow("numero_ticket").ToString()
                             RestituirStockYAuditar(conn, trans, detalles, ticket, motivo, usuarioId)
 
                             ' Paso 2: Marcar comprobante como Anulado
-                            MarcarVentaAnulada(conn, trans, ventaId, motivo)
+                            MarcarVentaAnulada(conn, trans, ventaId, motivo, usuarioId)
 
                             ' Paso 3: Restar el monto de la caja activa para mantener el balance contable
                             Dim cajaId = Convert.ToInt32(ventaRow("caja_id"))
-                            Dim total = Convert.ToDecimal(ventaRow("total"))
+                            Dim total = Math.Round(Convert.ToDecimal(ventaRow("total")), 2)
                             Dim metodo = ventaRow("metodo_pago").ToString()
+                            Dim montoEfecGuardado As Nullable(Of Decimal) = Nothing
+                            If ventaRow.Table.Columns.Contains("monto_efectivo") AndAlso Not Convert.IsDBNull(ventaRow("monto_efectivo")) Then
+                                montoEfecGuardado = Math.Round(Convert.ToDecimal(ventaRow("monto_efectivo")), 2)
+                            End If
+
                             If cajaId > 0 Then
-                                ActualizarCajaAnulacion(conn, trans, cajaId, metodo, total)
+                                Dim efecReversa As Decimal
+                                If montoEfecGuardado.HasValue Then
+                                    efecReversa = montoEfecGuardado.Value
+                                ElseIf metodo.Equals("Efectivo", StringComparison.OrdinalIgnoreCase) Then
+                                    efecReversa = total
+                                Else
+                                    efecReversa = 0D
+                                End If
+                                Dim digReversa = Math.Round(total - efecReversa, 2)
+                                ActualizarCajaAnulacion(conn, trans, cajaId, efecReversa, digReversa)
                             End If
 
                             trans.Commit()
+                            AppLogger.LogAudit("VENTA_ANULADA", $"Ticket={ticket} | VentaId={ventaId} | AutorizadoPor={usuarioId} | Motivo={motivo}")
                             errorMessage = String.Empty
                             Return True
                         Catch exTrans As Exception
                             trans.Rollback()
+                            AppLogger.LogError("Error en transacción AnularVenta", exTrans)
                             errorMessage = "Error al anular la venta: " & exTrans.Message
                             Return False
                         End Try
                     End Using
                 End Using
             Catch ex As Exception
+                AppLogger.LogError("Error de conexión en AnularVenta", ex)
                 errorMessage = "Error de conexión: " & ex.Message
                 Return False
             End Try
         End Function
 
         ' --- Helpers privados de soporte ---
+
+        Private Shared Function CalcularMontoEfectivoVenta(venta As Venta) As Decimal
+            If venta.MontoEfectivo.HasValue Then
+                Return Math.Clamp(Math.Round(venta.MontoEfectivo.Value, 2), 0D, venta.Total)
+            End If
+
+            Dim metodo = If(venta.MetodoPago, "Efectivo").Trim()
+            If metodo.Equals("Efectivo", StringComparison.OrdinalIgnoreCase) Then
+                Return venta.Total
+            End If
+
+            If metodo.Equals("Múltiple", StringComparison.OrdinalIgnoreCase) Then
+                Return Math.Clamp(Math.Round(venta.MontoAbonado, 2), 0D, venta.Total)
+            End If
+
+            Return 0D
+        End Function
 
         Private Sub GarantizarNumeroTicket(conn As DbConnection, trans As DbTransaction, venta As Venta)
             If String.IsNullOrWhiteSpace(venta.NumeroTicket) Then
@@ -337,14 +386,15 @@ Namespace Services
         End Sub
 
         Private Function InsertarVenta(conn As DbConnection, trans As DbTransaction, venta As Venta) As Integer
-            Dim queryVenta = "INSERT INTO `ventas` (`numero_ticket`, `fecha`, `usuario_id`, `cliente_id`, `caja_id`, " &
+            Dim queryVenta = "INSERT INTO `ventas` (`numero_ticket`, `fecha`, `usuario_id`, `autorizado_por_id`, `cliente_id`, `caja_id`, " &
                              "`tipo_comprobante`, `metodo_pago`, `subtotal`, `descuento_porcentaje`, `descuento_monto`, " &
-                             "`recargo_monto`, `total`, `monto_abonado`, `vuelto`, `estado`, `observaciones`) " &
-                             "VALUES (@num, NOW(), @userId, @cliId, @cajaId, @tipoComp, @metodo, @sub, @descPorc, @descMonto, @recargo, @total, @abonado, @vuelto, 'Completada', @obs);"
+                             "`recargo_monto`, `total`, `monto_efectivo`, `monto_abonado`, `vuelto`, `estado`, `observaciones`) " &
+                             "VALUES (@num, NOW(), @userId, @autId, @cliId, @cajaId, @tipoComp, @metodo, @sub, @descPorc, @descMonto, @recargo, @total, @montoEfec, @abonado, @vuelto, 'Completada', @obs);"
 
             Using cmdVenta = DatabaseHelper.CreateCommand(conn, queryVenta, trans)
                 DatabaseHelper.AddParam(cmdVenta, "@num", venta.NumeroTicket)
                 DatabaseHelper.AddParam(cmdVenta, "@userId", venta.UsuarioId)
+                DatabaseHelper.AddParam(cmdVenta, "@autId", If(venta.AutorizadoPorId.HasValue, CObj(venta.AutorizadoPorId.Value), DBNull.Value))
                 DatabaseHelper.AddParam(cmdVenta, "@cliId", venta.ClienteId)
                 DatabaseHelper.AddParam(cmdVenta, "@cajaId", venta.CajaId)
                 DatabaseHelper.AddParam(cmdVenta, "@tipoComp", venta.TipoComprobante)
@@ -354,6 +404,7 @@ Namespace Services
                 DatabaseHelper.AddParam(cmdVenta, "@descMonto", venta.DescuentoMonto)
                 DatabaseHelper.AddParam(cmdVenta, "@recargo", venta.RecargoMonto)
                 DatabaseHelper.AddParam(cmdVenta, "@total", venta.Total)
+                DatabaseHelper.AddParam(cmdVenta, "@montoEfec", If(venta.MontoEfectivo.HasValue, CObj(venta.MontoEfectivo.Value), DBNull.Value))
                 DatabaseHelper.AddParam(cmdVenta, "@abonado", venta.MontoAbonado)
                 DatabaseHelper.AddParam(cmdVenta, "@vuelto", venta.Vuelto)
                 DatabaseHelper.AddParam(cmdVenta, "@obs", venta.Observaciones)
@@ -375,23 +426,25 @@ Namespace Services
                     DatabaseHelper.AddParam(cmdDet, "@color", d.Color)
                     DatabaseHelper.AddParam(cmdDet, "@cod", d.CodigoBarra)
                     DatabaseHelper.AddParam(cmdDet, "@desc", d.DescripcionArticulo)
-                    DatabaseHelper.AddParam(cmdDet, "@pu", d.PrecioUnitario)
-                    DatabaseHelper.AddParam(cmdDet, "@cu", d.CostoUnitario)
+                    DatabaseHelper.AddParam(cmdDet, "@pu", Math.Round(d.PrecioUnitario, 2))
+                    DatabaseHelper.AddParam(cmdDet, "@cu", Math.Round(d.CostoUnitario, 2))
                     DatabaseHelper.AddParam(cmdDet, "@cant", d.Cantidad)
-                    DatabaseHelper.AddParam(cmdDet, "@sub", d.Subtotal)
+                    DatabaseHelper.AddParam(cmdDet, "@sub", Math.Round(d.Subtotal, 2))
                     cmdDet.ExecuteNonQuery()
                 End Using
             Next
         End Sub
 
-        Private Sub ActualizarCajaVenta(conn As DbConnection, trans As DbTransaction, cajaId As Integer, metodoPago As String, total As Decimal)
-            Dim esEfectivo = metodoPago.Equals("Efectivo", StringComparison.OrdinalIgnoreCase)
-            Dim updateCajaQuery = If(esEfectivo,
-                "UPDATE `cajas` SET `total_ventas_efectivo` = `total_ventas_efectivo` + @tot, `monto_esperado` = `monto_esperado` + @tot WHERE `id` = @cajaId;",
-                "UPDATE `cajas` SET `total_ventas_digital` = `total_ventas_digital` + @tot WHERE `id` = @cajaId;")
+        Private Sub ActualizarCajaVenta(conn As DbConnection, trans As DbTransaction, cajaId As Integer, montoEfectivo As Decimal, montoDigital As Decimal)
+            Dim updateCajaQuery = "UPDATE `cajas` SET " &
+                                  "`total_ventas_efectivo` = ROUND(`total_ventas_efectivo` + @efec, 2), " &
+                                  "`total_ventas_digital` = ROUND(`total_ventas_digital` + @dig, 2), " &
+                                  "`monto_esperado` = ROUND(`monto_esperado` + @efec, 2) " &
+                                  "WHERE `id` = @cajaId;"
 
             Using cmdUpdCaja = DatabaseHelper.CreateCommand(conn, updateCajaQuery, trans)
-                DatabaseHelper.AddParam(cmdUpdCaja, "@tot", total)
+                DatabaseHelper.AddParam(cmdUpdCaja, "@efec", montoEfectivo)
+                DatabaseHelper.AddParam(cmdUpdCaja, "@dig", montoDigital)
                 DatabaseHelper.AddParam(cmdUpdCaja, "@cajaId", cajaId)
                 cmdUpdCaja.ExecuteNonQuery()
             End Using
@@ -412,14 +465,59 @@ Namespace Services
             End Using
         End Function
 
+        Private Function ObtenerDetallesVentaEnTransaccion(conn As DbConnection, trans As DbTransaction, ventaId As Integer) As List(Of DetalleVenta)
+            Dim list = New List(Of DetalleVenta)()
+            Dim query = "SELECT dv.*, t.nombre AS talle_nombre " &
+                        "FROM `detalle_ventas` dv " &
+                        "INNER JOIN `talles` t ON dv.talle_id = t.id " &
+                        "WHERE dv.venta_id = @vId;"
+
+            Using cmd = DatabaseHelper.CreateCommand(conn, query, trans)
+                DatabaseHelper.AddParam(cmd, "@vId", ventaId)
+                Using reader = cmd.ExecuteReader()
+                    Dim dt = New DataTable()
+                    For i As Integer = 0 To reader.FieldCount - 1
+                        Dim colType = reader.GetFieldType(i)
+                        dt.Columns.Add(reader.GetName(i), If(colType, GetType(Object)))
+                    Next
+                    While reader.Read()
+                        Dim row = dt.NewRow()
+                        For i As Integer = 0 To reader.FieldCount - 1
+                            row(i) = reader.GetValue(i)
+                        Next
+                        dt.Rows.Add(row)
+                    End While
+                    For Each r As DataRow In dt.Rows
+                        list.Add(MapDetalleVenta(r))
+                    Next
+                End Using
+            End Using
+
+            Return list
+        End Function
+
         Private Sub RestituirStockYAuditar(conn As DbConnection, trans As DbTransaction, detalles As List(Of DetalleVenta), numeroTicket As String, motivo As String, usuarioId As Integer)
-            Dim queryStock = "UPDATE `producto_talles` SET `stock_actual` = `stock_actual` + @cant WHERE `producto_id` = @pId AND `talle_id` = @tId AND `color` = @color;"
+            Dim querySelect = "SELECT stock_actual FROM `producto_talles` WHERE `producto_id` = @pId AND `talle_id` = @tId AND `color` = @color;"
+            Dim queryStock = "UPDATE `producto_talles` SET `stock_actual` = @nuevoStock WHERE `producto_id` = @pId AND `talle_id` = @tId AND `color` = @color;"
             Dim queryAud = "INSERT INTO `movimientos_stock` (`producto_id`, `talle_id`, `color`, `tipo_movimiento`, `cantidad`, `stock_anterior`, `stock_posterior`, `motivo`, `usuario_id`) " &
-                           "VALUES (@pId, @tId, @color, 'Anulacion_Venta', @cant, 0, 0, @motivo, @uId);"
+                           "VALUES (@pId, @tId, @color, 'Anulacion_Venta', @cant, @ant, @post, @motivo, @uId);"
 
             For Each item In detalles
+                Dim stockActual = 0
+                Using cmdSel = DatabaseHelper.CreateCommand(conn, querySelect, trans)
+                    DatabaseHelper.AddParam(cmdSel, "@pId", item.ProductoId)
+                    DatabaseHelper.AddParam(cmdSel, "@tId", item.TalleId)
+                    DatabaseHelper.AddParam(cmdSel, "@color", item.Color)
+                    Dim val = cmdSel.ExecuteScalar()
+                    If val IsNot Nothing AndAlso Not Convert.IsDBNull(val) Then
+                        stockActual = Convert.ToInt32(val)
+                    End If
+                End Using
+
+                Dim nuevoStock = stockActual + item.Cantidad
+
                 Using cmdStock = DatabaseHelper.CreateCommand(conn, queryStock, trans)
-                    DatabaseHelper.AddParam(cmdStock, "@cant", item.Cantidad)
+                    DatabaseHelper.AddParam(cmdStock, "@nuevoStock", nuevoStock)
                     DatabaseHelper.AddParam(cmdStock, "@pId", item.ProductoId)
                     DatabaseHelper.AddParam(cmdStock, "@tId", item.TalleId)
                     DatabaseHelper.AddParam(cmdStock, "@color", item.Color)
@@ -431,6 +529,8 @@ Namespace Services
                     DatabaseHelper.AddParam(cmdAud, "@tId", item.TalleId)
                     DatabaseHelper.AddParam(cmdAud, "@color", item.Color)
                     DatabaseHelper.AddParam(cmdAud, "@cant", item.Cantidad)
+                    DatabaseHelper.AddParam(cmdAud, "@ant", stockActual)
+                    DatabaseHelper.AddParam(cmdAud, "@post", nuevoStock)
                     DatabaseHelper.AddParam(cmdAud, "@motivo", "Anulación venta #" & numeroTicket & ": " & motivo)
                     DatabaseHelper.AddParam(cmdAud, "@uId", usuarioId)
                     cmdAud.ExecuteNonQuery()
@@ -438,47 +538,62 @@ Namespace Services
             Next
         End Sub
 
-        Private Sub MarcarVentaAnulada(conn As DbConnection, trans As DbTransaction, ventaId As Integer, motivo As String)
-            Dim queryUpdateVenta = "UPDATE `ventas` SET `estado` = 'Anulada', `observaciones` = (IFNULL(`observaciones`,'') || ' | ANULADA: ' || @motivo) WHERE `id` = @vId;"
+        Private Sub MarcarVentaAnulada(conn As DbConnection, trans As DbTransaction, ventaId As Integer, motivo As String, usuarioId As Integer)
+            Dim queryUpdateVenta = "UPDATE `ventas` SET `estado` = 'Anulada', `autorizado_por_id` = @autId, `observaciones` = (IFNULL(`observaciones`,'') || ' | ANULADA: ' || @motivo) WHERE `id` = @vId;"
             Using cmdUpdVenta = DatabaseHelper.CreateCommand(conn, queryUpdateVenta, trans)
                 DatabaseHelper.AddParam(cmdUpdVenta, "@motivo", motivo)
+                DatabaseHelper.AddParam(cmdUpdVenta, "@autId", usuarioId)
                 DatabaseHelper.AddParam(cmdUpdVenta, "@vId", ventaId)
                 cmdUpdVenta.ExecuteNonQuery()
             End Using
         End Sub
 
-        Private Sub ActualizarCajaAnulacion(conn As DbConnection, trans As DbTransaction, cajaId As Integer, metodo As String, total As Decimal)
-            Dim esEfectivo = metodo.Equals("Efectivo", StringComparison.OrdinalIgnoreCase)
-            Dim updateCajaQuery = If(esEfectivo,
-                "UPDATE `cajas` SET `total_ventas_efectivo` = `total_ventas_efectivo` - @tot, `monto_esperado` = `monto_esperado` - @tot WHERE `id` = @cajaId;",
-                "UPDATE `cajas` SET `total_ventas_digital` = `total_ventas_digital` - @tot WHERE `id` = @cajaId;")
+        Private Sub ActualizarCajaAnulacion(conn As DbConnection, trans As DbTransaction, cajaId As Integer, montoEfectivo As Decimal, montoDigital As Decimal)
+            Dim updateCajaQuery = "UPDATE `cajas` SET " &
+                                  "`total_ventas_efectivo` = ROUND(`total_ventas_efectivo` - @efec, 2), " &
+                                  "`total_ventas_digital` = ROUND(`total_ventas_digital` - @dig, 2), " &
+                                  "`monto_esperado` = ROUND(`monto_esperado` - @efec, 2) " &
+                                  "WHERE `id` = @cajaId;"
 
             Using cmdCaja = DatabaseHelper.CreateCommand(conn, updateCajaQuery, trans)
-                DatabaseHelper.AddParam(cmdCaja, "@tot", total)
+                DatabaseHelper.AddParam(cmdCaja, "@efec", montoEfectivo)
+                DatabaseHelper.AddParam(cmdCaja, "@dig", montoDigital)
                 DatabaseHelper.AddParam(cmdCaja, "@cajaId", cajaId)
                 cmdCaja.ExecuteNonQuery()
             End Using
         End Sub
 
         Private Shared Function MapVenta(row As DataRow) As Venta
+            Dim autId As Nullable(Of Integer) = Nothing
+            If row.Table.Columns.Contains("autorizado_por_id") AndAlso Not Convert.IsDBNull(row("autorizado_por_id")) Then
+                autId = Convert.ToInt32(row("autorizado_por_id"))
+            End If
+
+            Dim montoEfec As Nullable(Of Decimal) = Nothing
+            If row.Table.Columns.Contains("monto_efectivo") AndAlso Not Convert.IsDBNull(row("monto_efectivo")) Then
+                montoEfec = Math.Round(Convert.ToDecimal(row("monto_efectivo")), 2)
+            End If
+
             Return New Venta() With {
                 .Id = Convert.ToInt32(row("id")),
                 .NumeroTicket = row("numero_ticket").ToString(),
                 .Fecha = Convert.ToDateTime(row("fecha")),
                 .UsuarioId = Convert.ToInt32(row("usuario_id")),
                 .UsuarioNombre = row("usuario_nombre").ToString(),
+                .AutorizadoPorId = autId,
                 .ClienteId = Convert.ToInt32(row("cliente_id")),
                 .ClienteNombre = row("cliente_nombre").ToString(),
                 .CajaId = Convert.ToInt32(row("caja_id")),
                 .TipoComprobante = row("tipo_comprobante").ToString(),
                 .MetodoPago = row("metodo_pago").ToString(),
-                .Subtotal = Convert.ToDecimal(row("subtotal")),
-                .DescuentoPorcentaje = Convert.ToDecimal(row("descuento_porcentaje")),
-                .DescuentoMonto = Convert.ToDecimal(row("descuento_monto")),
-                .RecargoMonto = Convert.ToDecimal(row("recargo_monto")),
-                .Total = Convert.ToDecimal(row("total")),
-                .MontoAbonado = Convert.ToDecimal(row("monto_abonado")),
-                .Vuelto = Convert.ToDecimal(row("vuelto")),
+                .Subtotal = Math.Round(Convert.ToDecimal(row("subtotal")), 2),
+                .DescuentoPorcentaje = Math.Round(Convert.ToDecimal(row("descuento_porcentaje")), 2),
+                .DescuentoMonto = Math.Round(Convert.ToDecimal(row("descuento_monto")), 2),
+                .RecargoMonto = Math.Round(Convert.ToDecimal(row("recargo_monto")), 2),
+                .Total = Math.Round(Convert.ToDecimal(row("total")), 2),
+                .MontoEfectivo = montoEfec,
+                .MontoAbonado = Math.Round(Convert.ToDecimal(row("monto_abonado")), 2),
+                .Vuelto = Math.Round(Convert.ToDecimal(row("vuelto")), 2),
                 .Estado = row("estado").ToString(),
                 .Observaciones = If(Convert.IsDBNull(row("observaciones")), "", row("observaciones").ToString())
             }
@@ -494,10 +609,10 @@ Namespace Services
                 .Color = row("color").ToString(),
                 .CodigoBarra = row("codigo_barra").ToString(),
                 .DescripcionArticulo = row("descripcion_articulo").ToString(),
-                .PrecioUnitario = Convert.ToDecimal(row("precio_unitario")),
-                .CostoUnitario = Convert.ToDecimal(row("costo_unitario")),
+                .PrecioUnitario = Math.Round(Convert.ToDecimal(row("precio_unitario")), 2),
+                .CostoUnitario = Math.Round(Convert.ToDecimal(row("costo_unitario")), 2),
                 .Cantidad = Convert.ToInt32(row("cantidad")),
-                .Subtotal = Convert.ToDecimal(row("subtotal"))
+                .Subtotal = Math.Round(Convert.ToDecimal(row("subtotal")), 2)
             }
         End Function
 

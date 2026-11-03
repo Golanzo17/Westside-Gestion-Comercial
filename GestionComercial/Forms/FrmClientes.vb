@@ -60,42 +60,45 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Toolbar con FlowLayoutPanel para adaptar botones en resoluciones variadas
+            ' Toolbar con FlowLayoutPanel responsivo para adaptar botones en resoluciones variadas
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 55,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 54),
                 .BackColor = UITheme.ColorSurface
             }
             Dim flpToolbar As New FlowLayoutPanel() With {
-                .Dock = DockStyle.Fill,
-                .Padding = New Padding(10, 12, 10, 10),
-                .WrapContents = False
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(12, 10, 12, 6),
+                .WrapContents = True
             }
 
-            Dim lblB As New Label() With {.Text = "Buscar por DNI o Nombre:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 5, 4, 0)}
-            txtBuscar = New TextBox() With {.Size = New Size(200, 26), .Margin = New Padding(0, 2, 0, 0)}
+            Dim lblB As New Label() With {.Text = "Buscar por DNI o Nombre:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 4, 4)}
+            txtBuscar = New TextBox() With {.Size = New Size(190, 26), .Margin = New Padding(0, 3, 0, 4)}
             UITheme.StyleTextBox(txtBuscar)
             AddHandler txtBuscar.KeyDown, Sub(s, e)
                                               If e.KeyCode = Keys.Enter Then LoadClientes()
                                           End Sub
 
-            btnBuscar = New Button() With {.Text = "Buscar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
+            btnBuscar = New Button() With {.Text = "Buscar", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 1, 0, 4)}
             UITheme.StyleButton(btnBuscar, "Primary")
             AddHandler btnBuscar.Click, Sub() LoadClientes()
 
-            btnNuevo = New Button() With {.Text = "+ Nuevo Cliente", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
+            btnNuevo = New Button() With {.Text = "+ Nuevo Cliente", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 1, 0, 4)}
             UITheme.StyleButton(btnNuevo, "Success")
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-            btnEditar = New Button() With {.Text = "Editar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
+            btnEditar = New Button() With {.Text = "Editar", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 1, 0, 4)}
             UITheme.StyleButton(btnEditar, "Secondary")
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
-            btnToggleActivo = New Button() With {.Text = "🚫 Activar / Desactivar", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 2, 0, 0)}
+            btnToggleActivo = New Button() With {.Text = "🚫 Activar / Desactivar", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 1, 0, 4)}
             UITheme.StyleButton(btnToggleActivo, "Danger")
             AddHandler btnToggleActivo.Click, AddressOf BtnToggleActivo_Click
 
-            chkMostrarInactivos = New CheckBox() With {.Text = "Mostrar inactivos", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 0, 0)}
+            chkMostrarInactivos = New CheckBox() With {.Text = "Mostrar inactivos", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 0, 4)}
             AddHandler chkMostrarInactivos.CheckedChanged, Sub() LoadClientes()
 
             flpToolbar.Controls.AddRange({lblB, txtBuscar, btnBuscar, btnNuevo, btnEditar, btnToggleActivo, chkMostrarInactivos})
@@ -126,32 +129,43 @@ Namespace Forms
 
         Private Sub ConfigurarColumnas()
             dgvClientes.Columns.Clear()
+            dgvClientes.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
             dgvClientes.Columns.Add("Id", "ID")
-            dgvClientes.Columns("Id").Width = 50
+            dgvClientes.Columns("Id").FillWeight = 5
+            dgvClientes.Columns("Id").MinimumWidth = 45
 
             dgvClientes.Columns.Add("Dni", "DNI / CUIT")
-            dgvClientes.Columns("Dni").Width = 120
+            dgvClientes.Columns("Dni").FillWeight = 11
+            dgvClientes.Columns("Dni").MinimumWidth = 90
 
             dgvClientes.Columns.Add("Apellido", "Apellido")
-            dgvClientes.Columns("Apellido").Width = 130
+            dgvClientes.Columns("Apellido").FillWeight = 13
+            dgvClientes.Columns("Apellido").MinimumWidth = 95
 
             dgvClientes.Columns.Add("NombreCompleto", "Nombre")
-            dgvClientes.Columns("NombreCompleto").Width = 130
+            dgvClientes.Columns("NombreCompleto").FillWeight = 13
+            dgvClientes.Columns("NombreCompleto").MinimumWidth = 95
 
             dgvClientes.Columns.Add("Telefono", "Teléfono")
-            dgvClientes.Columns("Telefono").Width = 120
+            dgvClientes.Columns("Telefono").FillWeight = 11
+            dgvClientes.Columns("Telefono").MinimumWidth = 90
 
             dgvClientes.Columns.Add("Email", "Email")
-            dgvClientes.Columns("Email").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvClientes.Columns("Email").FillWeight = 20
+            dgvClientes.Columns("Email").MinimumWidth = 120
 
             dgvClientes.Columns.Add("Ciudad", "Ciudad")
-            dgvClientes.Columns("Ciudad").Width = 110
+            dgvClientes.Columns("Ciudad").FillWeight = 10
+            dgvClientes.Columns("Ciudad").MinimumWidth = 80
 
             dgvClientes.Columns.Add("FechaNac", "Fecha Nac.")
-            dgvClientes.Columns("FechaNac").Width = 95
+            dgvClientes.Columns("FechaNac").FillWeight = 9
+            dgvClientes.Columns("FechaNac").MinimumWidth = 80
 
             dgvClientes.Columns.Add("Activo", "Estado")
-            dgvClientes.Columns("Activo").Width = 85
+            dgvClientes.Columns("Activo").FillWeight = 8
+            dgvClientes.Columns("Activo").MinimumWidth = 70
         End Sub
 
         ''' <summary>

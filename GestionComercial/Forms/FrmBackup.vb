@@ -77,42 +77,65 @@ Namespace Forms
             }
             pnlHeader.Controls.AddRange({lblTitle, lblSub})
 
-            ' Panel de Tarjetas Informativas (KPIs)
+            ' Panel de Tarjetas Informativas (KPIs responsivos en 4 columnas iguales)
             Dim pnlCards As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 125,
                 .BackColor = UITheme.ColorSurfaceMuted,
-                .Padding = New Padding(15, 5, 15, 5)
+                .Padding = New Padding(12, 5, 12, 5)
             }
 
+            Dim tlpCards As New TableLayoutPanel() With {
+                .Dock = DockStyle.Fill,
+                .ColumnCount = 4,
+                .RowCount = 1,
+                .BackColor = Color.Transparent
+            }
+            tlpCards.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpCards.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpCards.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpCards.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpCards.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
+
             Dim cardDb = UITheme.CreateKpiCard("BASE ACTIVA", "SQLite (.db)", "En uso por el sistema", UITheme.ColorPrimary)
-            cardDb.Location = New Point(15, 5)
+            cardDb.Dock = DockStyle.Fill
+            cardDb.Margin = New Padding(3, 3, 6, 3)
             lblDbNombre = CType(cardDb.Controls(2), Label)
 
             Dim cardCant = UITheme.CreateKpiCard("TOTAL BACKUPS", "0", "Copias disponibles", UITheme.ColorSuccess)
-            cardCant.Location = New Point(265, 5)
+            cardCant.Dock = DockStyle.Fill
+            cardCant.Margin = New Padding(6, 3, 6, 3)
             lblCantBackups = CType(cardCant.Controls(2), Label)
 
             Dim cardUlt = UITheme.CreateKpiCard("ÚLTIMO RESPALDO", "-", "Punto más reciente", UITheme.ColorInfo)
-            cardUlt.Location = New Point(515, 5)
+            cardUlt.Dock = DockStyle.Fill
+            cardUlt.Margin = New Padding(6, 3, 6, 3)
             lblUltimoBackup = CType(cardUlt.Controls(2), Label)
 
             Dim cardEst = UITheme.CreateKpiCard("INTEGRIDAD", "100%", "Conformidad ACID activa", UITheme.ColorWarning)
-            cardEst.Location = New Point(765, 5)
+            cardEst.Dock = DockStyle.Fill
+            cardEst.Margin = New Padding(6, 3, 3, 3)
             lblIntegridad = CType(cardEst.Controls(2), Label)
 
-            pnlCards.Controls.AddRange({cardDb, cardCant, cardUlt, cardEst})
+            tlpCards.Controls.Add(cardDb, 0, 0)
+            tlpCards.Controls.Add(cardCant, 1, 0)
+            tlpCards.Controls.Add(cardUlt, 2, 0)
+            tlpCards.Controls.Add(cardEst, 3, 0)
+            pnlCards.Controls.Add(tlpCards)
 
-            ' Toolbar de Operaciones
+            ' Toolbar de Operaciones responsiva
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 55,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 54),
                 .BackColor = UITheme.ColorSurface
             }
             Dim flpToolbar As New FlowLayoutPanel() With {
-                .Dock = DockStyle.Fill,
-                .Padding = New Padding(12, 10, 10, 8),
-                .WrapContents = False
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(12, 10, 12, 6),
+                .WrapContents = True
             }
 
             btnCrearBackup = New Button() With {
@@ -121,7 +144,7 @@ Namespace Forms
                 .AutoSize = True,
                 .AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 .Padding = New Padding(12, 0, 12, 0),
-                .Margin = New Padding(0, 0, 8, 0)
+                .Margin = New Padding(0, 0, 8, 4)
             }
             UITheme.StyleButton(btnCrearBackup, "Success")
             AddHandler btnCrearBackup.Click, AddressOf BtnCrearBackup_Click
@@ -132,7 +155,7 @@ Namespace Forms
                 .AutoSize = True,
                 .AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 .Padding = New Padding(12, 0, 12, 0),
-                .Margin = New Padding(0, 0, 8, 0)
+                .Margin = New Padding(0, 0, 8, 4)
             }
             UITheme.StyleButton(btnCrearEnRuta, "Primary")
             AddHandler btnCrearEnRuta.Click, AddressOf BtnCrearEnRuta_Click
@@ -143,7 +166,7 @@ Namespace Forms
                 .AutoSize = True,
                 .AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 .Padding = New Padding(12, 0, 12, 0),
-                .Margin = New Padding(0, 0, 8, 0)
+                .Margin = New Padding(0, 0, 8, 4)
             }
             UITheme.StyleButton(btnRestaurar, "Danger")
             AddHandler btnRestaurar.Click, AddressOf BtnRestaurar_Click
@@ -154,7 +177,7 @@ Namespace Forms
                 .AutoSize = True,
                 .AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 .Padding = New Padding(10, 0, 10, 0),
-                .Margin = New Padding(0, 0, 8, 0)
+                .Margin = New Padding(0, 0, 8, 4)
             }
             UITheme.StyleButton(btnAbrirCarpeta, "Secondary")
             AddHandler btnAbrirCarpeta.Click, AddressOf BtnAbrirCarpeta_Click
@@ -164,7 +187,8 @@ Namespace Forms
                 .Height = 34,
                 .AutoSize = True,
                 .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                .Padding = New Padding(10, 0, 10, 0)
+                .Padding = New Padding(10, 0, 10, 0),
+                .Margin = New Padding(0, 0, 0, 4)
             }
             UITheme.StyleButton(btnRefrescar, "Secondary")
             AddHandler btnRefrescar.Click, Sub() LoadDashboardBackup()

@@ -68,35 +68,38 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Toolbar con FlowLayoutPanel para garantizar adaptabilidad
+            ' Toolbar con FlowLayoutPanel responsivo para garantizar adaptabilidad
             Dim pnlToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 60,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 56),
                 .BackColor = UITheme.ColorSurface
             }
             Dim flpToolbar As New FlowLayoutPanel() With {
-                .Dock = DockStyle.Fill,
-                .Padding = New Padding(10, 12, 10, 10),
-                .WrapContents = False
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(12, 10, 12, 6),
+                .WrapContents = True
             }
 
-            btnNuevo = New Button() With {.Text = "+ Nuevo Usuario", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0)}
+            btnNuevo = New Button() With {.Text = "+ Nuevo Usuario", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(0, 0, 6, 4)}
             UITheme.StyleButton(btnNuevo, "Success")
             AddHandler btnNuevo.Click, AddressOf BtnNuevo_Click
 
-            btnEditar = New Button() With {.Text = "✏ Editar Datos", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 0, 0, 0)}
+            btnEditar = New Button() With {.Text = "✏ Editar Datos", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(0, 0, 6, 4)}
             UITheme.StyleButton(btnEditar, "Secondary")
             AddHandler btnEditar.Click, AddressOf BtnEditar_Click
 
-            btnCambiarPass = New Button() With {.Text = "🔑 Cambiar Clave", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 0, 0, 0)}
+            btnCambiarPass = New Button() With {.Text = "🔑 Cambiar Clave", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(0, 0, 6, 4)}
             UITheme.StyleButton(btnCambiarPass, "Secondary")
             AddHandler btnCambiarPass.Click, AddressOf BtnCambiarPass_Click
 
-            btnToggleActivo = New Button() With {.Text = "🚫 Activar / Desactivar", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 0, 0, 0)}
+            btnToggleActivo = New Button() With {.Text = "🚫 Activar / Desactivar", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(0, 0, 6, 4)}
             UITheme.StyleButton(btnToggleActivo, "Danger")
             AddHandler btnToggleActivo.Click, AddressOf BtnToggleActivo_Click
 
-            btnRefrescar = New Button() With {.Text = "🔄 Actualizar", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(6, 0, 0, 0)}
+            btnRefrescar = New Button() With {.Text = "🔄 Actualizar", .Height = 34, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(0, 0, 0, 4)}
             UITheme.StyleButton(btnRefrescar, "Secondary")
             AddHandler btnRefrescar.Click, Sub() LoadUsuarios()
 

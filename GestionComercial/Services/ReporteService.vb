@@ -1,4 +1,4 @@
-' ARCHIVO: ReporteService.vb
+﻿' ARCHIVO: ReporteService.vb
 ' PROPÓSITO: Cálculo de métricas comerciales, KPIs de ventas y alertas de stock crítico.
 ' Este servicio alimenta el Dashboard del formulario principal (FrmMain) y la pantalla de reportes analíticos:
 ' 1. KPIs en Tiempo Real: Suma ventas del día de hoy, cuenta tickets emitidos y discrimina
@@ -83,17 +83,17 @@ Namespace Services
                 Dim query As String = "SELECT " &
                                      "IFNULL(SUM(total), 0) AS total_vendido, " &
                                      "COUNT(*) AS cantidad_tickets, " &
-                                     "IFNULL(SUM(CASE WHEN metodo_pago = 'Efectivo' THEN total ELSE 0 END), 0) AS total_efectivo, " &
-                                     "IFNULL(SUM(CASE WHEN metodo_pago != 'Efectivo' THEN total ELSE 0 END), 0) AS total_digital " &
+                                     "IFNULL(SUM(CASE WHEN metodo_pago = 'Efectivo' THEN total WHEN metodo_pago = 'Múltiple' THEN IFNULL(monto_efectivo, 0) ELSE 0 END), 0) AS total_efectivo, " &
+                                     "IFNULL(SUM(CASE WHEN metodo_pago = 'Efectivo' THEN 0 WHEN metodo_pago = 'Múltiple' THEN (total - IFNULL(monto_efectivo, 0)) ELSE total END), 0) AS total_digital " &
                                      "FROM `ventas` WHERE DATE(`fecha`) = CURDATE() AND `estado` = 'Completada';"
 
                 Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query)
                 If dt.Rows.Count > 0 Then
                     Dim row = dt.Rows(0)
-                    resumen.TotalVendido = Convert.ToDecimal(row("total_vendido"))
+                    resumen.TotalVendido = Math.Round(Convert.ToDecimal(row("total_vendido")), 2, MidpointRounding.AwayFromZero)
                     resumen.CantidadTickets = Convert.ToInt32(row("cantidad_tickets"))
-                    resumen.TotalEfectivo = Convert.ToDecimal(row("total_efectivo"))
-                    resumen.TotalDigital = Convert.ToDecimal(row("total_digital"))
+                    resumen.TotalEfectivo = Math.Round(Convert.ToDecimal(row("total_efectivo")), 2, MidpointRounding.AwayFromZero)
+                    resumen.TotalDigital = Math.Round(Convert.ToDecimal(row("total_digital")), 2, MidpointRounding.AwayFromZero)
                 End If
 
                 ' Cantidad de artículos con stock bajo
@@ -103,7 +103,7 @@ Namespace Services
                 resumen.ArticulosStockBajo = Convert.ToInt32(DatabaseHelper.ExecuteScalar(queryStock))
 
             Catch ex As Exception
-                ' Retorna ceros
+                AppLogger.LogError("ReporteService.GetResumenHoy", ex)
             End Try
             Return resumen
         End Function
@@ -139,15 +139,15 @@ Namespace Services
 
                 Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, params)
                 For Each row As DataRow In dt.Rows
-                    Dim recaudado As Decimal = Convert.ToDecimal(row("total_monto"))
-                    Dim costo As Decimal = Convert.ToDecimal(row("total_costo"))
-                    Dim margen As Decimal = Convert.ToDecimal(row("total_margen"))
-                    Dim pctMargen As Decimal = If(recaudado > 0D, Math.Round((margen / recaudado) * 100D, 1), 0D)
+                    Dim recaudado As Decimal = Math.Round(Convert.ToDecimal(row("total_monto")), 2, MidpointRounding.AwayFromZero)
+                    Dim costo As Decimal = Math.Round(Convert.ToDecimal(row("total_costo")), 2, MidpointRounding.AwayFromZero)
+                    Dim margen As Decimal = Math.Round(Convert.ToDecimal(row("total_margen")), 2, MidpointRounding.AwayFromZero)
+                    Dim pctMargen As Decimal = If(recaudado > 0D, Math.Round((margen / recaudado) * 100D, 1, MidpointRounding.AwayFromZero), 0D)
 
                     list.Add(New TopProductoVendido() With {
                         .ProductoId = Convert.ToInt32(row("producto_id")),
                         .Nombre = row("descripcion_articulo").ToString(),
-                        .Talle = If(IsDBNull(row("talle_nombre")), "-", row("talle_nombre").ToString()),
+                        .Talle = If(Convert.IsDBNull(row("talle_nombre")), "-", row("talle_nombre").ToString()),
                         .CantidadVendida = Convert.ToInt32(row("total_cantidad")),
                         .TotalRecaudado = recaudado,
                         .CostoTotal = costo,
@@ -156,7 +156,7 @@ Namespace Services
                     })
                 Next
             Catch ex As Exception
-                ' Silencioso
+                AppLogger.LogError("ReporteService.GetTopProductosVendidos", ex)
             End Try
             Return list
         End Function
@@ -221,13 +221,13 @@ Namespace Services
 
                 Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, params)
                 For Each row As DataRow In dt.Rows
-                    Dim facturado As Decimal = Convert.ToDecimal(row("total_facturado"))
-                    Dim costo As Decimal = Convert.ToDecimal(row("total_costo"))
-                    Dim margen As Decimal = Convert.ToDecimal(row("margen_ganancia"))
-                    Dim pctMargen As Decimal = If(facturado > 0D, Math.Round((margen / facturado) * 100D, 1), 0D)
+                    Dim facturado As Decimal = Math.Round(Convert.ToDecimal(row("total_facturado")), 2, MidpointRounding.AwayFromZero)
+                    Dim costo As Decimal = Math.Round(Convert.ToDecimal(row("total_costo")), 2, MidpointRounding.AwayFromZero)
+                    Dim margen As Decimal = Math.Round(Convert.ToDecimal(row("margen_ganancia")), 2, MidpointRounding.AwayFromZero)
+                    Dim pctMargen As Decimal = If(facturado > 0D, Math.Round((margen / facturado) * 100D, 1, MidpointRounding.AwayFromZero), 0D)
 
                     Dim ultimaFecha As Nullable(Of DateTime) = Nothing
-                    If Not IsDBNull(row("ultima_compra")) Then
+                    If Not Convert.IsDBNull(row("ultima_compra")) Then
                         Dim parsed As DateTime
                         If DateTime.TryParse(row("ultima_compra").ToString(), parsed) Then
                             ultimaFecha = parsed
@@ -249,7 +249,7 @@ Namespace Services
                     })
                 Next
             Catch ex As Exception
-                ' Silencioso
+                AppLogger.LogError("ReporteService.GetReporteVentasPorCliente", ex)
             End Try
             Return list
         End Function
@@ -277,7 +277,7 @@ Namespace Services
                     })
                 Next
             Catch ex As Exception
-                ' Silencioso
+                AppLogger.LogError("ReporteService.GetAlertasStockBajo", ex)
             End Try
             Return list
         End Function

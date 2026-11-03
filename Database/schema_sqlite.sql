@@ -3,6 +3,9 @@
 -- Sistema de Gestión Comercial para Local de Ropa / Indumentaria
 -- =======================================================================
 
+PRAGMA foreign_keys = ON;
+PRAGMA journal_mode = WAL;
+
 -- 1. TABLA: configuracion
 CREATE TABLE IF NOT EXISTS configuracion (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -128,13 +131,15 @@ CREATE TABLE IF NOT EXISTS movimientos_caja (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     caja_id INTEGER NOT NULL,
     usuario_id INTEGER NOT NULL,
+    autorizado_por_id INTEGER NULL,
     fecha TEXT DEFAULT (datetime('now', 'localtime')),
     tipo TEXT NOT NULL,
     concepto TEXT NOT NULL,
     monto REAL NOT NULL,
     referencia TEXT NULL,
     FOREIGN KEY (caja_id) REFERENCES cajas(id) ON DELETE CASCADE,
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    FOREIGN KEY (autorizado_por_id) REFERENCES usuarios(id)
 );
 
 -- 10. TABLA: ventas
@@ -143,6 +148,7 @@ CREATE TABLE IF NOT EXISTS ventas (
     numero_ticket TEXT NOT NULL UNIQUE,
     fecha TEXT DEFAULT (datetime('now', 'localtime')),
     usuario_id INTEGER NOT NULL,
+    autorizado_por_id INTEGER NULL,
     cliente_id INTEGER NOT NULL,
     caja_id INTEGER NOT NULL,
     tipo_comprobante TEXT NOT NULL DEFAULT 'Ticket',
@@ -152,11 +158,13 @@ CREATE TABLE IF NOT EXISTS ventas (
     descuento_monto REAL NOT NULL DEFAULT 0.0,
     recargo_monto REAL NOT NULL DEFAULT 0.0,
     total REAL NOT NULL DEFAULT 0.0,
+    monto_efectivo REAL NULL,
     monto_abonado REAL NOT NULL DEFAULT 0.0,
     vuelto REAL NOT NULL DEFAULT 0.0,
     estado TEXT NOT NULL DEFAULT 'Completada',
     observaciones TEXT NULL,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    FOREIGN KEY (autorizado_por_id) REFERENCES usuarios(id),
     FOREIGN KEY (cliente_id) REFERENCES clientes(id),
     FOREIGN KEY (caja_id) REFERENCES cajas(id)
 );
@@ -202,3 +210,5 @@ CREATE INDEX IF NOT EXISTS idx_prod_codigo ON productos (codigo_barra);
 CREATE INDEX IF NOT EXISTS idx_prod_nombre ON productos (nombre);
 CREATE INDEX IF NOT EXISTS idx_ventas_fecha ON ventas (fecha);
 CREATE INDEX IF NOT EXISTS idx_ventas_ticket ON ventas (numero_ticket);
+CREATE INDEX IF NOT EXISTS idx_ventas_caja ON ventas (caja_id);
+CREATE INDEX IF NOT EXISTS idx_mov_stock_prod ON movimientos_stock (producto_id, fecha);

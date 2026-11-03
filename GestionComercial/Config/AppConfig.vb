@@ -1,4 +1,4 @@
-' ARCHIVO: AppConfig.vb
+﻿' ARCHIVO: AppConfig.vb
 ' PROPÓSITO: Administrador centralizado de la configuración de base de datos del sistema.
 ' En este archivo manejamos la configuración de persistencia del sistema. Decidimos
 ' guardar los parámetros en formato JSON (appsettings.json) usando System.Text.Json.
@@ -7,6 +7,8 @@
 
 Imports System.IO
 Imports System.Text.Json
+Imports System.Text.Json.Serialization
+Imports GestionComercial.Services
 
 Namespace Config
 
@@ -16,8 +18,16 @@ Namespace Config
         Public Property Provider As String = "SQLite"
         Public Property SqliteFileName As String = "gestion_comercial.db"
 
+        ' Permite redirigir la conexión a un archivo temporal aislado durante pruebas automatizadas.
+        <JsonIgnore>
+        Public Property CustomDatabasePath As String = String.Empty
+
         ' Ubica el archivo SQLite (.db) buscando en las carpetas relativas del proyecto o junto al ejecutable.
         Public Function GetSqlitePath() As String
+            If Not String.IsNullOrWhiteSpace(CustomDatabasePath) Then
+                Return Path.GetFullPath(CustomDatabasePath)
+            End If
+
             Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
             Dim candidates As String() = {
                 Path.Combine(baseDir, "..", "..", "..", "..", "Database", SqliteFileName),
@@ -33,7 +43,8 @@ Namespace Config
                     If File.Exists(full) Then
                         Return full
                     End If
-                Catch
+                Catch ex As Exception
+                    AppLogger.LogWarning("Ruta candidata SQLite inválida: " & c, ex)
                 End Try
             Next
 
@@ -41,10 +52,11 @@ Namespace Config
             For Each c In candidates
                 Try
                     Dim dir = Path.GetDirectoryName(Path.GetFullPath(c))
-                    If Directory.Exists(dir) Then
+                    If Not String.IsNullOrEmpty(dir) AndAlso Directory.Exists(dir) Then
                         Return Path.Combine(dir, SqliteFileName)
                     End If
-                Catch
+                Catch ex As Exception
+                    AppLogger.LogWarning("Directorio candidato SQLite inválido: " & c, ex)
                 End Try
             Next
 
@@ -52,9 +64,9 @@ Namespace Config
             Return Path.Combine(baseDir, SqliteFileName)
         End Function
 
-        ' Construye la cadena de conexión completa para SQLite.
+        ' Construye la cadena de conexión completa para SQLite con integridad referencial activa (Foreign Keys=True).
         Public Function GetConnectionString() As String
-            Return $"Data Source={GetSqlitePath()};"
+            Return $"Data Source={GetSqlitePath()};Foreign Keys=True;"
         End Function
     End Class
 
@@ -84,17 +96,19 @@ Namespace Config
                     _settings = JsonSerializer.Deserialize(Of DatabaseSettings)(json)
                 End If
             Catch ex As Exception
-                ' Si hay error de lectura, usamos valores por defecto
+                ' Si hay error de lectura, registramos la advertencia y usamos valores por defecto
+                AppLogger.LogWarning("No se pudo leer appsettings.json, usando configuración por defecto.", ex)
             End Try
 
             If _settings Is Nothing Then
                 _settings = New DatabaseSettings()
                 SaveSettings()
-            Else
-                If String.IsNullOrWhiteSpace(_settings.Provider) Then
-                    _settings.Provider = "SQLite"
-                    SaveSettings()
-                End If
+                Return
+            End If
+
+            If String.IsNullOrWhiteSpace(_settings.Provider) Then
+                _settings.Provider = "SQLite"
+                SaveSettings()
             End If
         End Sub
 
@@ -105,7 +119,8 @@ Namespace Config
                 Dim json As String = JsonSerializer.Serialize(_settings, options)
                 File.WriteAllText(ConfigFilePath, json)
             Catch ex As Exception
-                ' Error silencioso para no interrumpir el flujo si el archivo está bloqueado
+                ' Registramos el aviso sin interrumpir el flujo si el archivo está bloqueado
+                AppLogger.LogWarning("No se pudo guardar appsettings.json.", ex)
             End Try
         End Sub
 

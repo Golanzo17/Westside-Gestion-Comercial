@@ -3,9 +3,11 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <RootNamespace>GestionComercial</RootNamespace>
-    <StartupObject>Sub Main</StartupObject>
+    <StartupObject>GestionComercial.Program</StartupObject>
     <UseWindowsForms>true</UseWindowsForms>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionStrict>On</OptionStrict>
+    <OptionInfer>On</OptionInfer>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,15 +17,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="GestionComercial.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.11" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\Database\*.sql">
-      <Link>Database\%(Filename)%(Extension)</Link>
+    <None Update="Database\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

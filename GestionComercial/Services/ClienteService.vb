@@ -1,4 +1,4 @@
-' ARCHIVO: ClienteService.vb
+﻿' ARCHIVO: ClienteService.vb
 ' PROPÓSITO: Lógica de directorio de clientes, búsqueda rápida y validación de DNI/CUIT.
 ' En este servicio manejamos los compradores del negocio:
 ' 1. Búsqueda Multicriterio en POS: Permite buscar un cliente por DNI, nombre, apellido
@@ -49,7 +49,7 @@ Namespace Services
 
         Private Function MapCliente(row As DataRow) As Cliente
             Dim fnac As Nullable(Of DateTime) = Nothing
-            If Not IsDBNull(row("fecha_nacimiento")) Then
+            If Not Convert.IsDBNull(row("fecha_nacimiento")) Then
                 Dim parsed As DateTime
                 If DateTime.TryParse(row("fecha_nacimiento").ToString(), parsed) Then
                     fnac = parsed
@@ -60,11 +60,11 @@ Namespace Services
                 .DniCuit = row("dni_cuit").ToString(),
                 .Nombre = row("nombre").ToString(),
                 .Apellido = row("apellido").ToString(),
-                .Telefono = If(IsDBNull(row("telefono")), "", row("telefono").ToString()),
-                .Email = If(IsDBNull(row("email")), "", row("email").ToString()),
-                .Direccion = If(IsDBNull(row("direccion")), "", row("direccion").ToString()),
-                .Ciudad = If(IsDBNull(row("ciudad")), "", row("ciudad").ToString()),
-                .Notas = If(IsDBNull(row("notas")), "", row("notas").ToString()),
+                .Telefono = If(Convert.IsDBNull(row("telefono")), "", row("telefono").ToString()),
+                .Email = If(Convert.IsDBNull(row("email")), "", row("email").ToString()),
+                .Direccion = If(Convert.IsDBNull(row("direccion")), "", row("direccion").ToString()),
+                .Ciudad = If(Convert.IsDBNull(row("ciudad")), "", row("ciudad").ToString()),
+                .Notas = If(Convert.IsDBNull(row("notas")), "", row("notas").ToString()),
                 .FechaNacimiento = fnac,
                 .Activo = Convert.ToBoolean(row("activo"))
             }
@@ -145,7 +145,6 @@ Namespace Services
                 ' Control preventivo de unicidad de DNI
                 Dim clienteDuplicado As Cliente = Nothing
                 If ExisteDni(dniTrimmed, cli.Id, clienteDuplicado) Then
-                    Dim estadoDesc = If(clienteDuplicado.Activo, "activo", "dado de baja")
                     If clienteDuplicado.Activo Then
                         errorMessage = $"Ya existe un cliente registrado con el DNI/CUIT '{dniTrimmed}': {clienteDuplicado.NombreCompleto}."
                     Else
@@ -163,7 +162,7 @@ Namespace Services
                     {"@email", cli.Email.Trim()},
                     {"@dir",   cli.Direccion.Trim()},
                     {"@ciu",   cli.Ciudad.Trim()},
-                    {"@notas", cli.Notas.Trim()},
+                    {"@notas", If(cli.Notas, "").Trim()},
                     {"@fnac",  If(cli.FechaNacimiento.HasValue, CObj(cli.FechaNacimiento.Value.ToString("yyyy-MM-dd")), DBNull.Value)},
                     {"@activo", If(cli.Activo, 1, 0)}
                 }
@@ -182,6 +181,7 @@ Namespace Services
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("ClienteService.GuardarCliente", ex)
                 errorMessage = ex.Message
                 Return False
             End Try
@@ -194,6 +194,7 @@ Namespace Services
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("ClienteService.EliminarCliente", ex)
                 errorMessage = ex.Message
                 Return False
             End Try
@@ -225,6 +226,7 @@ Namespace Services
                 errorMessage = String.Empty
                 Return True
             Catch ex As Exception
+                AppLogger.LogError("ClienteService.ToggleActivo", ex)
                 errorMessage = ex.Message
                 Return False
             End Try

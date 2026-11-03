@@ -162,16 +162,28 @@ Namespace Forms
             Dim pnlContent As New Panel() With {
                 .Dock = DockStyle.Fill,
                 .AutoScroll = True,
-                .Padding = New Padding(20)
+                .Padding = New Padding(16)
             }
+
+            Dim tlpConciliacion As New TableLayoutPanel() With {
+                .Dock = DockStyle.Fill,
+                .ColumnCount = 2,
+                .RowCount = 1,
+                .MinimumSize = New Size(820, 485),
+                .BackColor = Color.Transparent
+            }
+            tlpConciliacion.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 51.0F))
+            tlpConciliacion.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 49.0F))
+            tlpConciliacion.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
 
             ' Tarjeta Izquierda: Fórmula y Conciliación Matemática
             Dim pnlFormulaCard As New Panel() With {
-                .Location = New Point(20, 20),
-                .Size = New Size(440, 480),
+                .Dock = DockStyle.Fill,
+                .Margin = New Padding(4, 4, 8, 4),
                 .BackColor = UITheme.ColorSurface,
                 .Padding = New Padding(18)
             }
+            AddHandler pnlFormulaCard.Resize, Sub(s, ev) pnlFormulaCard.Invalidate()
             AddHandler pnlFormulaCard.Paint, Sub(s, ev)
                                                  Using pen As New Pen(UITheme.ColorBorder, 1)
                                                      ev.Graphics.DrawRectangle(pen, 0, 0, pnlFormulaCard.Width - 1, pnlFormulaCard.Height - 1)
@@ -207,7 +219,7 @@ Namespace Forms
 
             ' Divisor
             yPos += 38
-            Dim div1 As New Panel() With {.Location = New Point(18, yPos), .Size = New Size(404, 1), .BackColor = UITheme.ColorBorder}
+            Dim div1 As New Panel() With {.Location = New Point(18, yPos), .Size = New Size(404, 1), .BackColor = UITheme.ColorBorder, .Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right}
             pnlFormulaCard.Controls.Add(div1)
 
             yPos += 10
@@ -216,7 +228,7 @@ Namespace Forms
             lblFormulaReal = AgregarFilaFormula(pnlFormulaCard, "Conteo Real Declarado por Vendedor:", "$ 0,00", yPos, UITheme.ColorTextPrimary, True)
 
             yPos += 42
-            Dim div2 As New Panel() With {.Location = New Point(18, yPos), .Size = New Size(404, 2), .BackColor = UITheme.ColorBorderStrong}
+            Dim div2 As New Panel() With {.Location = New Point(18, yPos), .Size = New Size(404, 2), .BackColor = UITheme.ColorBorderStrong, .Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right}
             pnlFormulaCard.Controls.Add(div2)
 
             yPos += 14
@@ -242,17 +254,19 @@ Namespace Forms
                 .ReadOnly = True,
                 .BackColor = UITheme.ColorSurfaceMuted,
                 .ScrollBars = ScrollBars.Vertical,
-                .Font = UITheme.FontRegular
+                .Font = UITheme.FontRegular,
+                .Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right Or AnchorStyles.Bottom
             }
             pnlFormulaCard.Controls.Add(txtObservaciones)
 
             ' Tarjeta Derecha: Conciliación de Medios de Pago
             Dim pnlMediosCard As New Panel() With {
-                .Location = New Point(475, 20),
-                .Size = New Size(420, 480),
+                .Dock = DockStyle.Fill,
+                .Margin = New Padding(8, 4, 4, 4),
                 .BackColor = UITheme.ColorSurface,
                 .Padding = New Padding(18)
             }
+            AddHandler pnlMediosCard.Resize, Sub(s, ev) pnlMediosCard.Invalidate()
             AddHandler pnlMediosCard.Paint, Sub(s, ev)
                                                 Using pen As New Pen(UITheme.ColorBorder, 1)
                                                     ev.Graphics.DrawRectangle(pen, 0, 0, pnlMediosCard.Width - 1, pnlMediosCard.Height - 1)
@@ -277,7 +291,7 @@ Namespace Forms
 
             dgvMediosPago = New DataGridView() With {
                 .Location = New Point(18, 70),
-                .Size = New Size(384, 385),
+                .Size = New Size(pnlMediosCard.ClientSize.Width - 36, pnlMediosCard.ClientSize.Height - 88),
                 .Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right Or AnchorStyles.Bottom
             }
             UITheme.StyleDataGrid(dgvMediosPago)
@@ -285,7 +299,9 @@ Namespace Forms
 
             pnlMediosCard.Controls.AddRange({lblTitleMedios, lblSubMedios, dgvMediosPago})
 
-            pnlContent.Controls.AddRange({pnlFormulaCard, pnlMediosCard})
+            tlpConciliacion.Controls.Add(pnlFormulaCard, 0, 0)
+            tlpConciliacion.Controls.Add(pnlMediosCard, 1, 0)
+            pnlContent.Controls.Add(tlpConciliacion)
             tabConciliacion.Controls.Add(pnlContent)
         End Sub
 
@@ -303,9 +319,10 @@ Namespace Forms
                 .Text = valText,
                 .Font = If(isBold, UITheme.FontBold, UITheme.FontRegular),
                 .ForeColor = valColor,
-                .Location = New Point(265, y),
+                .Location = New Point(parent.ClientSize.Width - 175, y),
                 .Size = New Size(157, 24),
-                .TextAlign = ContentAlignment.MiddleRight
+                .TextAlign = ContentAlignment.MiddleRight,
+                .Anchor = AnchorStyles.Top Or AnchorStyles.Right
             }
 
             parent.Controls.AddRange({lblDesc, lblVal})

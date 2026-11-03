@@ -106,29 +106,32 @@ Namespace Forms
             }
             pnlHeader.Controls.Add(lblTitle)
 
-            ' Toolbar de Fechas general
+            ' Toolbar de Fechas general responsiva
             Dim pnlFilter As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 55,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 52),
                 .BackColor = UITheme.ColorSurface
             }
             Dim flpFilter As New FlowLayoutPanel() With {
-                .Dock = DockStyle.Fill,
-                .Padding = New Padding(10, 12, 10, 10),
-                .WrapContents = False
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(12, 10, 12, 6),
+                .WrapContents = True
             }
 
-            Dim lblD As New Label() With {.Text = "Desde:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 4, 0)}
-            dtpDesde = New DateTimePicker() With {.Size = New Size(125, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddDays(-7), .Margin = New Padding(0, 3, 0, 0)}
+            Dim lblD As New Label() With {.Text = "Desde:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 4, 4)}
+            dtpDesde = New DateTimePicker() With {.Size = New Size(125, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddDays(-7), .Margin = New Padding(0, 3, 0, 4)}
 
-            Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 4, 0)}
-            dtpHasta = New DateTimePicker() With {.Size = New Size(125, 26), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today, .Margin = New Padding(0, 3, 0, 0)}
+            Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 4, 4)}
+            dtpHasta = New DateTimePicker() With {.Size = New Size(125, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today, .Margin = New Padding(0, 3, 0, 4)}
 
-            btnFiltrar = New Button() With {.Text = "Generar Reportes", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(12, 2, 0, 0)}
+            btnFiltrar = New Button() With {.Text = "Generar Reportes", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(12, 0, 12, 0), .Margin = New Padding(12, 1, 0, 4)}
             UITheme.StyleButton(btnFiltrar, "Primary")
             AddHandler btnFiltrar.Click, Sub() LoadReportes()
 
-            btnAnularVenta = New Button() With {.Text = "Anular Venta Seleccionada", .Height = 30, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(10, 0, 10, 0), .Margin = New Padding(10, 2, 0, 0)}
+            btnAnularVenta = New Button() With {.Text = "Anular Venta Seleccionada", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(12, 0, 12, 0), .Margin = New Padding(10, 1, 0, 4)}
             UITheme.StyleButton(btnAnularVenta, "Danger")
             btnAnularVenta.Visible = AuthService.IsAdminOrManager
             AddHandler btnAnularVenta.Click, AddressOf BtnAnularVenta_Click
@@ -136,31 +139,51 @@ Namespace Forms
             flpFilter.Controls.AddRange({lblD, dtpDesde, lblH, dtpHasta, btnFiltrar, btnAnularVenta})
             pnlFilter.Controls.Add(flpFilter)
 
-            ' Tarjetas KPI para balance global del período
+            ' Tarjetas KPI para balance global del período (responsivas en 4 columnas iguales)
             Dim pnlKpis As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 125,
                 .BackColor = UITheme.ColorSurfaceMuted,
-                .Padding = New Padding(15, 5, 15, 5)
+                .Padding = New Padding(12, 5, 12, 5)
             }
 
+            Dim tlpKpis As New TableLayoutPanel() With {
+                .Dock = DockStyle.Fill,
+                .ColumnCount = 4,
+                .RowCount = 1,
+                .BackColor = Color.Transparent
+            }
+            tlpKpis.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpKpis.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpKpis.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpKpis.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
+            tlpKpis.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
+
             Dim cardTot = UITheme.CreateKpiCard("TOTAL FACTURADO", "$ 0,00", "En el período seleccionado", UITheme.ColorSuccess)
-            cardTot.Location = New Point(15, 5)
+            cardTot.Dock = DockStyle.Fill
+            cardTot.Margin = New Padding(3, 3, 6, 3)
             lblTotalVentas = CType(cardTot.Controls(2), Label)
 
             Dim cardCant = UITheme.CreateKpiCard("CANTIDAD VENTAS", "0", "Tickets emitidos", UITheme.ColorPrimary)
-            cardCant.Location = New Point(265, 5)
+            cardCant.Dock = DockStyle.Fill
+            cardCant.Margin = New Padding(6, 3, 6, 3)
             lblCantTickets = CType(cardCant.Controls(2), Label)
 
             Dim cardEf = UITheme.CreateKpiCard("COBRADO EN EFECTIVO", "$ 0,00", "Total en billetes", UITheme.ColorWarning)
-            cardEf.Location = New Point(515, 5)
+            cardEf.Dock = DockStyle.Fill
+            cardEf.Margin = New Padding(6, 3, 6, 3)
             lblEfectivo = CType(cardEf.Controls(2), Label)
 
             Dim cardDig = UITheme.CreateKpiCard("COBRADO DIGITAL", "$ 0,00", "Tarjetas y transferencias", UITheme.ColorInfo)
-            cardDig.Location = New Point(765, 5)
+            cardDig.Dock = DockStyle.Fill
+            cardDig.Margin = New Padding(6, 3, 3, 3)
             lblDigital = CType(cardDig.Controls(2), Label)
 
-            pnlKpis.Controls.AddRange({cardTot, cardCant, cardEf, cardDig})
+            tlpKpis.Controls.Add(cardTot, 0, 0)
+            tlpKpis.Controls.Add(cardCant, 1, 0)
+            tlpKpis.Controls.Add(cardEf, 2, 0)
+            tlpKpis.Controls.Add(cardDig, 3, 0)
+            pnlKpis.Controls.Add(tlpKpis)
 
             ' TabControl con 3 secciones analíticas
             tabs = New TabControl() With {
@@ -212,34 +235,37 @@ Namespace Forms
         End Sub
 
         Private Sub ConstruirTabClientes()
-            ' Panel superior de filtros para clientes
+            ' Panel superior de filtros para clientes (responsivo)
             Dim pnlClientesToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 50,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 48),
                 .BackColor = UITheme.ColorSurface
             }
             Dim flpClientes As New FlowLayoutPanel() With {
-                .Dock = DockStyle.Fill,
-                .Padding = New Padding(10, 10, 10, 8),
-                .WrapContents = False
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(10, 10, 10, 6),
+                .WrapContents = True
             }
 
-            Dim lblCli As New Label() With {.Text = "Cliente:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 4, 0)}
+            Dim lblCli As New Label() With {.Text = "Cliente:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 4, 4)}
             cboClientesFiltro = New ComboBox() With {
                 .DropDownStyle = ComboBoxStyle.DropDownList,
                 .Width = 260,
-                .Margin = New Padding(0, 3, 0, 0)
+                .Margin = New Padding(0, 3, 0, 4)
             }
             UITheme.StyleComboBox(cboClientesFiltro)
             AddHandler cboClientesFiltro.SelectedIndexChanged, Sub()
                                                                    If Not isLoading Then LoadVentasPorCliente()
                                                                End Sub
 
-            Dim lblOrd As New Label() With {.Text = "Ordenar por:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(14, 6, 4, 0)}
+            Dim lblOrd As New Label() With {.Text = "Ordenar por:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(14, 6, 4, 4)}
             cboOrdenClientes = New ComboBox() With {
                 .DropDownStyle = ComboBoxStyle.DropDownList,
                 .Width = 220,
-                .Margin = New Padding(0, 3, 0, 0)
+                .Margin = New Padding(0, 3, 0, 4)
             }
             UITheme.StyleComboBox(cboOrdenClientes)
             cboOrdenClientes.Items.AddRange({"Mayor Facturación ($)", "Mayor Salida (Prendas)", "Mayor Margen de Ganancia ($)"})
@@ -252,7 +278,7 @@ Namespace Forms
                 .AutoSize = True,
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorPrimaryDark,
-                .Margin = New Padding(20, 7, 0, 0),
+                .Margin = New Padding(20, 7, 0, 4),
                 .Text = "Cargando métricas..."
             }
 
@@ -277,22 +303,24 @@ Namespace Forms
             ' Panel inferior: detalle de tickets del cliente
             Dim pnlTicketsHeader As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 36,
+                .Height = 46,
                 .BackColor = UITheme.ColorSurfaceMuted,
-                .Padding = New Padding(12, 6, 12, 6)
+                .Padding = New Padding(12, 7, 12, 7)
             }
             lblTicketsClienteHeader = New Label() With {
                 .Text = "Comprobantes emitidos del cliente seleccionado",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorTextPrimary,
-                .AutoSize = True,
-                .Dock = DockStyle.Left
+                .AutoSize = False,
+                .Dock = DockStyle.Fill,
+                .TextAlign = ContentAlignment.MiddleLeft,
+                .AutoEllipsis = True
             }
             btnVerDetalleTicketCliente = New Button() With {
                 .Text = "Ver Detalle de Prendas del Ticket",
                 .Dock = DockStyle.Right,
-                .Width = 230,
-                .Height = 26
+                .Width = 240,
+                .Height = 32
             }
             UITheme.StyleButton(btnVerDetalleTicketCliente, "Secondary")
             AddHandler btnVerDetalleTicketCliente.Click, AddressOf BtnVerDetalleTicketCliente_Click
@@ -315,13 +343,16 @@ Namespace Forms
         Private Sub ConstruirTabRanking()
             Dim pnlRankingToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 48,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 48),
                 .BackColor = UITheme.ColorSurface
             }
             Dim flpRanking As New FlowLayoutPanel() With {
-                .Dock = DockStyle.Fill,
-                .Padding = New Padding(12, 10, 10, 8),
-                .WrapContents = False
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(12, 10, 10, 6),
+                .WrapContents = True
             }
 
             Dim lblCrit As New Label() With {.Text = "Criterio de Ranking:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 5, 8, 0)}
@@ -570,6 +601,10 @@ Namespace Forms
                     validTickets += 1
                     If v.MetodoPago = "Efectivo" Then
                         totalEfec += v.Total
+                    ElseIf v.MetodoPago = "Múltiple" Then
+                        Dim efecMixto = Math.Max(0D, Math.Min(v.MontoEfectivo.GetValueOrDefault(0D), v.Total))
+                        totalEfec += efecMixto
+                        totalDig += (v.Total - efecMixto)
                     Else
                         totalDig += v.Total
                     End If
@@ -795,8 +830,8 @@ Namespace Forms
             }
             Dim btnGuardarPdf As New Button() With {
                 .Text = "Guardar ticket en PDF",
-                .Size = New Size(155, 32),
-                .Location = New Point(modal.ClientSize.Width - 285, 9),
+                .Size = New Size(175, 32),
+                .Location = New Point(modal.ClientSize.Width - 305, 9),
                 .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
             }
             UITheme.StyleButton(btnCerrar, "Secondary")
@@ -880,15 +915,16 @@ Namespace Forms
 
                     MessageBox.Show("El ticket se guardó correctamente en PDF.", "Ticket guardado", MessageBoxButtons.OK, MessageBoxIcon.Information)
                 Catch ex As Exception
+                    AppLogger.LogError("FrmReportes.GuardarTicketEnPdf", ex)
                     MessageBox.Show("No se pudo guardar el ticket en PDF: " & ex.Message, "Error de impresión", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 End Try
             End Using
         End Sub
 
-        Private Shared Function ConstruirLineasTicket(venta As Venta, configuracion As ConfiguracionComercio) As List(Of String)
+        Friend Shared Function ConstruirLineasTicket(venta As Venta, configuracion As ConfiguracionComercio) As List(Of String)
             Dim contenido As New System.Text.StringBuilder()
             contenido.AppendLine("==========================================")
-            contenido.AppendLine(configuracion.NombreComercio.ToUpper())
+            contenido.AppendLine(configuracion.NombreComercio.ToUpperInvariant())
             contenido.AppendLine($"CUIT: {configuracion.Cuit} - {configuracion.CondicionIva}")
             contenido.AppendLine($"Dirección: {configuracion.Direccion}")
             contenido.AppendLine($"Teléfono: {configuracion.Telefono}")
@@ -1008,8 +1044,9 @@ Namespace Forms
 
                 If prompt.ShowDialog() = DialogResult.OK Then
                     Dim userId As Integer = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.Id, 1)
+                    Dim autorizadorId As Integer = If(AuthService.LastAuthorizingSupervisor IsNot Nothing, AuthService.LastAuthorizingSupervisor.Id, userId)
                     Dim errMsg As String = ""
-                    If ventaService.AnularVenta(ventaId, userId, txtMot.Text.Trim(), errMsg) Then
+                    If ventaService.AnularVenta(ventaId, autorizadorId, txtMot.Text.Trim(), errMsg) Then
                         MessageBox.Show("Venta anulada y stock devuelto exitosamente.", "Anulación Exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information)
                         LoadReportes()
                     Else

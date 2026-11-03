@@ -171,6 +171,35 @@ Namespace Forms
                 btnFiltrar, btnLimpiar, btnExportarCSV, btnRefrescar
             })
 
+            AddHandler pnlFiltros.Resize, Sub(s, ev)
+                                              Dim w = pnlFiltros.ClientSize.Width
+                                              If w <= 100 Then Return
+                                              If w >= 960 Then
+                                                  lblF1.Left = 15 : cboRapidoFechas.Left = 15 : cboRapidoFechas.Width = 140
+                                                  lblF2.Left = 165 : dtpDesde.Left = 165 : dtpDesde.Width = 115
+                                                  lblF3.Left = 290 : dtpHasta.Left = 290 : dtpHasta.Width = 115
+                                                  lblF4.Left = 415 : cboVendedor.Left = 415 : cboVendedor.Width = 180
+                                                  lblF5.Left = 605 : cboEstado.Left = 605 : cboEstado.Width = 140
+                                                  lblF6.Left = 755 : cboDiscrepancia.Left = 755 : cboDiscrepancia.Width = Math.Min(220, w - 770)
+                                              Else
+                                                  ' Modo compacto responsivo para pantallas de 1024px - 1200px
+                                                  Dim avail = w - 30
+                                                  Dim w1 = Math.Max(95, CInt(avail * 0.14))
+                                                  Dim w2 = Math.Max(95, CInt(avail * 0.13))
+                                                  Dim w3 = Math.Max(95, CInt(avail * 0.13))
+                                                  Dim w4 = Math.Max(110, CInt(avail * 0.19))
+                                                  Dim w5 = Math.Max(105, CInt(avail * 0.16))
+                                                  Dim x = 15
+                                                  lblF1.Left = x : cboRapidoFechas.Left = x : cboRapidoFechas.Width = w1 : x += w1 + 6
+                                                  lblF2.Left = x : dtpDesde.Left = x : dtpDesde.Width = w2 : x += w2 + 6
+                                                  lblF3.Left = x : dtpHasta.Left = x : dtpHasta.Width = w3 : x += w3 + 6
+                                                  lblF4.Left = x : cboVendedor.Left = x : cboVendedor.Width = w4 : x += w4 + 6
+                                                  lblF5.Left = x : cboEstado.Left = x : cboEstado.Width = w5 : x += w5 + 6
+                                                  lblF6.Left = x : cboDiscrepancia.Left = x : cboDiscrepancia.Width = Math.Max(110, w - 15 - x)
+                                              End If
+                                              pnlFiltros.Invalidate()
+                                          End Sub
+
             ' ─── Fila Superior de Tarjetas KPI (TableLayoutPanel responsivo) ───
             Dim pnlKpis As New Panel() With {
                 .Dock = DockStyle.Top,
@@ -225,24 +254,33 @@ Namespace Forms
             ' ─── Panel Inferior de Acciones y Footer ───
             Dim pnlFooter As New Panel() With {
                 .Dock = DockStyle.Bottom,
-                .Height = 55,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 55),
                 .BackColor = UITheme.ColorSurfaceMuted,
-                .Padding = New Padding(15, 10, 15, 10)
+                .Padding = New Padding(12, 8, 12, 8)
             }
 
-            btnAuditar = New Button() With {.Text = "🔍 Auditar Turno Seleccionado", .Location = New Point(15, 10), .Size = New Size(230, 35)}
+            Dim flpFooterBtns As New FlowLayoutPanel() With {
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .WrapContents = True,
+                .BackColor = Color.Transparent
+            }
+
+            btnAuditar = New Button() With {.Text = "🔍 Auditar Turno Seleccionado", .Size = New Size(230, 35), .Margin = New Padding(0, 0, 8, 4)}
             UITheme.StyleButton(btnAuditar, "Primary")
             AddHandler btnAuditar.Click, AddressOf BtnAuditar_Click
 
-            btnVerActa = New Button() With {.Text = "📄 Ver Acta Oficial", .Location = New Point(255, 10), .Size = New Size(160, 35)}
+            btnVerActa = New Button() With {.Text = "📄 Ver Acta Oficial", .Size = New Size(160, 35), .Margin = New Padding(0, 0, 8, 4)}
             UITheme.StyleButton(btnVerActa, "Secondary")
             AddHandler btnVerActa.Click, AddressOf BtnVerActa_Click
 
-            btnVerMovimientos = New Button() With {.Text = "💵 Gastos y Retiros", .Location = New Point(425, 10), .Size = New Size(160, 35)}
+            btnVerMovimientos = New Button() With {.Text = "💵 Gastos y Retiros", .Size = New Size(160, 35), .Margin = New Padding(0, 0, 8, 4)}
             UITheme.StyleButton(btnVerMovimientos, "Secondary")
             AddHandler btnVerMovimientos.Click, AddressOf BtnVerMovimientos_Click
 
-            btnVerTickets = New Button() With {.Text = "🧾 Tickets de Venta", .Location = New Point(595, 10), .Size = New Size(160, 35)}
+            btnVerTickets = New Button() With {.Text = "🧾 Tickets de Venta", .Size = New Size(160, 35), .Margin = New Padding(0, 0, 12, 4)}
             UITheme.StyleButton(btnVerTickets, "Secondary")
             AddHandler btnVerTickets.Click, AddressOf BtnVerTickets_Click
 
@@ -251,11 +289,11 @@ Namespace Forms
                 .Font = UITheme.FontSmall,
                 .ForeColor = UITheme.ColorTextSecondary,
                 .AutoSize = True,
-                .Location = New Point(770, 18),
-                .Anchor = AnchorStyles.Top Or AnchorStyles.Right
+                .Margin = New Padding(6, 10, 0, 4)
             }
 
-            pnlFooter.Controls.AddRange({btnAuditar, btnVerActa, btnVerMovimientos, btnVerTickets, lblStatusFooter})
+            flpFooterBtns.Controls.AddRange({btnAuditar, btnVerActa, btnVerMovimientos, btnVerTickets, lblStatusFooter})
+            pnlFooter.Controls.Add(flpFooterBtns)
 
             ' ─── Grilla Principal de Cajas ───
             Dim pnlGrid As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(15)}
@@ -527,8 +565,8 @@ Namespace Forms
                 End If
 
                 Dim cierreStr = If(c.FechaCierre.HasValue, c.FechaCierre.Value.ToString("dd/MM/yyyy HH:mm"), "En curso")
-                Dim realObj As Object = If(c.MontoReal.HasValue, c.MontoReal.Value, "--")
-                Dim difObj As Object = If(c.Diferencia.HasValue, c.Diferencia.Value, "--")
+                Dim realObj As Object = If(c.MontoReal.HasValue, CObj(c.MontoReal.Value), "--")
+                Dim difObj As Object = If(c.Diferencia.HasValue, CObj(c.Diferencia.Value), "--")
 
                 dgvCajas.Rows.Add(
                     c.Id,
@@ -697,7 +735,7 @@ Namespace Forms
                 Next
 
                 Dim pnlBot As New Panel() With {.Dock = DockStyle.Bottom, .Height = 50, .BackColor = UITheme.ColorSurfaceMuted}
-                Dim btnC = New Button() With {.Text = "Cerrar", .Location = New Point(630, 9), .Size = New Size(100, 32)}
+                Dim btnC = New Button() With {.Text = "Cerrar", .Location = New Point(630, 9), .Size = New Size(100, 32), .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right}
                 UITheme.StyleButton(btnC, "Secondary")
                 AddHandler btnC.Click, Sub() dlg.Close()
                 pnlBot.Controls.Add(btnC)
@@ -747,7 +785,7 @@ Namespace Forms
                 Next
 
                 Dim pnlBot As New Panel() With {.Dock = DockStyle.Bottom, .Height = 50, .BackColor = UITheme.ColorSurfaceMuted}
-                Dim btnC = New Button() With {.Text = "Cerrar", .Location = New Point(720, 9), .Size = New Size(100, 32)}
+                Dim btnC = New Button() With {.Text = "Cerrar", .Location = New Point(720, 9), .Size = New Size(100, 32), .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right}
                 UITheme.StyleButton(btnC, "Secondary")
                 AddHandler btnC.Click, Sub() dlg.Close()
                 pnlBot.Controls.Add(btnC)
