@@ -43,7 +43,6 @@ Namespace Forms
         Private lblKpiEsperadoSub As Label
         Private lblKpiBalance As Label
         Private lblKpiBalanceSub As Label
-        Private cardBalance As Panel
 
         ' Grilla de Cajas y Turnos
         Private dgvCajas As DataGridView
@@ -239,7 +238,7 @@ Namespace Forms
             lblKpiEsperado = CType(card3.Controls(2), Label)
             lblKpiEsperadoSub = CType(card3.Controls(3), Label)
 
-            cardBalance = UITheme.CreateKpiCard("BALANCE DE ARQUEO", "$ 0,00", "Faltantes: $ 0 | Sobrantes: $ 0", UITheme.ColorSuccess)
+            Dim cardBalance = UITheme.CreateKpiCard("BALANCE DE ARQUEO", "$ 0,00", "Faltantes: $ 0 | Sobrantes: $ 0", UITheme.ColorSuccess)
             cardBalance.Dock = DockStyle.Fill
             cardBalance.Margin = New Padding(5, 5, 5, 5)
             lblKpiBalance = CType(cardBalance.Controls(2), Label)
@@ -689,8 +688,7 @@ Namespace Forms
                 Return
             End If
 
-            Using frm As New FrmDetalleArqueoCaja(id)
-                ' Enfocar pestaña de acta si está disponible
+            Using frm As New FrmDetalleArqueoCaja(id, seleccionarTabActa:=True)
                 frm.ShowDialog(Me)
             End Using
         End Sub

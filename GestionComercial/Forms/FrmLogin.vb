@@ -1,4 +1,4 @@
-﻿' ARCHIVO: FrmLogin.vb
+' ARCHIVO: FrmLogin.vb
 ' PROPÓSITO: Formulario de inicio de sesión y autenticación de usuarios.
 ' Es la primera ventana que ve el usuario al ejecutar el sistema:
 ' 1. Construcción 100% por Código: Paneles, etiquetas, cajas de texto y botones en InitializeUI() aplicando los tokens de UITheme.vb.
@@ -176,7 +176,7 @@ Namespace Forms
                 AddHandler frm.FormClosed, Sub() Me.Close()
                 frm.Show()
             Else
-                If errMsg.Contains("Unable to connect", StringComparison.OrdinalIgnoreCase) OrElse errMsg.Contains("Unknown database", StringComparison.OrdinalIgnoreCase) OrElse errMsg.Contains("no such table", StringComparison.OrdinalIgnoreCase) Then
+                If errMsg.Contains("Unable to connect", StringComparison.OrdinalIgnoreCase) OrElse errMsg.Contains("no such table", StringComparison.OrdinalIgnoreCase) Then
                     MessageBox.Show("No se pudo conectar con la base de datos o el servicio no está disponible." & vbCrLf & vbCrLf & "Por favor verifique que la base de datos esté activa o contacte al administrador del sistema.", "Error de Conexión", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 Else
                     MessageBox.Show(errMsg, "Error de Inicio de Sesión", MessageBoxButtons.OK, MessageBoxIcon.Warning)

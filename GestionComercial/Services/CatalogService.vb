@@ -1,4 +1,4 @@
-﻿' ARCHIVO: CatalogService.vb
+' ARCHIVO: CatalogService.vb
 ' PROPÓSITO: Lógica de catálogo de indumentaria, talles, categorías y matriz de stock.
 ' Este servicio resuelve la estructura comercial de las prendas de ropa:
 ' 1. Matriz de Variantes: Una prenda no tiene una única cantidad fija; tiene múltiples
@@ -31,38 +31,6 @@ Namespace Services
             Next
             Return list
         End Function
-
-        ' Guarda o modifica una categoría en la base de datos
-        Public Function GuardarCategoria(cat As Categoria, ByRef errorMessage As String) As Boolean
-            If cat Is Nothing OrElse String.IsNullOrWhiteSpace(cat.Nombre) Then
-                errorMessage = "El nombre de la categoría es obligatorio."
-                Return False
-            End If
-
-            Try
-                Dim query As String
-                Dim params = New Dictionary(Of String, Object) From {
-                    {"@nombre", cat.Nombre.Trim()},
-                    {"@desc", If(cat.Descripcion, "").Trim()},
-                    {"@activo", If(cat.Activo, 1, 0)}
-                }
-
-                If cat.Id = 0 Then
-                    query = "INSERT INTO `categorias` (`nombre`, `descripcion`, `activo`) VALUES (@nombre, @desc, @activo);"
-                Else
-                    query = "UPDATE `categorias` SET `nombre` = @nombre, `descripcion` = @desc, `activo` = @activo WHERE `id` = @id;"
-                    params.Add("@id", cat.Id)
-                End If
-
-                DatabaseHelper.ExecuteNonQuery(query, params)
-                errorMessage = String.Empty
-                Return True
-            Catch ex As Exception
-                AppLogger.LogError("CatalogService.GuardarCategoria", ex)
-                errorMessage = ex.Message
-                Return False
-            End Try
-        End Function
 #End Region
 
 #Region "Talles"
@@ -77,36 +45,6 @@ Namespace Services
                 list.Add(MapTalle(row))
             Next
             Return list
-        End Function
-
-        Public Function GuardarTalle(talle As Talle, ByRef errorMessage As String) As Boolean
-            If talle Is Nothing OrElse String.IsNullOrWhiteSpace(talle.Nombre) Then
-                errorMessage = "El nombre del talle es obligatorio."
-                Return False
-            End If
-
-            Try
-                Dim query As String
-                Dim params = New Dictionary(Of String, Object) From {
-                    {"@nombre", talle.Nombre.Trim()},
-                    {"@orden", talle.Orden}
-                }
-
-                If talle.Id = 0 Then
-                    query = "INSERT INTO `talles` (`nombre`, `orden`) VALUES (@nombre, @orden);"
-                Else
-                    query = "UPDATE `talles` SET `nombre` = @nombre, `orden` = @orden WHERE `id` = @id;"
-                    params.Add("@id", talle.Id)
-                End If
-
-                DatabaseHelper.ExecuteNonQuery(query, params)
-                errorMessage = String.Empty
-                Return True
-            Catch ex As Exception
-                AppLogger.LogError("CatalogService.GuardarTalle", ex)
-                errorMessage = ex.Message
-                Return False
-            End Try
         End Function
 
         ''' <summary>
@@ -336,25 +274,6 @@ Namespace Services
                 End Using
             Catch ex As Exception
                 AppLogger.LogError("CatalogService.AjustarStockManual", ex)
-                errorMessage = ex.Message
-                Return False
-            End Try
-        End Function
-
-        Public Function EliminarProducto(id As Integer, ByRef errorMessage As String) As Boolean
-            If id <= 0 Then
-                errorMessage = "Identificador de producto inválido."
-                Return False
-            End If
-
-            Try
-                ' Soft delete para mantener integridad de ventas pasadas
-                Dim query = "UPDATE `productos` SET `activo` = 0 WHERE `id` = @id;"
-                DatabaseHelper.ExecuteNonQuery(query, New Dictionary(Of String, Object) From {{"@id", id}})
-                errorMessage = String.Empty
-                Return True
-            Catch ex As Exception
-                AppLogger.LogError("CatalogService.EliminarProducto", ex)
                 errorMessage = ex.Message
                 Return False
             End Try

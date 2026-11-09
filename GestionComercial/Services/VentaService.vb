@@ -1,4 +1,4 @@
-﻿' ARCHIVO: VentaService.vb
+' ARCHIVO: VentaService.vb
 ' PROPÓSITO: Lógica de negocio de cobros, transacciones atómicas y control de inventario.
 ' Este es el servicio central del circuito comercial:
 ' 1. Transacciones ACID (DbTransaction): Todo el cobro se ejecuta como una sola unidad atómica.
@@ -137,7 +137,7 @@ Namespace Services
             End Try
         End Function
 
-        Public Function GetVentas(fechaDesde As DateTime, fechaHasta As DateTime, Optional busqueda As String = "", Optional clienteId As Integer = 0) As List(Of Venta)
+        Public Function GetVentas(fechaDesde As DateTime, fechaHasta As DateTime, Optional busqueda As String = "", Optional clienteId As Integer = 0, Optional usuarioId As Integer = 0) As List(Of Venta)
             Dim list = New List(Of Venta)()
             Dim query = "SELECT v.*, u.nombre_completo AS usuario_nombre, (c.apellido || ', ' || c.nombre) AS cliente_nombre " &
                         "FROM `ventas` v " &
@@ -153,6 +153,11 @@ Namespace Services
             If clienteId > 0 Then
                 query &= "AND v.cliente_id = @cliId "
                 params.Add("@cliId", clienteId)
+            End If
+
+            If usuarioId > 0 Then
+                query &= "AND v.usuario_id = @usrId "
+                params.Add("@usrId", usuarioId)
             End If
 
             Dim hasBusqueda = Not String.IsNullOrWhiteSpace(busqueda)

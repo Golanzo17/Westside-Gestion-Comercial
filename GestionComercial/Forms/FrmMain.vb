@@ -128,10 +128,10 @@ Namespace Forms
             ' Configuración de accesos del menú lateral según el rol activo
             btnPos.Visible = AuthService.IsVendor
             btnStock.Visible = AuthService.IsManager
-            btnProductos.Visible = AuthService.IsVendor
+            btnProductos.Visible = AuthService.IsManager OrElse AuthService.IsVendor
             btnCaja.Visible = AuthService.IsVendor
             btnControlCajas.Visible = AuthService.IsManager
-            btnReportes.Visible = AuthService.IsManager OrElse AuthService.IsVendor
+            btnReportes.Visible = AuthService.IsManager
             btnUsuarios.Visible = AuthService.IsAdmin
             btnBackup.Visible = AuthService.IsAdmin
             btnConfig.Visible = AuthService.IsAdmin
@@ -471,6 +471,18 @@ Namespace Forms
             If AuthService.IsAdminOrManager Then
 
                 If AuthService.IsManager Then
+                    Dim btnAccionPrenda As New Button() With {
+                        .Text = "Catálogo y Prendas",
+                        .Height = 44,
+                        .AutoSize = True,
+                        .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                        .Padding = New Padding(16, 0, 16, 0),
+                        .Margin = New Padding(0, 0, 10, 8)
+                    }
+                    UITheme.StyleButton(btnAccionPrenda, "Success")
+                    AddHandler btnAccionPrenda.Click, AddressOf Nav_Productos
+                    flpAcciones.Controls.Add(btnAccionPrenda)
+
                     Dim btnAccionStock As New Button() With {
                         .Text = "Ingreso de Mercadería",
                         .Height = 44,
@@ -494,6 +506,18 @@ Namespace Forms
                     UITheme.StyleButton(btnAccionAuditoriaCajas, "Secondary")
                     AddHandler btnAccionAuditoriaCajas.Click, AddressOf Nav_ControlCajas
                     flpAcciones.Controls.Add(btnAccionAuditoriaCajas)
+
+                    Dim btnAccionReportes As New Button() With {
+                        .Text = "Reportes y Ventas",
+                        .Height = 44,
+                        .AutoSize = True,
+                        .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                        .Padding = New Padding(16, 0, 16, 0),
+                        .Margin = New Padding(0, 0, 10, 8)
+                    }
+                    UITheme.StyleButton(btnAccionReportes, "Primary")
+                    AddHandler btnAccionReportes.Click, AddressOf Nav_Reportes
+                    flpAcciones.Controls.Add(btnAccionReportes)
                 End If
             End If
 
@@ -642,10 +666,6 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_Productos(sender As Object, e As EventArgs)
-            If AuthService.IsManager Then
-                MessageBox.Show("El acceso al catálogo de prendas está restringido para el rol de Gerente.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
             If AuthService.IsAdmin Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmProductos())
@@ -678,7 +698,8 @@ Namespace Forms
         End Sub
 
         Private Sub Nav_Reportes(sender As Object, e As EventArgs)
-            If AuthService.IsAdmin OrElse Not (AuthService.IsManager OrElse AuthService.IsVendor) Then
+            If Not AuthService.IsManager Then
+                MessageBox.Show("El acceso a reportes comerciales y ventas está reservado exclusivamente para el rol de Gerente.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 Return
             End If
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))

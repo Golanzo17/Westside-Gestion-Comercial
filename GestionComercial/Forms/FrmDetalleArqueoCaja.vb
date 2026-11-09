@@ -48,10 +48,13 @@ Namespace Forms
         Private lblFormulaDiferencia As Label
         Private txtObservaciones As TextBox
 
-        Public Sub New(cajaId As Integer)
+        Public Sub New(cajaId As Integer, Optional seleccionarTabActa As Boolean = False)
             _cajaId = cajaId
             InitializeComponent()
             CargarDatosTurno()
+            If seleccionarTabActa AndAlso tabActa IsNot Nothing Then
+                tabControl.SelectedTab = tabActa
+            End If
         End Sub
 
         Private Sub InitializeComponent()

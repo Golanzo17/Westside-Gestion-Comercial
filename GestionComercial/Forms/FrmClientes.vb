@@ -109,8 +109,8 @@ Namespace Forms
             dgvClientes = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvClientes)
             ConfigurarColumnas()
-            AddHandler dgvClientes.CellDoubleClick, Sub()
-                                                    If AuthService.IsAdminOrManager Then EditarSeleccionado()
+            AddHandler dgvClientes.CellDoubleClick, Sub(s, e)
+                                                    If e.RowIndex >= 0 Then EditarSeleccionado()
                                                 End Sub
             AddHandler dgvClientes.CellFormatting, AddressOf DgvClientes_CellFormatting
             pnlGrid.Controls.Add(dgvClientes)

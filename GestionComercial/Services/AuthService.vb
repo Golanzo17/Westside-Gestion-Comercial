@@ -1,4 +1,4 @@
-﻿' ARCHIVO: AuthService.vb
+' ARCHIVO: AuthService.vb
 ' PROPÓSITO: Autenticación, control de sesiones, protección anti fuerza bruta y permisos por rol.
 ' En este servicio resolvemos la seguridad de acceso al sistema:
 ' 1. Matriz de Roles (RBAC):
@@ -229,46 +229,6 @@ Namespace Services
             CurrentUser = Nothing
             LastAuthorizingSupervisor = Nothing
         End Sub
-
-        ' Valida si una contraseña ingresada coincide con algún Administrador activo.
-        ' Sirve para autorizaciones rápidas de supervisor sin tener que cerrar sesión.
-        Public Function ValidarCredencialesAdmin(password As String, Optional username As String = "") As Boolean
-            Try
-                If String.IsNullOrWhiteSpace(password) Then Return False
-
-                Dim sql As String
-                Dim prms As New Dictionary(Of String, Object)()
-                If Not String.IsNullOrWhiteSpace(username) Then
-                    sql = "SELECT * FROM `usuarios` WHERE `username` = @user AND `rol` = 'Administrador' AND `activo` = 1 LIMIT 1;"
-                    prms.Add("@user", username.Trim())
-                Else
-                    sql = "SELECT * FROM `usuarios` WHERE `rol` = 'Administrador' AND `activo` = 1;"
-                End If
-
-                Dim dt = DatabaseHelper.ExecuteQuery(sql, prms)
-                For Each row As DataRow In dt.Rows
-                    Dim storedHash = row("password_hash").ToString()
-                    If DatabaseHelper.VerifyPassword(password, storedHash) Then
-                        LastAuthorizingSupervisor = ConstruirUsuarioDesdeFila(row)
-                        Return True
-                    End If
-                Next
-                Return False
-            Catch ex As Exception
-                AppLogger.LogError("Error en ValidarCredencialesAdmin", ex)
-                Return False
-            End Try
-        End Function
-
-        ' Valida si la contraseña pertenece a un Gerente activo
-        Public Function ValidarCredencialesManager(password As String) As Boolean
-            Return ValidarCredencialesPorRol(password, "Gerente")
-        End Function
-
-        ' Valida si la contraseña pertenece indistintamente a un Administrador o Gerente
-        Public Function ValidarCredencialesAdminOManager(password As String) As Boolean
-            Return ValidarCredencialesAdmin(password) OrElse ValidarCredencialesManager(password)
-        End Function
 
         ' Helper interno que consulta contraseñas filtrando por rol específico
         Private Function ValidarCredencialesPorRol(password As String, rol As String) As Boolean

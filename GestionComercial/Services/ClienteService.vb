@@ -1,4 +1,4 @@
-﻿' ARCHIVO: ClienteService.vb
+' ARCHIVO: ClienteService.vb
 ' PROPÓSITO: Lógica de directorio de clientes, búsqueda rápida y validación de DNI/CUIT.
 ' En este servicio manejamos los compradores del negocio:
 ' 1. Búsqueda Multicriterio en POS: Permite buscar un cliente por DNI, nombre, apellido
@@ -182,19 +182,6 @@ Namespace Services
                 Return True
             Catch ex As Exception
                 AppLogger.LogError("ClienteService.GuardarCliente", ex)
-                errorMessage = ex.Message
-                Return False
-            End Try
-        End Function
-
-        Public Function EliminarCliente(id As Integer, ByRef errorMessage As String) As Boolean
-            Try
-                Dim query As String = "UPDATE `clientes` SET `activo` = 0 WHERE `id` = @id;"
-                DatabaseHelper.ExecuteNonQuery(query, New Dictionary(Of String, Object) From {{"@id", id}})
-                errorMessage = String.Empty
-                Return True
-            Catch ex As Exception
-                AppLogger.LogError("ClienteService.EliminarCliente", ex)
                 errorMessage = ex.Message
                 Return False
             End Try

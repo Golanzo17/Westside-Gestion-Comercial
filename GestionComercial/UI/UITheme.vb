@@ -49,8 +49,6 @@ Namespace UI
         Public ReadOnly ColorInfo As Color = Color.FromArgb(59, 130, 246)           ' Blue 500
         Public ReadOnly ColorInfoLight As Color = Color.FromArgb(219, 234, 254)     ' Blue 100
         Public ReadOnly ColorRowHover As Color = Color.FromArgb(238, 242, 255)      ' Hover fila tabla
-        Public ReadOnly ColorShadow As Color = Color.FromArgb(25, 15, 23, 42)       ' Sombra sutil (Slate 900 con 10% opacidad)
-        Public ReadOnly ColorShadowMedium As Color = Color.FromArgb(40, 15, 23, 42) ' Sombra media
         Public ReadOnly ColorSidebarSection As Color = Color.FromArgb(55, 65, 81)   ' Gray 700 (separadores sidebar)
 
         ' Tipografías institucionales con jerarquía visual clara (Segoe UI)
@@ -398,27 +396,6 @@ Namespace UI
                                   End Sub
 
             Return pnl
-        End Function
-
-        ''' <summary>
-        ''' Crea un badge de estado con texto, color de fondo y color de texto.
-        ''' Ideal para etiquetar estados en grillas o headers (ej: "Activa", "Anulada", "Bajo Stock").
-        ''' </summary>
-        Public Function CreateBadge(text As String, bgColor As Color, fgColor As Color) As Label
-            Dim lbl As New Label() With {
-                .Text = $"  {text}  ",
-                .Font = FontSmallBold,
-                .BackColor = bgColor,
-                .ForeColor = fgColor,
-                .AutoSize = True,
-                .TextAlign = ContentAlignment.MiddleCenter,
-                .Padding = New Padding(4, 2, 4, 2)
-            }
-            AddHandler lbl.Resize, Sub(s, ev)
-                                       Dim l = CType(s, Label)
-                                       If l.Width > 0 AndAlso l.Height > 0 Then ApplyRoundedRegion(l, 6)
-                                   End Sub
-            Return lbl
         End Function
 
         ''' <summary>

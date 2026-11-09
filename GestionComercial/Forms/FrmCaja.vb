@@ -6,9 +6,7 @@
 ' 2. Seguridad en Retiros: Si el cajero registra un retiro o egreso de efectivo, el sistema
 '    exige la autorización presencial de un Administrador o Gerente.
 ' 3. Arqueo y Cierre: Al finalizar el turno, pide contar los billetes en mano (montoReal),
-'    calcula automáticamente si sobró o faltó plata y emite el balance impreso.
-' 4. Pestaña de Historial: Permite a los supervisores consultar los cierres de cajas
-'    anteriores para auditorías contables.
+'    calcula automáticamente si sobró o faltó plata y archiva el cierre para auditoría gerencial.
 
 
 Imports System.Drawing
@@ -25,11 +23,8 @@ Namespace Forms
         Private cajaActual As Caja = Nothing
 
         Private lblEstadoCaja As Label
-        Private lblMontoInicial As Label
         Private lblVentasEfectivo As Label
         Private lblVentasDigital As Label
-        Private lblTotalIngresos As Label
-        Private lblTotalEgresos As Label
         Private lblEfectivoEsperado As Label
 
         Private btnAbrirCaja As Button
@@ -38,19 +33,11 @@ Namespace Forms
         Private btnRefrescar As Button
         Private dgvMovimientos As DataGridView
 
-        ' Controles de Historial de Cajas
         Private tabControlCaja As TabControl
-        Private dtpDesdeHistorial As DateTimePicker
-        Private dtpHastaHistorial As DateTimePicker
-        Private btnFiltrarHistorial As Button
-        Private btnVerDetalleCaja As Button
-        Private dgvHistorial As DataGridView
-        Private lblResumenHistorial As Label
 
         Public Sub New()
             InitializeUI()
             LoadCajaData()
-            LoadHistorialData()
         End Sub
 
         Private Sub InitializeUI()
@@ -180,72 +167,6 @@ Namespace Forms
             tabTurnoActual.Controls.Add(pnlToolbar)
             tabTurnoActual.Controls.Add(pnlKpis)
             tabControlCaja.TabPages.Add(tabTurnoActual)
-
-            ' Pestaña 2: Historial de Cajas Cerradas
-            Dim tabHistorial As New TabPage("Historial de cajas cerradas y arqueos") With {.BackColor = UITheme.ColorBackground}
-
-            Dim pnlFilterHistorial As New Panel() With {
-                .Dock = DockStyle.Top,
-                .AutoSize = True,
-                .MinimumSize = New Size(0, 52),
-                .BackColor = UITheme.ColorSurface
-            }
-            Dim flpFilterHistorial As New FlowLayoutPanel() With {
-                .Dock = DockStyle.Top,
-                .AutoSize = True,
-                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                .WrapContents = True,
-                .Padding = New Padding(15, 10, 15, 6),
-                .BackColor = Color.Transparent
-            }
-
-            Dim lblD As New Label() With {.Text = "Desde:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 6, 4)}
-            dtpDesdeHistorial = New DateTimePicker() With {.Size = New Size(125, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddDays(-30), .Margin = New Padding(0, 3, 14, 4)}
-
-            Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 6, 4)}
-            dtpHastaHistorial = New DateTimePicker() With {.Size = New Size(125, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today, .Margin = New Padding(0, 3, 16, 4)}
-
-            btnFiltrarHistorial = New Button() With {.Text = "Filtrar cajas", .Size = New Size(135, 32), .Margin = New Padding(0, 0, 10, 4)}
-            UITheme.StyleButton(btnFiltrarHistorial, "Primary")
-            AddHandler btnFiltrarHistorial.Click, Sub() LoadHistorialData()
-
-            btnVerDetalleCaja = New Button() With {.Text = "Ver movimientos del turno", .Size = New Size(220, 32), .Margin = New Padding(0, 0, 0, 4)}
-            UITheme.StyleButton(btnVerDetalleCaja, "Secondary")
-            AddHandler btnVerDetalleCaja.Click, AddressOf BtnVerDetalleCaja_Click
-
-            flpFilterHistorial.Controls.AddRange({lblD, dtpDesdeHistorial, lblH, dtpHastaHistorial, btnFiltrarHistorial, btnVerDetalleCaja})
-            pnlFilterHistorial.Controls.Add(flpFilterHistorial)
-
-            Dim pnlGridHistorial As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(15)}
-            dgvHistorial = New DataGridView() With {.Dock = DockStyle.Fill}
-            UITheme.StyleDataGrid(dgvHistorial)
-            ConfigurarColumnasHistorial()
-            AddHandler dgvHistorial.CellDoubleClick, AddressOf DgvHistorial_CellDoubleClick
-            AddHandler dgvHistorial.CellFormatting, AddressOf DgvHistorial_CellFormatting
-            pnlGridHistorial.Controls.Add(dgvHistorial)
-
-            Dim pnlFooterHistorial As New Panel() With {
-                .Dock = DockStyle.Bottom,
-                .Height = 35,
-                .BackColor = UITheme.ColorSurfaceMuted,
-                .Padding = New Padding(15, 8, 15, 8)
-            }
-            lblResumenHistorial = New Label() With {
-                .Text = "Cargando historial de cajas...",
-                .Font = UITheme.FontBold,
-                .ForeColor = UITheme.ColorTextSecondary,
-                .AutoSize = True,
-                .Location = New Point(15, 8)
-            }
-            pnlFooterHistorial.Controls.Add(lblResumenHistorial)
-
-            tabHistorial.Controls.Add(pnlGridHistorial)
-            tabHistorial.Controls.Add(pnlFooterHistorial)
-            tabHistorial.Controls.Add(pnlFilterHistorial)
-            tabControlCaja.TabPages.Add(tabHistorial)
-            If AuthService.IsVendor Then
-                tabControlCaja.TabPages.Remove(tabHistorial)
-            End If
 
             ' Orden exacto de Docking en FrmCaja: TabControl primero, Header último
             Me.Controls.Add(tabControlCaja)
@@ -499,247 +420,9 @@ Namespace Forms
                 If cajaService.CerrarCaja(cajaActual.Id, numReal.Value, txtObs.Text.Trim(), errMsg) Then
                     MessageBox.Show("Caja cerrada y arqueo archivado correctamente.", "Caja Cerrada", MessageBoxButtons.OK, MessageBoxIcon.Information)
                     LoadCajaData()
-                    LoadHistorialData()
                 Else
                     MessageBox.Show("Error al cerrar caja: " & errMsg, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 End If
-            End If
-        End Sub
-
-        Private Sub ConfigurarColumnasHistorial()
-            dgvHistorial.Columns.Clear()
-            ' Modo Fill: las columnas se distribuyen proporcionalmente al ancho disponible
-            dgvHistorial.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-
-            ' ── Nº Turno (centrado) ──
-            dgvHistorial.Columns.Add("Id", "# Turno")
-            dgvHistorial.Columns("Id").FillWeight = 5
-            dgvHistorial.Columns("Id").MinimumWidth = 55
-            dgvHistorial.Columns("Id").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-            dgvHistorial.Columns("Id").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
-
-            ' ── Vendedor Responsable (izquierda) ──
-            dgvHistorial.Columns.Add("Usuario", "Vendedor Responsable")
-            dgvHistorial.Columns("Usuario").FillWeight = 12
-            dgvHistorial.Columns("Usuario").MinimumWidth = 120
-            dgvHistorial.Columns("Usuario").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
-            dgvHistorial.Columns("Usuario").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
-
-            ' ── Fecha Apertura (centrado) ──
-            dgvHistorial.Columns.Add("Apertura", "Fecha Apertura")
-            dgvHistorial.Columns("Apertura").FillWeight = 10
-            dgvHistorial.Columns("Apertura").MinimumWidth = 105
-            dgvHistorial.Columns("Apertura").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-            dgvHistorial.Columns("Apertura").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
-
-            ' ── Fecha Cierre (centrado) ──
-            dgvHistorial.Columns.Add("Cierre", "Fecha Cierre")
-            dgvHistorial.Columns("Cierre").FillWeight = 10
-            dgvHistorial.Columns("Cierre").MinimumWidth = 105
-            dgvHistorial.Columns("Cierre").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-            dgvHistorial.Columns("Cierre").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
-
-            ' ── Monto Inicial (derecha) ──
-            dgvHistorial.Columns.Add("Inicial", "Monto Inicial")
-            dgvHistorial.Columns("Inicial").FillWeight = 8
-            dgvHistorial.Columns("Inicial").MinimumWidth = 85
-            dgvHistorial.Columns("Inicial").DefaultCellStyle.Format = "C2"
-            dgvHistorial.Columns("Inicial").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
-            dgvHistorial.Columns("Inicial").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
-
-            ' ── Ventas Efectivo (derecha) ──
-            dgvHistorial.Columns.Add("VentasEfec", "Ventas Efec.")
-            dgvHistorial.Columns("VentasEfec").FillWeight = 8
-            dgvHistorial.Columns("VentasEfec").MinimumWidth = 85
-            dgvHistorial.Columns("VentasEfec").DefaultCellStyle.Format = "C2"
-            dgvHistorial.Columns("VentasEfec").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
-            dgvHistorial.Columns("VentasEfec").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
-
-            ' ── Tarjetas/QR (derecha) ──
-            dgvHistorial.Columns.Add("VentasDig", "Tarjetas/QR")
-            dgvHistorial.Columns("VentasDig").FillWeight = 8
-            dgvHistorial.Columns("VentasDig").MinimumWidth = 85
-            dgvHistorial.Columns("VentasDig").DefaultCellStyle.Format = "C2"
-            dgvHistorial.Columns("VentasDig").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
-            dgvHistorial.Columns("VentasDig").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
-
-            ' ── Ingresos (derecha) ──
-            dgvHistorial.Columns.Add("Ingresos", "Ingresos")
-            dgvHistorial.Columns("Ingresos").FillWeight = 7
-            dgvHistorial.Columns("Ingresos").MinimumWidth = 75
-            dgvHistorial.Columns("Ingresos").DefaultCellStyle.Format = "C2"
-            dgvHistorial.Columns("Ingresos").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
-            dgvHistorial.Columns("Ingresos").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
-
-            ' ── Egresos (derecha) ──
-            dgvHistorial.Columns.Add("Egresos", "Egresos")
-            dgvHistorial.Columns("Egresos").FillWeight = 7
-            dgvHistorial.Columns("Egresos").MinimumWidth = 75
-            dgvHistorial.Columns("Egresos").DefaultCellStyle.Format = "C2"
-            dgvHistorial.Columns("Egresos").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
-            dgvHistorial.Columns("Egresos").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
-
-            ' ── Monto Esperado (derecha, solo gerente) ──
-            dgvHistorial.Columns.Add("Esperado", "Monto Esperado")
-            dgvHistorial.Columns("Esperado").FillWeight = 9
-            dgvHistorial.Columns("Esperado").MinimumWidth = 90
-            dgvHistorial.Columns("Esperado").DefaultCellStyle.Format = "C2"
-            dgvHistorial.Columns("Esperado").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
-            dgvHistorial.Columns("Esperado").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
-            dgvHistorial.Columns("Esperado").Visible = AuthService.IsAdminOrManager
-
-            ' ── Efectivo Real (derecha, negrita) ──
-            dgvHistorial.Columns.Add("Real", "Efectivo Real")
-            dgvHistorial.Columns("Real").FillWeight = 8
-            dgvHistorial.Columns("Real").MinimumWidth = 85
-            dgvHistorial.Columns("Real").DefaultCellStyle.Format = "C2"
-            dgvHistorial.Columns("Real").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
-            dgvHistorial.Columns("Real").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
-            dgvHistorial.Columns("Real").DefaultCellStyle.Font = UITheme.FontBold
-
-            ' ── Diferencia Arqueo (derecha, negrita, solo gerente) ──
-            dgvHistorial.Columns.Add("Diferencia", "Diferencia Arqueo")
-            dgvHistorial.Columns("Diferencia").FillWeight = 9
-            dgvHistorial.Columns("Diferencia").MinimumWidth = 90
-            dgvHistorial.Columns("Diferencia").DefaultCellStyle.Format = "C2"
-            dgvHistorial.Columns("Diferencia").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
-            dgvHistorial.Columns("Diferencia").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
-            dgvHistorial.Columns("Diferencia").Visible = AuthService.IsAdminOrManager
-
-            ' ── Observaciones (relleno restante, izquierda) ──
-            dgvHistorial.Columns.Add("Observaciones", "Observaciones")
-            dgvHistorial.Columns("Observaciones").FillWeight = 10
-            dgvHistorial.Columns("Observaciones").MinimumWidth = 80
-            dgvHistorial.Columns("Observaciones").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft
-            dgvHistorial.Columns("Observaciones").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleLeft
-        End Sub
-
-        Public Sub LoadHistorialData()
-            Dim desde = dtpDesdeHistorial.Value.Date
-            Dim hasta = dtpHastaHistorial.Value.Date
-            Dim lista = cajaService.GetHistorialCajas(desde, hasta)
-
-            dgvHistorial.Rows.Clear()
-            Dim totalRecaudado As Decimal = 0D
-
-            For Each c In lista
-                Dim cierreStr = If(c.FechaCierre.HasValue, c.FechaCierre.Value.ToString("dd/MM/yyyy HH:mm"), "Sin cerrar")
-                Dim difVal As Object = If(c.Diferencia.HasValue, CObj(c.Diferencia.Value), Nothing)
-                Dim realVal As Object = If(c.MontoReal.HasValue, CObj(c.MontoReal.Value), Nothing)
-
-                dgvHistorial.Rows.Add(
-                    c.Id,
-                    c.UsuarioNombre,
-                    c.FechaApertura.ToString("dd/MM/yyyy HH:mm"),
-                    cierreStr,
-                    c.MontoInicial,
-                    c.TotalVentasEfectivo,
-                    c.TotalVentasDigital,
-                    c.TotalIngresos,
-                    c.TotalEgresos,
-                    c.MontoEsperado,
-                    realVal,
-                    difVal,
-                    c.Observaciones
-                )
-
-                totalRecaudado += (c.TotalVentasEfectivo + c.TotalVentasDigital)
-            Next
-
-            lblResumenHistorial.Text = $"Total de turnos auditados: {lista.Count} | Recaudación del período: {totalRecaudado:C2}"
-        End Sub
-
-        Private Sub DgvHistorial_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs)
-            If e.RowIndex >= 0 Then
-                If dgvHistorial.Columns(e.ColumnIndex).Name = "Diferencia" Then
-                    If e.Value IsNot Nothing AndAlso Not IsDBNull(e.Value) Then
-                        Dim dif As Decimal = 0D
-                        If Decimal.TryParse(e.Value.ToString(), dif) Then
-                            If dif = 0 Then
-                                e.CellStyle.ForeColor = UITheme.ColorSuccess
-                                e.CellStyle.Font = UITheme.FontBold
-                            ElseIf dif > 0 Then
-                                e.CellStyle.ForeColor = UITheme.ColorInfo
-                                e.CellStyle.Font = UITheme.FontBold
-                            Else
-                                e.CellStyle.ForeColor = UITheme.ColorDanger
-                                e.CellStyle.Font = UITheme.FontBold
-                            End If
-                        End If
-                    End If
-                End If
-            End If
-        End Sub
-
-        Private Sub BtnVerDetalleCaja_Click(sender As Object, e As EventArgs)
-            VerDetalleCajaSeleccionada()
-        End Sub
-
-        Private Sub DgvHistorial_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
-            If e.RowIndex >= 0 Then
-                VerDetalleCajaSeleccionada()
-            End If
-        End Sub
-
-        Private Sub VerDetalleCajaSeleccionada()
-            If dgvHistorial.CurrentRow IsNot Nothing Then
-                Dim cajaId As Integer = Convert.ToInt32(dgvHistorial.CurrentRow.Cells("Id").Value)
-                Dim vendedor As String = dgvHistorial.CurrentRow.Cells("Usuario").Value.ToString()
-                Dim movs = cajaService.GetMovimientosCaja(cajaId)
-
-                Using dlg As New Form()
-                    dlg.Text = $"Movimientos de Efectivo - Turno #{cajaId} ({vendedor})"
-                    dlg.Size = New Size(750, 480)
-                    dlg.StartPosition = FormStartPosition.CenterParent
-                    dlg.FormBorderStyle = FormBorderStyle.FixedDialog
-                    dlg.MaximizeBox = False
-                    dlg.MinimizeBox = False
-                    dlg.BackColor = UITheme.ColorBackground
-
-                    Dim pnlTop As New Panel() With {
-                        .Dock = DockStyle.Top,
-                        .Height = 50,
-                        .BackColor = UITheme.ColorSecondary,
-                        .Padding = New Padding(15, 12, 15, 10)
-                    }
-                    Dim lblT As New Label() With {
-                        .Text = $"DETALLE DE MOVIMIENTOS - TURNO #{cajaId} ({vendedor})",
-                        .Font = UITheme.FontSubheading,
-                        .ForeColor = Color.White,
-                        .AutoSize = True,
-                        .Location = New Point(15, 14)
-                    }
-                    pnlTop.Controls.Add(lblT)
-
-                    Dim dgvDet As New DataGridView() With {.Dock = DockStyle.Fill}
-                    UITheme.StyleDataGrid(dgvDet)
-                    dgvDet.Columns.Add("Hora", "Hora")
-                    dgvDet.Columns("Hora").Width = 120
-                    dgvDet.Columns.Add("Tipo", "Tipo")
-                    dgvDet.Columns("Tipo").Width = 100
-                    dgvDet.Columns.Add("Concepto", "Concepto")
-                    dgvDet.Columns("Concepto").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
-                    dgvDet.Columns.Add("Monto", "Monto")
-                    dgvDet.Columns("Monto").Width = 120
-                    dgvDet.Columns("Monto").DefaultCellStyle.Format = "C2"
-                    dgvDet.Columns.Add("Usuario", "Registrado Por")
-                    dgvDet.Columns("Usuario").Width = 140
-
-                    For Each m In movs
-                        dgvDet.Rows.Add(m.Fecha.ToString("dd/MM/yyyy HH:mm"), m.Tipo, m.Concepto, m.Monto, m.UsuarioNombre)
-                    Next
-
-                    Dim pnlBot As New Panel() With {.Dock = DockStyle.Bottom, .Height = 50, .BackColor = UITheme.ColorSurfaceMuted}
-                    Dim btnCerrar As New Button() With {.Text = "Cerrar", .Location = New Point(620, 9), .Size = New Size(100, 32), .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right}
-                    UITheme.StyleButton(btnCerrar, "Secondary")
-                    AddHandler btnCerrar.Click, Sub() dlg.Close()
-                    pnlBot.Controls.Add(btnCerrar)
-
-                    dlg.Controls.AddRange({dgvDet, pnlBot, pnlTop})
-                    dlg.ShowDialog(Me)
-                End Using
-            Else
-                MessageBox.Show("Por favor seleccione un turno del historial.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
             End If
         End Sub
 

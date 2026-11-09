@@ -1,4 +1,4 @@
-﻿' ARCHIVO: CajaService.vb
+' ARCHIVO: CajaService.vb
 ' PROPÓSITO: Lógica de negocio de turnos de caja, arqueo de efectivo y control de gastos.
 ' En este servicio resolvemos el control financiero diario del salón de ventas:
 ' 1. Apertura de Turno: Exige registrar el fondo inicial para cambio antes de vender.
@@ -213,10 +213,6 @@ Namespace Services
                 AppLogger.LogError("Error en GetCajaById", ex)
                 Return Nothing
             End Try
-        End Function
-
-        Public Function GetHistorialCajas(fechaDesde As DateTime, fechaHasta As DateTime) As List(Of Caja)
-            Return GetHistorialCajasAvanzado(fechaDesde, fechaHasta, Nothing, Nothing, Nothing)
         End Function
 
         ''' <summary>

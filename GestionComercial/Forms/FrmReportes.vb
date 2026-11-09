@@ -25,11 +25,14 @@ Namespace Forms
         Private ventaService As New VentaService()
         Private reporteService As New ReporteService()
         Private clienteService As New ClienteService()
+        Private usuarioService As New UsuarioService()
         Private configService As New ConfiguracionService()
 
         Private dtpDesde As DateTimePicker
         Private dtpHasta As DateTimePicker
+        Private cboVendedorGeneral As ComboBox
         Private btnFiltrar As Button
+        Private btnDescargarPdf As Button
         Private btnAnularVenta As Button
 
         Private lblTotalVentas As Label
@@ -50,6 +53,18 @@ Namespace Forms
         Private dgvTicketsCliente As DataGridView
         Private lblTicketsClienteHeader As Label
         Private btnVerDetalleTicketCliente As Button
+        Private btnDescargarPdfTicketCliente As Button
+
+        ' Pestaña: Ventas por Vendedor
+        Private tabVendedores As TabPage
+        Private cboVendedoresFiltro As ComboBox
+        Private cboOrdenVendedores As ComboBox
+        Private lblResumenVendedores As Label
+        Private dgvVendedoresReporte As DataGridView
+        Private dgvTicketsVendedor As DataGridView
+        Private lblTicketsVendedorHeader As Label
+        Private btnVerDetalleTicketVendedor As Button
+        Private btnDescargarPdfTicketVendedor As Button
 
         ' Pestaña: Ranking de Prendas
         Private tabRanking As TabPage
@@ -60,8 +75,8 @@ Namespace Forms
 
         Private isLoading As Boolean = True
 
-        ' Helper interno para el ComboBox de clientes
-        Private Class ClienteComboItem
+        ' Helper interno para los ComboBox de filtro (Clientes y Vendedores)
+        Private Class FiltroComboItem
             Public Property Id As Integer
             Public Property Descripcion As String
 
@@ -78,8 +93,17 @@ Namespace Forms
         Public Sub New()
             InitializeUI()
             CargarComboClientes()
+            CargarComboVendedores()
             isLoading = False
             LoadReportes()
+        End Sub
+
+        Protected Overrides Sub OnLoad(e As EventArgs)
+            MyBase.OnLoad(e)
+            If Not AuthService.IsManager Then
+                MessageBox.Show("El acceso a reportes comerciales y ventas está reservado exclusivamente para el rol de Gerente.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Me.BeginInvoke(New Action(AddressOf Me.Close))
+            End If
         End Sub
 
         Private Sub InitializeUI()
@@ -122,21 +146,36 @@ Namespace Forms
             }
 
             Dim lblD As New Label() With {.Text = "Desde:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 4, 4)}
-            dtpDesde = New DateTimePicker() With {.Size = New Size(125, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddDays(-7), .Margin = New Padding(0, 3, 0, 4)}
+            dtpDesde = New DateTimePicker() With {.Size = New Size(120, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddDays(-7), .Margin = New Padding(0, 3, 0, 4)}
 
             Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 4, 4)}
-            dtpHasta = New DateTimePicker() With {.Size = New Size(125, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today, .Margin = New Padding(0, 3, 0, 4)}
+            dtpHasta = New DateTimePicker() With {.Size = New Size(120, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today, .Margin = New Padding(0, 3, 0, 4)}
 
-            btnFiltrar = New Button() With {.Text = "Generar Reportes", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(12, 0, 12, 0), .Margin = New Padding(12, 1, 0, 4)}
+            Dim lblVendGen As New Label() With {.Text = "Vendedor:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 4, 4)}
+            cboVendedorGeneral = New ComboBox() With {
+                .DropDownStyle = ComboBoxStyle.DropDownList,
+                .Width = 210,
+                .Margin = New Padding(0, 3, 0, 4)
+            }
+            UITheme.StyleComboBox(cboVendedorGeneral)
+            AddHandler cboVendedorGeneral.SelectedIndexChanged, Sub()
+                                                                    If Not isLoading Then LoadVentasGenerales()
+                                                                End Sub
+
+            btnFiltrar = New Button() With {.Text = "Generar Reportes", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(12, 0, 12, 0), .Margin = New Padding(10, 1, 0, 4)}
             UITheme.StyleButton(btnFiltrar, "Primary")
             AddHandler btnFiltrar.Click, Sub() LoadReportes()
 
-            btnAnularVenta = New Button() With {.Text = "Anular Venta Seleccionada", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(12, 0, 12, 0), .Margin = New Padding(10, 1, 0, 4)}
+            btnDescargarPdf = New Button() With {.Text = "📄 Descargar Ticket PDF", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(12, 0, 12, 0), .Margin = New Padding(8, 1, 0, 4)}
+            UITheme.StyleButton(btnDescargarPdf, "Secondary")
+            AddHandler btnDescargarPdf.Click, AddressOf BtnDescargarPdf_Click
+
+            btnAnularVenta = New Button() With {.Text = "Anular Venta Seleccionada", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(12, 0, 12, 0), .Margin = New Padding(8, 1, 0, 4)}
             UITheme.StyleButton(btnAnularVenta, "Danger")
             btnAnularVenta.Visible = AuthService.IsAdminOrManager
             AddHandler btnAnularVenta.Click, AddressOf BtnAnularVenta_Click
 
-            flpFilter.Controls.AddRange({lblD, dtpDesde, lblH, dtpHasta, btnFiltrar, btnAnularVenta})
+            flpFilter.Controls.AddRange({lblD, dtpDesde, lblH, dtpHasta, lblVendGen, cboVendedorGeneral, btnFiltrar, btnDescargarPdf, btnAnularVenta})
             pnlFilter.Controls.Add(flpFilter)
 
             ' Tarjetas KPI para balance global del período (responsivas en 4 columnas iguales)
@@ -206,26 +245,15 @@ Namespace Forms
             ConstruirTabClientes()
             tabs.TabPages.Add(tabClientes)
 
-            ' Tab 3: Ranking de Prendas (Mayor Salida y Mayor Margen)
+            ' Tab 3: Ventas por Vendedor (con filtro y desglose)
+            tabVendedores = New TabPage("Ventas por Vendedor y Fecha") With {.BackColor = UITheme.ColorBackground}
+            ConstruirTabVendedores()
+            tabs.TabPages.Add(tabVendedores)
+
+            ' Tab 4: Ranking de Prendas (Mayor Salida y Mayor Margen)
             tabRanking = New TabPage("Ranking de Prendas y Rentabilidad") With {.BackColor = UITheme.ColorBackground}
             ConstruirTabRanking()
             tabs.TabPages.Add(tabRanking)
-
-            ' Restricción de privilegios para el perfil Vendedor
-            If AuthService.IsVendor Then
-                tabs.TabPages.Remove(tabVentas)
-                pnlKpis.Visible = False
-                btnAnularVenta.Visible = False
-
-                ' Ocultamos métricas confidenciales de costo/margen
-                rbMayorMargen.Visible = False
-                cboOrdenClientes.Items.Remove("Mayor Margen de Ganancia ($)")
-                dgvRanking.Columns("Costo").Visible = False
-                dgvRanking.Columns("Margen").Visible = False
-                dgvRanking.Columns("PctMargen").Visible = False
-                dgvClientesReporte.Columns("Margen").Visible = False
-                dgvClientesReporte.Columns("Rentabilidad").Visible = False
-            End If
 
             ' Jerarquía de docking
             Me.Controls.Add(tabs)
@@ -319,13 +347,30 @@ Namespace Forms
             btnVerDetalleTicketCliente = New Button() With {
                 .Text = "Ver Detalle de Prendas del Ticket",
                 .Dock = DockStyle.Right,
-                .Width = 240,
+                .Width = 235,
                 .Height = 32
             }
             UITheme.StyleButton(btnVerDetalleTicketCliente, "Secondary")
             AddHandler btnVerDetalleTicketCliente.Click, AddressOf BtnVerDetalleTicketCliente_Click
 
+            Dim pnlSpacerTickets As New Panel() With {
+                .Dock = DockStyle.Right,
+                .Width = 8,
+                .BackColor = Color.Transparent
+            }
+
+            btnDescargarPdfTicketCliente = New Button() With {
+                .Text = "📄 Descargar Ticket PDF",
+                .Dock = DockStyle.Right,
+                .Width = 195,
+                .Height = 32
+            }
+            UITheme.StyleButton(btnDescargarPdfTicketCliente, "Primary")
+            AddHandler btnDescargarPdfTicketCliente.Click, AddressOf BtnDescargarPdfTicketCliente_Click
+
             pnlTicketsHeader.Controls.Add(lblTicketsClienteHeader)
+            pnlTicketsHeader.Controls.Add(btnDescargarPdfTicketCliente)
+            pnlTicketsHeader.Controls.Add(pnlSpacerTickets)
             pnlTicketsHeader.Controls.Add(btnVerDetalleTicketCliente)
 
             dgvTicketsCliente = New DataGridView() With {.Dock = DockStyle.Fill}
@@ -338,6 +383,129 @@ Namespace Forms
 
             tabClientes.Controls.Add(scClientes)
             tabClientes.Controls.Add(pnlClientesToolbar)
+        End Sub
+
+        Private Sub ConstruirTabVendedores()
+            ' Panel superior de filtros para vendedores (responsivo)
+            Dim pnlVendedoresToolbar As New Panel() With {
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 48),
+                .BackColor = UITheme.ColorSurface
+            }
+            Dim flpVendedores As New FlowLayoutPanel() With {
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(10, 10, 10, 6),
+                .WrapContents = True
+            }
+
+            Dim lblVend As New Label() With {.Text = "Vendedor:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 4, 4)}
+            cboVendedoresFiltro = New ComboBox() With {
+                .DropDownStyle = ComboBoxStyle.DropDownList,
+                .Width = 260,
+                .Margin = New Padding(0, 3, 0, 4)
+            }
+            UITheme.StyleComboBox(cboVendedoresFiltro)
+            AddHandler cboVendedoresFiltro.SelectedIndexChanged, Sub()
+                                                                     If Not isLoading Then LoadVentasPorVendedor()
+                                                                 End Sub
+
+            Dim lblOrdVend As New Label() With {.Text = "Ordenar por:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(14, 6, 4, 4)}
+            cboOrdenVendedores = New ComboBox() With {
+                .DropDownStyle = ComboBoxStyle.DropDownList,
+                .Width = 220,
+                .Margin = New Padding(0, 3, 0, 4)
+            }
+            UITheme.StyleComboBox(cboOrdenVendedores)
+            cboOrdenVendedores.Items.AddRange({"Mayor Facturación ($)", "Mayor Salida (Prendas)", "Mayor Margen de Ganancia ($)"})
+            cboOrdenVendedores.SelectedIndex = 0
+            AddHandler cboOrdenVendedores.SelectedIndexChanged, Sub()
+                                                                    If Not isLoading Then LoadVentasPorVendedor()
+                                                                End Sub
+
+            lblResumenVendedores = New Label() With {
+                .AutoSize = True,
+                .Font = UITheme.FontBold,
+                .ForeColor = UITheme.ColorPrimaryDark,
+                .Margin = New Padding(20, 7, 0, 4),
+                .Text = "Cargando métricas..."
+            }
+
+            flpVendedores.Controls.AddRange({lblVend, cboVendedoresFiltro, lblOrdVend, cboOrdenVendedores, lblResumenVendedores})
+            pnlVendedoresToolbar.Controls.Add(flpVendedores)
+
+            ' SplitContainer: Vendedores arriba, comprobantes abajo
+            Dim scVendedores As New SplitContainer() With {
+                .Dock = DockStyle.Fill,
+                .Orientation = Orientation.Horizontal,
+                .SplitterDistance = 270,
+                .SplitterWidth = 6
+            }
+
+            ' Grilla principal de Vendedores
+            dgvVendedoresReporte = New DataGridView() With {.Dock = DockStyle.Fill}
+            UITheme.StyleDataGrid(dgvVendedoresReporte)
+            ConfigurarColumnasVendedoresReporte()
+            AddHandler dgvVendedoresReporte.SelectionChanged, AddressOf DgvVendedoresReporte_SelectionChanged
+            scVendedores.Panel1.Controls.Add(dgvVendedoresReporte)
+
+            ' Panel inferior: detalle de tickets del vendedor
+            Dim pnlTicketsVendHeader As New Panel() With {
+                .Dock = DockStyle.Top,
+                .Height = 46,
+                .BackColor = UITheme.ColorSurfaceMuted,
+                .Padding = New Padding(12, 7, 12, 7)
+            }
+            lblTicketsVendedorHeader = New Label() With {
+                .Text = "Comprobantes emitidos por el vendedor seleccionado",
+                .Font = UITheme.FontBold,
+                .ForeColor = UITheme.ColorTextPrimary,
+                .AutoSize = False,
+                .Dock = DockStyle.Fill,
+                .TextAlign = ContentAlignment.MiddleLeft,
+                .AutoEllipsis = True
+            }
+            btnVerDetalleTicketVendedor = New Button() With {
+                .Text = "Ver Detalle de Prendas del Ticket",
+                .Dock = DockStyle.Right,
+                .Width = 235,
+                .Height = 32
+            }
+            UITheme.StyleButton(btnVerDetalleTicketVendedor, "Secondary")
+            AddHandler btnVerDetalleTicketVendedor.Click, AddressOf BtnVerDetalleTicketVendedor_Click
+
+            Dim pnlSpacerTicketsVend As New Panel() With {
+                .Dock = DockStyle.Right,
+                .Width = 8,
+                .BackColor = Color.Transparent
+            }
+
+            btnDescargarPdfTicketVendedor = New Button() With {
+                .Text = "📄 Descargar Ticket PDF",
+                .Dock = DockStyle.Right,
+                .Width = 195,
+                .Height = 32
+            }
+            UITheme.StyleButton(btnDescargarPdfTicketVendedor, "Primary")
+            AddHandler btnDescargarPdfTicketVendedor.Click, AddressOf BtnDescargarPdfTicketVendedor_Click
+
+            pnlTicketsVendHeader.Controls.Add(lblTicketsVendedorHeader)
+            pnlTicketsVendHeader.Controls.Add(btnDescargarPdfTicketVendedor)
+            pnlTicketsVendHeader.Controls.Add(pnlSpacerTicketsVend)
+            pnlTicketsVendHeader.Controls.Add(btnVerDetalleTicketVendedor)
+
+            dgvTicketsVendedor = New DataGridView() With {.Dock = DockStyle.Fill}
+            UITheme.StyleDataGrid(dgvTicketsVendedor)
+            ConfigurarColumnasTicketsVendedor()
+            AddHandler dgvTicketsVendedor.CellDoubleClick, AddressOf DgvTicketsVendedor_CellDoubleClick
+
+            scVendedores.Panel2.Controls.Add(dgvTicketsVendedor)
+            scVendedores.Panel2.Controls.Add(pnlTicketsVendHeader)
+
+            tabVendedores.Controls.Add(scVendedores)
+            tabVendedores.Controls.Add(pnlVendedoresToolbar)
         End Sub
 
         Private Sub ConstruirTabRanking()
@@ -406,16 +574,40 @@ Namespace Forms
 
         Private Sub CargarComboClientes()
             cboClientesFiltro.Items.Clear()
-            cboClientesFiltro.Items.Add(New ClienteComboItem(0, "[ Todos los clientes ]"))
+            cboClientesFiltro.Items.Add(New FiltroComboItem(0, "[ Todos los clientes ]"))
 
             Dim clientes = clienteService.GetClientes("", True)
             For Each c In clientes
                 Dim desc = $"{c.Apellido}, {c.Nombre} (DNI: {c.DniCuit})"
-                cboClientesFiltro.Items.Add(New ClienteComboItem(c.Id, desc))
+                cboClientesFiltro.Items.Add(New FiltroComboItem(c.Id, desc))
             Next
 
             If cboClientesFiltro.Items.Count > 0 Then
                 cboClientesFiltro.SelectedIndex = 0
+            End If
+        End Sub
+
+        Private Sub CargarComboVendedores()
+            cboVendedorGeneral.Items.Clear()
+            cboVendedorGeneral.Items.Add(New FiltroComboItem(0, "[ Todos los vendedores ]"))
+
+            cboVendedoresFiltro.Items.Clear()
+            cboVendedoresFiltro.Items.Add(New FiltroComboItem(0, "[ Todos los vendedores ]"))
+
+            Dim usuarios = usuarioService.GetUsuarios(soloActivos:=False)
+            For Each u In usuarios
+                If u.Rol.Equals("Vendedor", StringComparison.OrdinalIgnoreCase) OrElse u.Rol.Equals("Gerente", StringComparison.OrdinalIgnoreCase) Then
+                    Dim desc = $"{u.NombreCompleto} ({u.Username})"
+                    cboVendedorGeneral.Items.Add(New FiltroComboItem(u.Id, desc))
+                    cboVendedoresFiltro.Items.Add(New FiltroComboItem(u.Id, desc))
+                End If
+            Next
+
+            If cboVendedorGeneral.Items.Count > 0 Then
+                cboVendedorGeneral.SelectedIndex = 0
+            End If
+            If cboVendedoresFiltro.Items.Count > 0 Then
+                cboVendedoresFiltro.SelectedIndex = 0
             End If
         End Sub
 
@@ -533,6 +725,83 @@ Namespace Forms
             dgvTicketsCliente.Columns("Estado").Width = 110
         End Sub
 
+        Private Sub ConfigurarColumnasVendedoresReporte()
+            dgvVendedoresReporte.Columns.Clear()
+            dgvVendedoresReporte.Columns.Add("Id", "ID")
+            dgvVendedoresReporte.Columns("Id").Visible = False
+
+            dgvVendedoresReporte.Columns.Add("Vendedor", "Vendedor")
+            dgvVendedoresReporte.Columns("Vendedor").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+
+            dgvVendedoresReporte.Columns.Add("Username", "Usuario")
+            dgvVendedoresReporte.Columns("Username").Width = 115
+
+            dgvVendedoresReporte.Columns.Add("Dni", "DNI")
+            dgvVendedoresReporte.Columns("Dni").Width = 110
+
+            dgvVendedoresReporte.Columns.Add("Ventas", "Tickets")
+            dgvVendedoresReporte.Columns("Ventas").Width = 85
+            dgvVendedoresReporte.Columns("Ventas").DefaultCellStyle.Font = UITheme.FontBold
+            dgvVendedoresReporte.Columns("Ventas").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+            dgvVendedoresReporte.Columns.Add("Unidades", "Prendas Vendidas")
+            dgvVendedoresReporte.Columns("Unidades").Width = 130
+            dgvVendedoresReporte.Columns("Unidades").DefaultCellStyle.Font = UITheme.FontBold
+            dgvVendedoresReporte.Columns("Unidades").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+            dgvVendedoresReporte.Columns.Add("Total", "Total Facturado")
+            dgvVendedoresReporte.Columns("Total").Width = 130
+            dgvVendedoresReporte.Columns("Total").DefaultCellStyle.Format = "C2"
+            dgvVendedoresReporte.Columns("Total").DefaultCellStyle.Font = UITheme.FontBold
+
+            dgvVendedoresReporte.Columns.Add("Margen", "Margen Ganancia")
+            dgvVendedoresReporte.Columns("Margen").Width = 130
+            dgvVendedoresReporte.Columns("Margen").DefaultCellStyle.Format = "C2"
+            dgvVendedoresReporte.Columns("Margen").DefaultCellStyle.Font = UITheme.FontBold
+            dgvVendedoresReporte.Columns("Margen").DefaultCellStyle.ForeColor = UITheme.ColorSuccessDark
+
+            dgvVendedoresReporte.Columns.Add("Rentabilidad", "% Margen")
+            dgvVendedoresReporte.Columns("Rentabilidad").Width = 90
+            dgvVendedoresReporte.Columns("Rentabilidad").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+            dgvVendedoresReporte.Columns.Add("UltimaVenta", "Última Venta")
+            dgvVendedoresReporte.Columns("UltimaVenta").Width = 130
+        End Sub
+
+        Private Sub ConfigurarColumnasTicketsVendedor()
+            dgvTicketsVendedor.Columns.Clear()
+            dgvTicketsVendedor.Columns.Add("Id", "ID")
+            dgvTicketsVendedor.Columns("Id").Visible = False
+
+            dgvTicketsVendedor.Columns.Add("Ticket", "Nº Ticket")
+            dgvTicketsVendedor.Columns("Ticket").Width = 140
+
+            dgvTicketsVendedor.Columns.Add("Fecha", "Fecha y Hora")
+            dgvTicketsVendedor.Columns("Fecha").Width = 135
+
+            dgvTicketsVendedor.Columns.Add("Cliente", "Cliente")
+            dgvTicketsVendedor.Columns("Cliente").Width = 160
+
+            dgvTicketsVendedor.Columns.Add("Metodo", "Medio Pago")
+            dgvTicketsVendedor.Columns("Metodo").Width = 120
+
+            dgvTicketsVendedor.Columns.Add("Subtotal", "Subtotal")
+            dgvTicketsVendedor.Columns("Subtotal").Width = 100
+            dgvTicketsVendedor.Columns("Subtotal").DefaultCellStyle.Format = "C2"
+
+            dgvTicketsVendedor.Columns.Add("Descuento", "Desc. ($)")
+            dgvTicketsVendedor.Columns("Descuento").Width = 90
+            dgvTicketsVendedor.Columns("Descuento").DefaultCellStyle.Format = "C2"
+
+            dgvTicketsVendedor.Columns.Add("Total", "Total Facturado")
+            dgvTicketsVendedor.Columns("Total").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvTicketsVendedor.Columns("Total").DefaultCellStyle.Format = "C2"
+            dgvTicketsVendedor.Columns("Total").DefaultCellStyle.Font = UITheme.FontBold
+
+            dgvTicketsVendedor.Columns.Add("Estado", "Estado")
+            dgvTicketsVendedor.Columns("Estado").Width = 110
+        End Sub
+
         Private Sub ConfigurarColumnasRanking()
             dgvRanking.Columns.Clear()
             dgvRanking.Columns.Add("Prenda", "Prenda / Modelo")
@@ -579,6 +848,7 @@ Namespace Forms
         Private Sub LoadReportes()
             LoadVentasGenerales()
             LoadVentasPorCliente()
+            LoadVentasPorVendedor()
             LoadRanking()
         End Sub
 
@@ -586,7 +856,13 @@ Namespace Forms
             Dim desde = dtpDesde.Value.Date
             Dim hasta = dtpHasta.Value.Date
 
-            Dim ventas = ventaService.GetVentas(desde, hasta)
+            Dim vendedorId As Integer = 0
+            If cboVendedorGeneral IsNot Nothing AndAlso cboVendedorGeneral.SelectedItem IsNot Nothing Then
+                Dim item = CType(cboVendedorGeneral.SelectedItem, FiltroComboItem)
+                vendedorId = item.Id
+            End If
+
+            Dim ventas = ventaService.GetVentas(desde, hasta, "", 0, vendedorId)
             dgvVentas.Rows.Clear()
 
             Dim totalPeriodo As Decimal = 0D
@@ -625,7 +901,7 @@ Namespace Forms
 
             Dim clienteId As Integer = 0
             If cboClientesFiltro.SelectedItem IsNot Nothing Then
-                Dim item = CType(cboClientesFiltro.SelectedItem, ClienteComboItem)
+                Dim item = CType(cboClientesFiltro.SelectedItem, FiltroComboItem)
                 clienteId = item.Id
             End If
 
@@ -658,13 +934,81 @@ Namespace Forms
                 dgvClientesReporte.Rows.Add(c.ClienteId, c.ClienteNombre, c.DniCuit, c.Telefono, c.CantidadCompras, c.TotalUnidades, c.TotalFacturado, c.MargenGanancia, pctStr, fechaStr)
             Next
 
-            If AuthService.IsVendor Then
-                lblResumenClientes.Text = $"Clientes compradores: {totClientes} | Total prendas llevadas: {totPrendas}"
-            Else
-                lblResumenClientes.Text = $"Clientes: {totClientes} | Prendas: {totPrendas} | Facturado: {totFacturado:C2} | Margen Neto: {totMargen:C2}"
-            End If
+            lblResumenClientes.Text = $"Clientes: {totClientes} | Prendas: {totPrendas} | Facturado: {totFacturado:C2} | Margen Neto: {totMargen:C2}"
 
             DgvClientesReporte_SelectionChanged(Nothing, EventArgs.Empty)
+        End Sub
+
+        Private Sub LoadVentasPorVendedor()
+            Dim desde = dtpDesde.Value.Date
+            Dim hasta = dtpHasta.Value.Date
+
+            Dim vendedorId As Integer = 0
+            If cboVendedoresFiltro.SelectedItem IsNot Nothing Then
+                Dim item = CType(cboVendedoresFiltro.SelectedItem, FiltroComboItem)
+                vendedorId = item.Id
+            End If
+
+            Dim criterio As CriterioOrdenCliente = CriterioOrdenCliente.MayorFacturacion
+            If cboOrdenVendedores.SelectedItem IsNot Nothing Then
+                Dim sel = cboOrdenVendedores.SelectedItem.ToString()
+                If sel.Contains("Salida") Then
+                    criterio = CriterioOrdenCliente.MayorSalida
+                ElseIf sel.Contains("Margen") Then
+                    criterio = CriterioOrdenCliente.MayorMargen
+                End If
+            End If
+
+            Dim lista = reporteService.GetReporteVentasPorVendedor(desde, hasta, vendedorId, criterio)
+            dgvVendedoresReporte.Rows.Clear()
+
+            Dim totVendedores = lista.Count
+            Dim totPrendas = 0
+            Dim totFacturado As Decimal = 0D
+            Dim totMargen As Decimal = 0D
+
+            For Each v In lista
+                totPrendas += v.TotalUnidades
+                totFacturado += v.TotalFacturado
+                totMargen += v.MargenGanancia
+
+                Dim fechaStr = If(v.UltimaVenta.HasValue, v.UltimaVenta.Value.ToString("dd/MM/yyyy HH:mm"), "-")
+                Dim pctStr = $"{v.PorcentajeMargen:N1} %"
+
+                dgvVendedoresReporte.Rows.Add(v.UsuarioId, v.VendedorNombre, v.Username, If(String.IsNullOrWhiteSpace(v.Dni), "-", v.Dni), v.CantidadVentas, v.TotalUnidades, v.TotalFacturado, v.MargenGanancia, pctStr, fechaStr)
+            Next
+
+            lblResumenVendedores.Text = $"Vendedores: {totVendedores} | Prendas: {totPrendas} | Facturado: {totFacturado:C2} | Margen Neto: {totMargen:C2}"
+
+            DgvVendedoresReporte_SelectionChanged(Nothing, EventArgs.Empty)
+        End Sub
+
+        Private Sub DgvVendedoresReporte_SelectionChanged(sender As Object, e As EventArgs)
+            If dgvVendedoresReporte.CurrentRow IsNot Nothing AndAlso dgvVendedoresReporte.CurrentRow.Cells("Id").Value IsNot Nothing Then
+                Dim vendedorId As Integer = Convert.ToInt32(dgvVendedoresReporte.CurrentRow.Cells("Id").Value)
+                Dim vendedorNombre As String = dgvVendedoresReporte.CurrentRow.Cells("Vendedor").Value.ToString()
+                LoadTicketsVendedor(vendedorId, vendedorNombre)
+            Else
+                dgvTicketsVendedor.Rows.Clear()
+                lblTicketsVendedorHeader.Text = "Seleccione un vendedor para ver sus comprobantes emitidos"
+            End If
+        End Sub
+
+        Private Sub LoadTicketsVendedor(vendedorId As Integer, vendedorNombre As String)
+            Dim desde = dtpDesde.Value.Date
+            Dim hasta = dtpHasta.Value.Date
+
+            lblTicketsVendedorHeader.Text = $"Comprobantes emitidos por: {vendedorNombre} (período {desde:dd/MM} al {hasta:dd/MM})"
+
+            Dim tickets = ventaService.GetVentas(desde, hasta, "", 0, vendedorId)
+            dgvTicketsVendedor.Rows.Clear()
+
+            For Each v In tickets
+                Dim rIdx = dgvTicketsVendedor.Rows.Add(v.Id, v.NumeroTicket, v.Fecha.ToString("dd/MM/yyyy HH:mm"), v.ClienteNombre, v.MetodoPago, v.Subtotal, v.DescuentoMonto, v.Total, v.Estado)
+                If v.Estado <> "Completada" Then
+                    dgvTicketsVendedor.Rows(rIdx).DefaultCellStyle.ForeColor = UITheme.ColorTextMuted
+                End If
+            Next
         End Sub
 
         Private Sub DgvClientesReporte_SelectionChanged(sender As Object, e As EventArgs)
@@ -752,6 +1096,77 @@ Namespace Forms
             End If
         End Sub
 
+        Private Sub DgvTicketsVendedor_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
+            If e.RowIndex >= 0 Then
+                Dim row = dgvTicketsVendedor.Rows(e.RowIndex)
+                Dim ventaId As Integer = Convert.ToInt32(row.Cells("Id").Value)
+                Dim ticketNum As String = row.Cells("Ticket").Value.ToString()
+                MostrarModalDetalleVenta(ventaId, ticketNum)
+            End If
+        End Sub
+
+        Private Sub BtnVerDetalleTicketVendedor_Click(sender As Object, e As EventArgs)
+            If dgvTicketsVendedor.CurrentRow IsNot Nothing Then
+                Dim ventaId As Integer = Convert.ToInt32(dgvTicketsVendedor.CurrentRow.Cells("Id").Value)
+                Dim ticketNum As String = dgvTicketsVendedor.CurrentRow.Cells("Ticket").Value.ToString()
+                MostrarModalDetalleVenta(ventaId, ticketNum)
+            Else
+                MessageBox.Show("Por favor seleccione un comprobante en la lista para ver el detalle de artículos.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
+        End Sub
+
+        Private Sub BtnDescargarPdfTicketVendedor_Click(sender As Object, e As EventArgs)
+            If dgvTicketsVendedor.CurrentRow IsNot Nothing AndAlso dgvTicketsVendedor.CurrentRow.Cells("Id").Value IsNot Nothing Then
+                Dim ventaId As Integer = Convert.ToInt32(dgvTicketsVendedor.CurrentRow.Cells("Id").Value)
+                DescargarTicketPdfPorId(ventaId)
+            Else
+                MessageBox.Show("Por favor seleccione un comprobante del vendedor para descargar su ticket en PDF.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
+        End Sub
+
+        Private Sub BtnDescargarPdf_Click(sender As Object, e As EventArgs)
+            If tabs.SelectedTab Is tabVentas Then
+                If dgvVentas.CurrentRow IsNot Nothing AndAlso dgvVentas.CurrentRow.Cells("Id").Value IsNot Nothing Then
+                    Dim ventaId As Integer = Convert.ToInt32(dgvVentas.CurrentRow.Cells("Id").Value)
+                    DescargarTicketPdfPorId(ventaId)
+                Else
+                    MessageBox.Show("Seleccione una venta en el listado general para descargar su ticket en PDF.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                End If
+            ElseIf tabs.SelectedTab Is tabClientes Then
+                BtnDescargarPdfTicketCliente_Click(sender, e)
+            ElseIf tabs.SelectedTab Is tabVendedores Then
+                BtnDescargarPdfTicketVendedor_Click(sender, e)
+            Else
+                MessageBox.Show("Seleccione un comprobante en las pestañas de Ventas, Clientes o Vendedores para descargar su ticket en PDF.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
+        End Sub
+
+        Private Sub BtnDescargarPdfTicketCliente_Click(sender As Object, e As EventArgs)
+            If dgvTicketsCliente.CurrentRow IsNot Nothing AndAlso dgvTicketsCliente.CurrentRow.Cells("Id").Value IsNot Nothing Then
+                Dim ventaId As Integer = Convert.ToInt32(dgvTicketsCliente.CurrentRow.Cells("Id").Value)
+                DescargarTicketPdfPorId(ventaId)
+            Else
+                MessageBox.Show("Por favor seleccione un comprobante del cliente para descargar su ticket en PDF.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
+        End Sub
+
+        Private Sub DescargarTicketPdfPorId(ventaId As Integer)
+            Dim venta = ventaService.GetVentaPorId(ventaId)
+            If venta Is Nothing Then
+                MessageBox.Show("No se encontró la venta seleccionada.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            Dim detalles = ventaService.GetDetalleVenta(ventaId)
+            If detalles Is Nothing OrElse detalles.Count = 0 Then
+                MessageBox.Show("No se encontraron renglones de artículos para este ticket.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            venta.Detalles = detalles
+            GuardarTicketEnPdf(Me, venta)
+        End Sub
+
         Private Sub MostrarModalDetalleVenta(ventaId As Integer, ticketNumero As String)
             Dim venta = ventaService.GetVentaPorId(ventaId)
             If venta Is Nothing Then
@@ -828,17 +1243,9 @@ Namespace Forms
                 .Location = New Point(modal.ClientSize.Width - 120, 9),
                 .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
             }
-            Dim btnGuardarPdf As New Button() With {
-                .Text = "Guardar ticket en PDF",
-                .Size = New Size(175, 32),
-                .Location = New Point(modal.ClientSize.Width - 305, 9),
-                .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
-            }
             UITheme.StyleButton(btnCerrar, "Secondary")
-            UITheme.StyleButton(btnGuardarPdf, "Primary")
             AddHandler btnCerrar.Click, Sub() modal.Close()
-            AddHandler btnGuardarPdf.Click, Sub() GuardarTicketEnPdf(venta)
-            pnlBottom.Controls.AddRange({btnGuardarPdf, btnCerrar})
+            pnlBottom.Controls.Add(btnCerrar)
 
             modal.Controls.Add(dgvModal)
             modal.Controls.Add(pnlBottom)
@@ -847,9 +1254,9 @@ Namespace Forms
             modal.ShowDialog(Me)
         End Sub
 
-        Private Sub GuardarTicketEnPdf(venta As Venta)
+        Friend Shared Sub GuardarTicketEnPdf(owner As IWin32Window, venta As Venta)
             If venta Is Nothing OrElse venta.Detalles Is Nothing OrElse venta.Detalles.Count = 0 Then
-                MessageBox.Show("No hay información suficiente para imprimir el ticket.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                MessageBox.Show(owner, "No hay información suficiente para imprimir el ticket.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 Return
             End If
 
@@ -862,7 +1269,7 @@ Namespace Forms
             Next
 
             If String.IsNullOrWhiteSpace(nombreImpresoraPdf) Then
-                MessageBox.Show("No está instalada la impresora «Microsoft Print to PDF». Habilítela en las características de Windows para guardar el ticket.", "Impresora PDF no disponible", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                MessageBox.Show(owner, "No está instalada la impresora «Microsoft Print to PDF». Habilítela en las características de Windows para guardar el ticket.", "Impresora PDF no disponible", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 Return
             End If
 
@@ -879,49 +1286,58 @@ Namespace Forms
                 dialogoGuardar.AddExtension = True
                 dialogoGuardar.OverwritePrompt = True
 
-                If dialogoGuardar.ShowDialog(Me) <> DialogResult.OK Then
+                If dialogoGuardar.ShowDialog(owner) <> DialogResult.OK Then
                     Return
                 End If
 
                 Try
-                    Dim lineasTicket = ConstruirLineasTicket(venta, configService.GetConfiguracion())
+                    Dim cfgSvc As New ConfiguracionService()
+                    Dim lineasTicket = ConstruirLineasTicket(venta, cfgSvc.GetConfiguracion())
                     Dim indiceLinea As Integer = 0
                     Using documento As New PrintDocument()
                         documento.DocumentName = nombreArchivo
                         documento.PrinterSettings.PrinterName = nombreImpresoraPdf
                         documento.PrinterSettings.PrintToFile = True
                         documento.PrinterSettings.PrintFileName = dialogoGuardar.FileName
-                        documento.OriginAtMargins = True
+                        documento.OriginAtMargins = False
                         documento.DefaultPageSettings.Margins = New Margins(45, 45, 45, 45)
 
                         AddHandler documento.PrintPage,
                             Sub(sender, args)
                                 Using fuente As New Font("Courier New", 9.0F, FontStyle.Regular)
-                                    Dim altoLinea = fuente.GetHeight(args.Graphics) + 2.0F
-                                    Dim posicionY = CSng(args.MarginBounds.Top)
+                                    Using pincel As New SolidBrush(Color.Black)
+                                        Dim altoLinea = fuente.GetHeight(args.Graphics) + 2.0F
+                                        Dim posicionY = CSng(args.MarginBounds.Top)
+                                        Dim margenIzquierdo = CSng(args.MarginBounds.Left)
+                                        Dim limiteInferior = CSng(args.MarginBounds.Bottom)
 
-                                    While indiceLinea < lineasTicket.Count AndAlso posicionY + altoLinea <= args.MarginBounds.Bottom
-                                        args.Graphics.DrawString(lineasTicket(indiceLinea), fuente, Brushes.Black, args.MarginBounds.Left, posicionY)
-                                        posicionY += altoLinea
-                                        indiceLinea += 1
-                                    End While
+                                        While indiceLinea < lineasTicket.Count AndAlso posicionY + altoLinea <= limiteInferior
+                                            args.Graphics.DrawString(lineasTicket(indiceLinea), fuente, pincel, margenIzquierdo, posicionY)
+                                            posicionY += altoLinea
+                                            indiceLinea += 1
+                                        End While
 
-                                    args.HasMorePages = indiceLinea < lineasTicket.Count
+                                        args.HasMorePages = indiceLinea < lineasTicket.Count
+                                    End Using
                                 End Using
                             End Sub
 
                         documento.Print()
                     End Using
 
-                    MessageBox.Show("El ticket se guardó correctamente en PDF.", "Ticket guardado", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                    MessageBox.Show(owner, "El ticket se guardó correctamente en PDF.", "Ticket guardado", MessageBoxButtons.OK, MessageBoxIcon.Information)
                 Catch ex As Exception
                     AppLogger.LogError("FrmReportes.GuardarTicketEnPdf", ex)
-                    MessageBox.Show("No se pudo guardar el ticket en PDF: " & ex.Message, "Error de impresión", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    MessageBox.Show(owner, "No se pudo guardar el ticket en PDF: " & ex.Message, "Error de impresión", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 End Try
             End Using
         End Sub
 
         Friend Shared Function ConstruirLineasTicket(venta As Venta, configuracion As ConfiguracionComercio) As List(Of String)
+            Dim vendedorNombre As String = If(String.IsNullOrWhiteSpace(venta.UsuarioNombre),
+                                              If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.NombreCompleto, "Caja"),
+                                              venta.UsuarioNombre)
+
             Dim contenido As New System.Text.StringBuilder()
             contenido.AppendLine("==========================================")
             contenido.AppendLine(configuracion.NombreComercio.ToUpperInvariant())
@@ -931,10 +1347,10 @@ Namespace Forms
             contenido.AppendLine("==========================================")
             contenido.AppendLine($"TICKET Nº: {venta.NumeroTicket}")
             contenido.AppendLine($"Fecha: {venta.Fecha:dd/MM/yyyy HH:mm:ss}")
-            contenido.AppendLine($"Vendedor: {venta.UsuarioNombre}")
+            contenido.AppendLine($"Vendedor: {vendedorNombre}")
             contenido.AppendLine($"Cliente: {venta.ClienteNombre}")
             contenido.AppendLine($"Medio de pago: {venta.MetodoPago}")
-            If venta.Estado.Equals("Anulada", StringComparison.OrdinalIgnoreCase) Then
+            If Not String.IsNullOrWhiteSpace(venta.Estado) AndAlso venta.Estado.Equals("Anulada", StringComparison.OrdinalIgnoreCase) Then
                 contenido.AppendLine("ESTADO: ANULADA")
             End If
             contenido.AppendLine("------------------------------------------")

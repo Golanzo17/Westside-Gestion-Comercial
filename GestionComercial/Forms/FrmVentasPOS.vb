@@ -762,6 +762,8 @@ Namespace Forms
             End If
 
             ventaActual.UsuarioId = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.Id, 1)
+            ventaActual.UsuarioNombre = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.NombreCompleto, "Caja")
+            ventaActual.Fecha = DateTime.Now
             ventaActual.CajaId = cajaAbierta.Id
             ventaActual.MetodoPago = cboMetodoPago.SelectedItem.ToString()
             ventaActual.TipoComprobante = "Ticket"
@@ -840,7 +842,7 @@ Namespace Forms
             ' Modal con diseño térmico
             Dim frmTicket As New Form() With {
                 .Text = "Comprobante de Venta - Ticket",
-                .Size = New Size(420, 560),
+                .Size = New Size(430, 560),
                 .StartPosition = FormStartPosition.CenterParent,
                 .FormBorderStyle = FormBorderStyle.FixedDialog,
                 .MaximizeBox = False,
@@ -859,16 +861,32 @@ Namespace Forms
                 .Text = sb.ToString()
             }
 
-            Dim btnImprimir As New Button() With {
-                .Text = "🖨 Imprimir / Cerrar",
+            Dim pnlBottomTicket As New Panel() With {
                 .Dock = DockStyle.Bottom,
-                .Height = 45
+                .Height = 56,
+                .Padding = New Padding(12, 8, 12, 8),
+                .BackColor = UITheme.ColorSurfaceMuted
             }
-            UITheme.StyleButton(btnImprimir, "Primary")
+
+            Dim btnGuardarPdf As New Button() With {
+                .Text = "📄 Guardar ticket en PDF",
+                .Dock = DockStyle.Left,
+                .Width = 195
+            }
+            UITheme.StyleButton(btnGuardarPdf, "Primary")
+            AddHandler btnGuardarPdf.Click, Sub() FrmReportes.GuardarTicketEnPdf(frmTicket, v)
+
+            Dim btnImprimir As New Button() With {
+                .Text = "Imprimir / Cerrar",
+                .Dock = DockStyle.Right,
+                .Width = 175
+            }
+            UITheme.StyleButton(btnImprimir, "Secondary")
             AddHandler btnImprimir.Click, Sub() frmTicket.Close()
 
-            frmTicket.Controls.AddRange({txtRecibo, btnImprimir})
-            frmTicket.ShowDialog()
+            pnlBottomTicket.Controls.AddRange({btnGuardarPdf, btnImprimir})
+            frmTicket.Controls.AddRange({txtRecibo, pnlBottomTicket})
+            frmTicket.ShowDialog(Me)
         End Sub
 
     End Class

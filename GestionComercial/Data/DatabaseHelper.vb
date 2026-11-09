@@ -1,4 +1,4 @@
-﻿' ARCHIVO: DatabaseHelper.vb
+' ARCHIVO: DatabaseHelper.vb
 ' PROPÓSITO: Capa de Acceso a Datos (DAL), utilidades de base de datos y seguridad criptográfica.
 ' Aquí centralizamos la persistencia y la seguridad del sistema:
 ' 1. Adaptador de Persistencia (SQLite):
@@ -31,13 +31,6 @@ Namespace Data
         Private Const GerenteDefaultPbkdf2Hash As String = "PBKDF2$SHA256$100000$a606/LnGvERCjMeOWvEduQ==$KbsU0/h6RLoTTtqBps8fg16jvCN2SoxpP+OrX51GS6E="
         Private Const GerenteLegacySha256Hash As String = "ecfba551324356e5bd27b548adf36b728783f60d9b573d142caac7baad62be49"
 
-        ' Bandera booleana rápida que confirma que trabajamos con SQLite como motor de persistencia.
-        Public ReadOnly Property IsSQLite As Boolean
-            Get
-                Return True
-            End Get
-        End Property
-
         ' Fábrica de conexiones: Devuelve una instancia de SqliteConnection conectada
         ' al archivo de base de datos local según appsettings.json.
         ' Nos aseguramos de que la carpeta de destino exista antes de abrir.
@@ -52,12 +45,11 @@ Namespace Data
         End Function
 
         ' Adaptador de sintaxis SQL: Convierte funciones de fecha a sintaxis nativa de SQLite
-        ' (datetime(...) y date(...)) y remueve cláusulas incompatibles como "FOR UPDATE".
+        ' (datetime(...) y date(...)).
         Public Function PrepareQuery(query As String) As String
             Dim q = query
             q = q.Replace("NOW()", "datetime('now', 'localtime')", StringComparison.OrdinalIgnoreCase)
             q = q.Replace("CURDATE()", "date('now', 'localtime')", StringComparison.OrdinalIgnoreCase)
-            q = q.Replace("FOR UPDATE", "", StringComparison.OrdinalIgnoreCase)
             Return q
         End Function
 
@@ -233,10 +225,6 @@ Namespace Data
             End Try
 
             Return False
-        End Function
-
-        Public Function HashPassword(password As String) As String
-            Return HashPasswordSecure(password)
         End Function
 
         ' Resolución dinámica de scripts SQL (schema_sqlite, seed_data, etc.).
