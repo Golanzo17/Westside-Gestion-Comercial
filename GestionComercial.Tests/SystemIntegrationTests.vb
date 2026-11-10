@@ -34,6 +34,24 @@ Namespace GestionComercial.Tests
         End Sub
 
         <Fact>
+        Public Sub DemoCatalogSeed_ShouldAddFiftyProductsAndRemainIdempotent()
+            Dim productCount = Convert.ToInt32(DatabaseHelper.ExecuteScalar(
+                "SELECT COUNT(*) FROM productos WHERE codigo_barra LIKE '779002%';"))
+            Dim variantCount = Convert.ToInt32(DatabaseHelper.ExecuteScalar(
+                "SELECT COUNT(*) FROM producto_talles pt INNER JOIN productos p ON p.id = pt.producto_id WHERE p.codigo_barra LIKE '779002%';"))
+
+            Assert.Equal(50, productCount)
+            Assert.Equal(50, variantCount)
+
+            Dim errMsg As String = ""
+            Assert.True(DatabaseHelper.InitializeDatabaseAndTables(errMsg), errMsg)
+
+            productCount = Convert.ToInt32(DatabaseHelper.ExecuteScalar(
+                "SELECT COUNT(*) FROM productos WHERE codigo_barra LIKE '779002%';"))
+            Assert.Equal(50, productCount)
+        End Sub
+
+        <Fact>
         Public Sub PasswordHashing_PBKDF2_ShouldAuthenticateAdminAndManager()
             Dim errMsg As String = ""
             Dim okAdmin = AuthService.Login("admin", "admin123", errMsg)

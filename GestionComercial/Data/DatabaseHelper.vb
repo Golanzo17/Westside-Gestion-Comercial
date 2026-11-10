@@ -85,6 +85,7 @@ Namespace Data
 
                     ' Verificamos que todas las columnas necesarias existan (migración de esquema)
                     EnsureSchemaUpdates(conn)
+                    ApplyDemoCatalogSeed(conn)
 
                     errorMessage = String.Empty
                     Return True
@@ -295,6 +296,7 @@ Namespace Data
                         End Using
 
                         EnsureSchemaUpdates(conn)
+                        ApplyDemoCatalogSeed(conn)
                     End If
                 End Using
 
@@ -306,6 +308,17 @@ Namespace Data
                 Return False
             End Try
         End Function
+
+        Private Sub ApplyDemoCatalogSeed(conn As DbConnection)
+            Dim seedFile As String = ResolveDatabaseScriptPath("seed_catalogo_demo.sql")
+            If String.IsNullOrEmpty(seedFile) OrElse Not File.Exists(seedFile) Then Return
+
+            Dim seedSql As String = File.ReadAllText(seedFile)
+            Using cmdSeed = conn.CreateCommand()
+                cmdSeed.CommandText = seedSql
+                cmdSeed.ExecuteNonQuery()
+            End Using
+        End Sub
 
         ' Migraciones automáticas de esquema (Auto-Migrations):
         ' Detecta si faltan columnas de datos personales de usuarios, fecha de nacimiento
