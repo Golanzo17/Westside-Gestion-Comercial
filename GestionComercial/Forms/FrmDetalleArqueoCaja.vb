@@ -181,6 +181,7 @@ Namespace Forms
 
             ' Tarjeta Izquierda: Fórmula y Conciliación Matemática
             Dim pnlFormulaCard As New Panel() With {
+                .Size = New Size(440, 480),
                 .Dock = DockStyle.Fill,
                 .Margin = New Padding(4, 4, 8, 4),
                 .BackColor = UITheme.ColorSurface,
@@ -264,12 +265,18 @@ Namespace Forms
 
             ' Tarjeta Derecha: Conciliación de Medios de Pago
             Dim pnlMediosCard As New Panel() With {
+                .Size = New Size(440, 480),
                 .Dock = DockStyle.Fill,
                 .Margin = New Padding(8, 4, 4, 4),
                 .BackColor = UITheme.ColorSurface,
                 .Padding = New Padding(18)
             }
-            AddHandler pnlMediosCard.Resize, Sub(s, ev) pnlMediosCard.Invalidate()
+            AddHandler pnlMediosCard.Resize, Sub(s, ev)
+                                                 If dgvMediosPago IsNot Nothing Then
+                                                     dgvMediosPago.Size = New Size(Math.Max(150, pnlMediosCard.ClientSize.Width - 36), Math.Max(120, pnlMediosCard.ClientSize.Height - 88))
+                                                 End If
+                                                 pnlMediosCard.Invalidate()
+                                             End Sub
             AddHandler pnlMediosCard.Paint, Sub(s, ev)
                                                 Using pen As New Pen(UITheme.ColorBorder, 1)
                                                     ev.Graphics.DrawRectangle(pen, 0, 0, pnlMediosCard.Width - 1, pnlMediosCard.Height - 1)
@@ -309,26 +316,37 @@ Namespace Forms
         End Sub
 
         Private Function AgregarFilaFormula(parent As Panel, labelText As String, valText As String, y As Integer, valColor As Color, isBold As Boolean) As Label
+            Dim valWidth As Integer = 165
+            Dim rightPad As Integer = 18
+            Dim valLeft As Integer = Math.Max(200, parent.ClientSize.Width - valWidth - rightPad)
+
             Dim lblDesc As New Label() With {
                 .Text = labelText,
                 .Font = If(isBold, UITheme.FontBold, UITheme.FontRegular),
                 .ForeColor = UITheme.ColorTextPrimary,
                 .Location = New Point(18, y),
-                .Size = New Size(240, 24),
-                .TextAlign = ContentAlignment.MiddleLeft
+                .Size = New Size(Math.Max(140, valLeft - 24), 24),
+                .TextAlign = ContentAlignment.MiddleLeft,
+                .AutoEllipsis = True
             }
 
             Dim lblVal As New Label() With {
                 .Text = valText,
                 .Font = If(isBold, UITheme.FontBold, UITheme.FontRegular),
                 .ForeColor = valColor,
-                .Location = New Point(parent.ClientSize.Width - 175, y),
-                .Size = New Size(157, 24),
-                .TextAlign = ContentAlignment.MiddleRight,
-                .Anchor = AnchorStyles.Top Or AnchorStyles.Right
+                .Location = New Point(valLeft, y),
+                .Size = New Size(valWidth, 24),
+                .TextAlign = ContentAlignment.MiddleRight
             }
 
-            parent.Controls.AddRange({lblDesc, lblVal})
+            AddHandler parent.Resize, Sub(s, ev)
+                                          Dim newValLeft = Math.Max(200, parent.ClientSize.Width - valWidth - rightPad)
+                                          lblVal.Location = New Point(newValLeft, y)
+                                          lblDesc.Width = Math.Max(140, newValLeft - 24)
+                                      End Sub
+
+            parent.Controls.AddRange({lblVal, lblDesc})
+            lblVal.BringToFront()
             Return lblVal
         End Function
 
@@ -434,26 +452,43 @@ Namespace Forms
             Dim pnlGrid As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(20)}
             dgvMovimientos = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvMovimientos)
+            dgvMovimientos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
 
             dgvMovimientos.Columns.Add("Hora", "Fecha y Hora")
-            dgvMovimientos.Columns("Hora").Width = 130
+            dgvMovimientos.Columns("Hora").FillWeight = 13
+            dgvMovimientos.Columns("Hora").MinimumWidth = 100
+            dgvMovimientos.Columns("Hora").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvMovimientos.Columns("Hora").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvMovimientos.Columns.Add("Tipo", "Tipo")
-            dgvMovimientos.Columns("Tipo").Width = 110
+            dgvMovimientos.Columns("Tipo").FillWeight = 10
+            dgvMovimientos.Columns("Tipo").MinimumWidth = 80
+            dgvMovimientos.Columns("Tipo").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvMovimientos.Columns("Tipo").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvMovimientos.Columns.Add("Concepto", "Concepto / Justificación")
-            dgvMovimientos.Columns("Concepto").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvMovimientos.Columns("Concepto").FillWeight = 28
+            dgvMovimientos.Columns("Concepto").MinimumWidth = 130
 
             dgvMovimientos.Columns.Add("Monto", "Monto ($)")
-            dgvMovimientos.Columns("Monto").Width = 130
+            dgvMovimientos.Columns("Monto").FillWeight = 13
+            dgvMovimientos.Columns("Monto").MinimumWidth = 95
             dgvMovimientos.Columns("Monto").DefaultCellStyle.Format = "C2"
             dgvMovimientos.Columns("Monto").DefaultCellStyle.Font = UITheme.FontBold
+            dgvMovimientos.Columns("Monto").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvMovimientos.Columns("Monto").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
             dgvMovimientos.Columns.Add("Usuario", "Registrado Por")
-            dgvMovimientos.Columns("Usuario").Width = 160
+            dgvMovimientos.Columns("Usuario").FillWeight = 14
+            dgvMovimientos.Columns("Usuario").MinimumWidth = 100
+
+            dgvMovimientos.Columns.Add("AutorizadoPor", "Autorizado Por")
+            dgvMovimientos.Columns("AutorizadoPor").FillWeight = 14
+            dgvMovimientos.Columns("AutorizadoPor").MinimumWidth = 100
 
             dgvMovimientos.Columns.Add("Referencia", "Comprobante Ref.")
-            dgvMovimientos.Columns("Referencia").Width = 140
+            dgvMovimientos.Columns("Referencia").FillWeight = 12
+            dgvMovimientos.Columns("Referencia").MinimumWidth = 90
 
             AddHandler dgvMovimientos.CellFormatting, Sub(s, e)
                                                           If e.RowIndex >= 0 AndAlso dgvMovimientos.Columns(e.ColumnIndex).Name = "Tipo" Then
@@ -580,6 +615,7 @@ Namespace Forms
                     m.Concepto,
                     m.Monto,
                     m.UsuarioNombre,
+                    m.AutorizadoPorNombre,
                     m.Referencia
                 )
             Next

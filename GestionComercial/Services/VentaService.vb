@@ -137,11 +137,12 @@ Namespace Services
             End Try
         End Function
 
-        Public Function GetVentas(fechaDesde As DateTime, fechaHasta As DateTime, Optional busqueda As String = "", Optional clienteId As Integer = 0, Optional usuarioId As Integer = 0) As List(Of Venta)
+        Public Function GetVentas(fechaDesde As DateTime, fechaHasta As DateTime, Optional busqueda As String = "", Optional clienteId As Integer = 0, Optional usuarioId As Integer = 0, Optional metodoPago As String = "", Optional estado As String = "") As List(Of Venta)
             Dim list = New List(Of Venta)()
-            Dim query = "SELECT v.*, u.nombre_completo AS usuario_nombre, (c.apellido || ', ' || c.nombre) AS cliente_nombre " &
+            Dim query = "SELECT v.*, u.nombre_completo AS usuario_nombre, IFNULL(ua.nombre_completo, '') AS autorizado_por_nombre, (c.apellido || ', ' || c.nombre) AS cliente_nombre " &
                         "FROM `ventas` v " &
                         "INNER JOIN `usuarios` u ON v.usuario_id = u.id " &
+                        "LEFT JOIN `usuarios` ua ON v.autorizado_por_id = ua.id " &
                         "INNER JOIN `clientes` c ON v.cliente_id = c.id " &
                         "WHERE DATE(v.fecha) >= @desde AND DATE(v.fecha) <= @hasta "
 
@@ -158,6 +159,20 @@ Namespace Services
             If usuarioId > 0 Then
                 query &= "AND v.usuario_id = @usrId "
                 params.Add("@usrId", usuarioId)
+            End If
+
+            If Not String.IsNullOrWhiteSpace(metodoPago) Then
+                If metodoPago.Trim().StartsWith("Transferencia", StringComparison.OrdinalIgnoreCase) Then
+                    query &= "AND v.metodo_pago LIKE 'Transferencia%' "
+                Else
+                    query &= "AND v.metodo_pago = @metodo "
+                    params.Add("@metodo", metodoPago.Trim())
+                End If
+            End If
+
+            If Not String.IsNullOrWhiteSpace(estado) Then
+                query &= "AND v.estado = @estado "
+                params.Add("@estado", estado.Trim())
             End If
 
             Dim hasBusqueda = Not String.IsNullOrWhiteSpace(busqueda)
@@ -198,9 +213,10 @@ Namespace Services
                 Return Nothing
             End If
 
-            Dim query = "SELECT v.*, u.nombre_completo AS usuario_nombre, (c.apellido || ', ' || c.nombre) AS cliente_nombre " &
+            Dim query = "SELECT v.*, u.nombre_completo AS usuario_nombre, IFNULL(ua.nombre_completo, '') AS autorizado_por_nombre, (c.apellido || ', ' || c.nombre) AS cliente_nombre " &
                         "FROM `ventas` v " &
                         "INNER JOIN `usuarios` u ON v.usuario_id = u.id " &
+                        "LEFT JOIN `usuarios` ua ON v.autorizado_por_id = ua.id " &
                         "INNER JOIN `clientes` c ON v.cliente_id = c.id " &
                         "WHERE v.id = @vId LIMIT 1;"
             Dim params = New Dictionary(Of String, Object) From {{"@vId", ventaId}}
@@ -568,10 +584,237 @@ Namespace Services
             End Using
         End Sub
 
+        Public Function GetVentasPorTurnoVendedor(cajaId As Integer, usuarioId As Integer, Optional busqueda As String = "") As List(Of Venta)
+            Dim list = New List(Of Venta)()
+            Try
+                Dim query = "SELECT v.*, u.nombre_completo AS usuario_nombre, " &
+                            "IFNULL(ua.nombre_completo, '') AS autorizado_por_nombre, " &
+                            "(c.apellido || ', ' || c.nombre) AS cliente_nombre, " &
+                            "c.dni_cuit AS cliente_dni " &
+                            "FROM `ventas` v " &
+                            "INNER JOIN `usuarios` u ON v.usuario_id = u.id " &
+                            "LEFT JOIN `usuarios` ua ON v.autorizado_por_id = ua.id " &
+                            "INNER JOIN `clientes` c ON v.cliente_id = c.id " &
+                            "WHERE v.caja_id = @cId AND v.usuario_id = @uId "
+
+                Dim params = New Dictionary(Of String, Object) From {
+                    {"@cId", cajaId},
+                    {"@uId", usuarioId}
+                }
+
+                If Not String.IsNullOrWhiteSpace(busqueda) Then
+                    query &= "AND (v.numero_ticket LIKE @b OR c.nombre LIKE @b OR c.apellido LIKE @b OR c.dni_cuit LIKE @b) "
+                    params.Add("@b", "%" & busqueda.Trim() & "%")
+                End If
+
+                query &= "ORDER BY v.fecha DESC;"
+
+                Dim dt = DatabaseHelper.ExecuteQuery(query, params)
+                For Each row As DataRow In dt.Rows
+                    list.Add(MapVenta(row))
+                Next
+            Catch ex As Exception
+                AppLogger.LogError("VentaService.GetVentasPorTurnoVendedor", ex)
+            End Try
+            Return list
+        End Function
+
+        Public Function ProcesarCambioPrenda(ventaId As Integer, detalleId As Integer, nuevoTalleId As Integer, nuevoColor As String, usuarioId As Integer, motivo As String, ByRef errorMessage As String) As Boolean
+            Try
+                Using conn = DatabaseHelper.GetConnection()
+                    conn.Open()
+                    Using trans = conn.BeginTransaction()
+                        Try
+                            ' 1. Obtener datos actuales del renglón y de la venta
+                            Dim qDet = "SELECT dv.*, v.numero_ticket, v.estado, p.codigo_barra, p.nombre AS prod_nombre " &
+                                       "FROM `detalle_ventas` dv " &
+                                       "INNER JOIN `ventas` v ON dv.venta_id = v.id " &
+                                       "INNER JOIN `productos` p ON dv.producto_id = p.id " &
+                                       "WHERE dv.id = @dId AND dv.venta_id = @vId;"
+                            Dim prodId As Integer = 0
+                            Dim oldTalleId As Integer = 0
+                            Dim oldColor As String = ""
+                            Dim cantidad As Integer = 0
+                            Dim numeroTicket As String = ""
+                            Dim estadoVenta As String = ""
+                            Dim prodNombre As String = ""
+                            Dim codBarra As String = ""
+
+                            Using cmdDet = DatabaseHelper.CreateCommand(conn, qDet, trans)
+                                DatabaseHelper.AddParam(cmdDet, "@dId", detalleId)
+                                DatabaseHelper.AddParam(cmdDet, "@vId", ventaId)
+                                Using r = cmdDet.ExecuteReader()
+                                    If Not r.Read() Then
+                                        errorMessage = "No se encontró el ítem de la venta seleccionado."
+                                        trans.Rollback()
+                                        Return False
+                                    End If
+                                    prodId = Convert.ToInt32(r("producto_id"))
+                                    oldTalleId = Convert.ToInt32(r("talle_id"))
+                                    oldColor = r("color").ToString()
+                                    cantidad = Convert.ToInt32(r("cantidad"))
+                                    numeroTicket = r("numero_ticket").ToString()
+                                    estadoVenta = r("estado").ToString()
+                                    prodNombre = r("prod_nombre").ToString()
+                                    codBarra = r("codigo_barra").ToString()
+                                End Using
+                            End Using
+
+                            If estadoVenta.Equals("Anulada", StringComparison.OrdinalIgnoreCase) Then
+                                errorMessage = "No se puede realizar un cambio sobre una venta anulada."
+                                trans.Rollback()
+                                Return False
+                            End If
+
+                            If oldTalleId = nuevoTalleId AndAlso String.Equals(oldColor, nuevoColor, StringComparison.OrdinalIgnoreCase) Then
+                                errorMessage = "Debe seleccionar un talle o color distinto al original para realizar el cambio."
+                                trans.Rollback()
+                                Return False
+                            End If
+
+                            ' 2. Verificar stock disponible de la nueva variante (talle/color)
+                            Dim qNuevoStock = "SELECT pt.stock_actual, t.nombre AS talle_nombre " &
+                                              "FROM `producto_talles` pt " &
+                                              "INNER JOIN `talles` t ON pt.talle_id = t.id " &
+                                              "WHERE pt.producto_id = @pId AND pt.talle_id = @tId AND pt.color = @col;"
+                            Dim stockNuevoActual As Integer = -1
+                            Dim nuevoTalleNombre As String = ""
+                            Using cmdNS = DatabaseHelper.CreateCommand(conn, qNuevoStock, trans)
+                                DatabaseHelper.AddParam(cmdNS, "@pId", prodId)
+                                DatabaseHelper.AddParam(cmdNS, "@tId", nuevoTalleId)
+                                DatabaseHelper.AddParam(cmdNS, "@col", nuevoColor)
+                                Using r = cmdNS.ExecuteReader()
+                                    If r.Read() Then
+                                        stockNuevoActual = Convert.ToInt32(r("stock_actual"))
+                                        nuevoTalleNombre = r("talle_nombre").ToString()
+                                    End If
+                                End Using
+                            End Using
+
+                            If stockNuevoActual < cantidad Then
+                                errorMessage = $"Stock insuficiente en el nuevo talle/color seleccionado (Disponible: {Math.Max(0, stockNuevoActual)}, Requerido: {cantidad})."
+                                trans.Rollback()
+                                Return False
+                            End If
+
+                            ' 3. Obtener stock actual de la variante devuelta
+                            Dim qOldStock = "SELECT pt.stock_actual, t.nombre AS talle_nombre " &
+                                            "FROM `producto_talles` pt " &
+                                            "INNER JOIN `talles` t ON pt.talle_id = t.id " &
+                                            "WHERE pt.producto_id = @pId AND pt.talle_id = @tId AND pt.color = @col;"
+                            Dim stockOldActual As Integer = 0
+                            Dim oldTalleNombre As String = ""
+                            Using cmdOS = DatabaseHelper.CreateCommand(conn, qOldStock, trans)
+                                DatabaseHelper.AddParam(cmdOS, "@pId", prodId)
+                                DatabaseHelper.AddParam(cmdOS, "@tId", oldTalleId)
+                                DatabaseHelper.AddParam(cmdOS, "@col", oldColor)
+                                Using r = cmdOS.ExecuteReader()
+                                    If r.Read() Then
+                                        stockOldActual = Convert.ToInt32(r("stock_actual"))
+                                        oldTalleNombre = r("talle_nombre").ToString()
+                                    End If
+                                End Using
+                            End Using
+
+                            Dim queryUpdStock = "UPDATE `producto_talles` SET `stock_actual` = @nuevoStock WHERE `producto_id` = @pId AND `talle_id` = @tId AND `color` = @col;"
+                            Dim queryAud = "INSERT INTO `movimientos_stock` (`producto_id`, `talle_id`, `color`, `tipo_movimiento`, `cantidad`, `stock_anterior`, `stock_posterior`, `motivo`, `usuario_id`) " &
+                                           "VALUES (@pId, @tId, @col, @tipo, @cant, @ant, @post, @motivo, @uId);"
+
+                            ' 3a. Reingresar al stock la prenda devuelta
+                            Dim postOld As Integer = stockOldActual + cantidad
+                            Using cmdUpdOld = DatabaseHelper.CreateCommand(conn, queryUpdStock, trans)
+                                DatabaseHelper.AddParam(cmdUpdOld, "@nuevoStock", postOld)
+                                DatabaseHelper.AddParam(cmdUpdOld, "@pId", prodId)
+                                DatabaseHelper.AddParam(cmdUpdOld, "@tId", oldTalleId)
+                                DatabaseHelper.AddParam(cmdUpdOld, "@col", oldColor)
+                                cmdUpdOld.ExecuteNonQuery()
+                            End Using
+
+                            Dim motivoTexto As String = If(String.IsNullOrWhiteSpace(motivo), "Cambio de talle/color", motivo.Trim())
+                            Using cmdAudIn = DatabaseHelper.CreateCommand(conn, queryAud, trans)
+                                DatabaseHelper.AddParam(cmdAudIn, "@pId", prodId)
+                                DatabaseHelper.AddParam(cmdAudIn, "@tId", oldTalleId)
+                                DatabaseHelper.AddParam(cmdAudIn, "@col", oldColor)
+                                DatabaseHelper.AddParam(cmdAudIn, "@tipo", "Devolucion")
+                                DatabaseHelper.AddParam(cmdAudIn, "@cant", cantidad)
+                                DatabaseHelper.AddParam(cmdAudIn, "@ant", stockOldActual)
+                                DatabaseHelper.AddParam(cmdAudIn, "@post", postOld)
+                                DatabaseHelper.AddParam(cmdAudIn, "@motivo", $"Cambio en Ticket #{numeroTicket} (Ingresa T.{oldTalleNombre} {oldColor}): {motivoTexto}")
+                                DatabaseHelper.AddParam(cmdAudIn, "@uId", usuarioId)
+                                cmdAudIn.ExecuteNonQuery()
+                            End Using
+
+                            ' 3b. Descontar del stock la nueva prenda entregada
+                            Dim postNew As Integer = stockNuevoActual - cantidad
+                            Using cmdUpdNew = DatabaseHelper.CreateCommand(conn, queryUpdStock, trans)
+                                DatabaseHelper.AddParam(cmdUpdNew, "@nuevoStock", postNew)
+                                DatabaseHelper.AddParam(cmdUpdNew, "@pId", prodId)
+                                DatabaseHelper.AddParam(cmdUpdNew, "@tId", nuevoTalleId)
+                                DatabaseHelper.AddParam(cmdUpdNew, "@col", nuevoColor)
+                                cmdUpdNew.ExecuteNonQuery()
+                            End Using
+
+                            Using cmdAudOut = DatabaseHelper.CreateCommand(conn, queryAud, trans)
+                                DatabaseHelper.AddParam(cmdAudOut, "@pId", prodId)
+                                DatabaseHelper.AddParam(cmdAudOut, "@tId", nuevoTalleId)
+                                DatabaseHelper.AddParam(cmdAudOut, "@col", nuevoColor)
+                                DatabaseHelper.AddParam(cmdAudOut, "@tipo", "Cambio_Prenda")
+                                DatabaseHelper.AddParam(cmdAudOut, "@cant", cantidad)
+                                DatabaseHelper.AddParam(cmdAudOut, "@ant", stockNuevoActual)
+                                DatabaseHelper.AddParam(cmdAudOut, "@post", postNew)
+                                DatabaseHelper.AddParam(cmdAudOut, "@motivo", $"Cambio en Ticket #{numeroTicket} (Egresa T.{nuevoTalleNombre} {nuevoColor}): {motivoTexto}")
+                                DatabaseHelper.AddParam(cmdAudOut, "@uId", usuarioId)
+                                cmdAudOut.ExecuteNonQuery()
+                            End Using
+
+                            ' 4. Actualizar el renglón del ticket y dejar constancia en observaciones de la venta
+                            Dim nuevaDesc As String = $"{prodNombre} (T.{nuevoTalleNombre} - {nuevoColor})"
+                            Dim qUpdDet = "UPDATE `detalle_ventas` SET `talle_id` = @tId, `color` = @col, `descripcion_articulo` = @desc WHERE `id` = @dId;"
+                            Using cmdUpdDet = DatabaseHelper.CreateCommand(conn, qUpdDet, trans)
+                                DatabaseHelper.AddParam(cmdUpdDet, "@tId", nuevoTalleId)
+                                DatabaseHelper.AddParam(cmdUpdDet, "@col", nuevoColor)
+                                DatabaseHelper.AddParam(cmdUpdDet, "@desc", nuevaDesc)
+                                DatabaseHelper.AddParam(cmdUpdDet, "@dId", detalleId)
+                                cmdUpdDet.ExecuteNonQuery()
+                            End Using
+
+                            Dim notaCambio As String = $"CAMBIO ({DateTime.Now:dd/MM HH:mm}): {prodNombre} de [T.{oldTalleNombre} {oldColor}] a [T.{nuevoTalleNombre} {nuevoColor}]"
+                            Dim qUpdVenta = "UPDATE `ventas` SET `observaciones` = CASE WHEN IFNULL(`observaciones`, '') = '' THEN @nota ELSE (`observaciones` || ' | ' || @nota) END WHERE `id` = @vId;"
+                            Using cmdUpdV = DatabaseHelper.CreateCommand(conn, qUpdVenta, trans)
+                                DatabaseHelper.AddParam(cmdUpdV, "@nota", notaCambio)
+                                DatabaseHelper.AddParam(cmdUpdV, "@vId", ventaId)
+                                cmdUpdV.ExecuteNonQuery()
+                            End Using
+
+                            trans.Commit()
+                            Return True
+                        Catch exTrans As Exception
+                            trans.Rollback()
+                            errorMessage = exTrans.Message
+                            AppLogger.LogError("VentaService.ProcesarCambioPrenda [Transaction]", exTrans)
+                            Return False
+                        End Try
+                    End Using
+                End Using
+            Catch ex As Exception
+                errorMessage = ex.Message
+                AppLogger.LogError("VentaService.ProcesarCambioPrenda", ex)
+                Return False
+            End Try
+        End Function
+
         Private Shared Function MapVenta(row As DataRow) As Venta
             Dim autId As Nullable(Of Integer) = Nothing
             If row.Table.Columns.Contains("autorizado_por_id") AndAlso Not Convert.IsDBNull(row("autorizado_por_id")) Then
                 autId = Convert.ToInt32(row("autorizado_por_id"))
+            End If
+
+            Dim autNombre As String = ""
+            If row.Table.Columns.Contains("autorizado_por_nombre") AndAlso Not Convert.IsDBNull(row("autorizado_por_nombre")) Then
+                autNombre = row("autorizado_por_nombre").ToString()
+            End If
+            If String.IsNullOrWhiteSpace(autNombre) Then
+                autNombre = "-"
             End If
 
             Dim montoEfec As Nullable(Of Decimal) = Nothing
@@ -586,6 +829,7 @@ Namespace Services
                 .UsuarioId = Convert.ToInt32(row("usuario_id")),
                 .UsuarioNombre = row("usuario_nombre").ToString(),
                 .AutorizadoPorId = autId,
+                .AutorizadoPorNombre = autNombre,
                 .ClienteId = Convert.ToInt32(row("cliente_id")),
                 .ClienteNombre = row("cliente_nombre").ToString(),
                 .CajaId = Convert.ToInt32(row("caja_id")),

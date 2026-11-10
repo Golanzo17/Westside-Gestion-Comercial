@@ -24,3 +24,11 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
+
+## Documentación local y capturas
+MANUAL_DE_USUARIO.md
+srs_westside_pos.md
+capturas/
+
+## Backups generados localmente
+Database/Backups/*.db

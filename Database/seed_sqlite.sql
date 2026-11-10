@@ -22,11 +22,11 @@ INSERT OR REPLACE INTO categorias (id, nombre, descripcion, activo) VALUES
 (4, 'Vestidos y Polleras', 'Vestidos de fiesta, casuales y polleras', 1),
 (5, 'Accesorios y Calzado', 'Cinturones, gorras, medias y calzado urbano', 1);
 
--- 5. CLIENTE INICIAL (Consumidor Final)
+-- 5. CLIENTE INICIAL (Consumidor Final y Cartera de Corrientes Capital)
 INSERT OR REPLACE INTO clientes (id, dni_cuit, nombre, apellido, telefono, email, direccion, ciudad, notas, activo)
 VALUES 
-(1, '00000000', 'Consumidor', 'Final', '000-0000', 'consumidor@final.com', 'Mostrador', 'Local', 'Cliente genérico', 1),
-(2, '35123456', 'Gonzalo', 'Fernández', '11-3456-7890', 'gonzalo@email.com', 'Calle Falsa 123', 'Buenos Aires', 'Cliente habitual', 1);
+(1, '00000000', 'Consumidor', 'Final', '000-0000', 'consumidor@final.com', 'Mostrador', 'Corrientes Capital', 'Cliente genérico', 1),
+(2, '35123456', 'Gonzalo', 'Fernández', '3794-451230', 'gonzalo@email.com', 'Junín 1245', 'Corrientes Capital', 'Cliente habitual', 1);
 
 -- 6. PRENDAS DE DEMOSTRACIÓN
 INSERT OR REPLACE INTO productos (id, codigo_barra, nombre, descripcion, categoria_id, precio_costo, precio_venta, porcentaje_ganancia, activo) VALUES

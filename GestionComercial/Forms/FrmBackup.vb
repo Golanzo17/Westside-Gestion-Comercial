@@ -221,20 +221,28 @@ Namespace Forms
 
         Private Sub ConfigurarColumnasGrid()
             dgvBackups.Columns.Clear()
+            dgvBackups.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
 
             dgvBackups.Columns.Add("Nombre", "Archivo de Respaldo")
-            dgvBackups.Columns("Nombre").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvBackups.Columns("Nombre").FillWeight = 34
+            dgvBackups.Columns("Nombre").MinimumWidth = 150
 
             dgvBackups.Columns.Add("Fecha", "Fecha y Hora de Creación")
-            dgvBackups.Columns("Fecha").Width = 170
+            dgvBackups.Columns("Fecha").FillWeight = 18
+            dgvBackups.Columns("Fecha").MinimumWidth = 130
+            dgvBackups.Columns("Fecha").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvBackups.Columns("Fecha").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvBackups.Columns.Add("Tamano", "Tamaño")
-            dgvBackups.Columns("Tamano").Width = 100
+            dgvBackups.Columns("Tamano").FillWeight = 11
+            dgvBackups.Columns("Tamano").MinimumWidth = 80
             dgvBackups.Columns("Tamano").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvBackups.Columns("Tamano").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
             dgvBackups.Columns("Tamano").DefaultCellStyle.Font = UITheme.FontBold
 
             dgvBackups.Columns.Add("Ruta", "Ruta de Archivo")
-            dgvBackups.Columns("Ruta").Width = 320
+            dgvBackups.Columns("Ruta").FillWeight = 37
+            dgvBackups.Columns("Ruta").MinimumWidth = 160
         End Sub
 
         Private Sub LoadDashboardBackup()
@@ -263,6 +271,10 @@ Namespace Forms
         End Sub
 
         Private Sub BtnCrearBackup_Click(sender As Object, e As EventArgs)
+            If Not AuthService.SolicitarAutorizacionGerente(Me, "Por política de control dual (cuatro ojos), generar una copia de seguridad requiere autorización presencial de un Gerente.") Then
+                Return
+            End If
+
             Dim errMsg As String = ""
             Dim rutaCreada = backupService.CrearBackup(errMsg)
 
@@ -276,6 +288,10 @@ Namespace Forms
         End Sub
 
         Private Sub BtnCrearEnRuta_Click(sender As Object, e As EventArgs)
+            If Not AuthService.SolicitarAutorizacionGerente(Me, "Por política de control dual (cuatro ojos), exportar una copia de seguridad requiere autorización presencial de un Gerente.") Then
+                Return
+            End If
+
             Using sfd As New SaveFileDialog()
                 sfd.Title = "Guardar Copia de Seguridad de Base de Datos"
                 sfd.Filter = "Base de Datos SQLite (*.db)|*.db|Todos los archivos (*.*)|*.*"
@@ -312,6 +328,10 @@ Namespace Forms
 
             Dim confirm = MessageBox.Show(advertencia, "Confirmar Restauración de Base de Datos", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2)
             If confirm = DialogResult.Yes Then
+                If Not AuthService.SolicitarAutorizacionGerente(Me, $"Por política de control dual (cuatro ojos), restaurar la base de datos activa desde '{nombreArchivo}' requiere autorización presencial de un Gerente.") Then
+                    Return
+                End If
+
                 Dim errMsg As String = ""
                 If backupService.RestaurarBackup(rutaArchivo, errMsg) Then
                     MessageBox.Show("La base de datos fue restaurada con éxito desde el respaldo seleccionado." & vbCrLf & vbCrLf &

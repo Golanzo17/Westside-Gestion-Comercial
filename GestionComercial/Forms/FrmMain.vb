@@ -45,11 +45,18 @@ Namespace Forms
         Private usuarioService As New UsuarioService()
         Private activeChildForm As Form = Nothing
         Private activeNavBtn As Button = Nothing  ' Botón de nav activo (para indicador visual)
+        Private _cerrandoPorLogout As Boolean = False
 
         Public Sub New()
             InitializeUI()
             StartClock()
             LoadDashboardData()
+            AddHandler Me.FormClosed, Sub(s, ev)
+                                          If timerClock IsNot Nothing Then timerClock.Stop()
+                                          If Not _cerrandoPorLogout Then
+                                              Application.Exit()
+                                          End If
+                                      End Sub
         End Sub
 
         Private Sub InitializeUI()
@@ -115,6 +122,7 @@ Namespace Forms
 
             Dim btnHome = CreateNavButton("Panel principal", AddressOf Nav_Home)
             Dim btnPos = CreateNavButton("Punto de venta (POS)", AddressOf Nav_POS)
+            Dim btnMisVentas = CreateNavButton("Mis ventas del turno", AddressOf Nav_MisVentas)
             Dim btnProductos = CreateNavButton("Catálogo y talles", AddressOf Nav_Productos)
             Dim btnStock = CreateNavButton("Stock y reposición", AddressOf Nav_Stock)
             Dim btnClientes = CreateNavButton("Clientes", AddressOf Nav_Clientes)
@@ -127,6 +135,7 @@ Namespace Forms
 
             ' Configuración de accesos del menú lateral según el rol activo
             btnPos.Visible = AuthService.IsVendor
+            btnMisVentas.Visible = AuthService.IsVendor
             btnStock.Visible = AuthService.IsManager
             btnProductos.Visible = AuthService.IsManager OrElse AuthService.IsVendor
             btnCaja.Visible = AuthService.IsVendor
@@ -149,7 +158,7 @@ Namespace Forms
             secOperaciones.Visible = AuthService.IsVendor
 
             ' Orden de docking: se agregan en orden inverso (Bottom-up)
-            ' Resultado visual: Home > [Operaciones: POS, Caja, Clientes] > [Gestión: Catálogo, Stock, Cierres y arqueos, Reportes] > [Sistema: Usuarios, Backup, Config]
+            ' Resultado visual: Home > [Operaciones: POS, Mis ventas del turno, Caja, Clientes] > [Gestión: Catálogo, Stock, Cierres y arqueos, Reportes] > [Sistema: Usuarios, Backup, Config]
             pnlNavMenu.Controls.Add(btnConfig)
             pnlNavMenu.Controls.Add(btnBackup)
             pnlNavMenu.Controls.Add(btnUsuarios)
@@ -161,6 +170,7 @@ Namespace Forms
             pnlNavMenu.Controls.Add(btnProductos)
             pnlNavMenu.Controls.Add(secGestion)
             pnlNavMenu.Controls.Add(btnCaja)
+            pnlNavMenu.Controls.Add(btnMisVentas)
             pnlNavMenu.Controls.Add(btnClientes)
             pnlNavMenu.Controls.Add(btnPos)
             pnlNavMenu.Controls.Add(secOperaciones)
@@ -371,12 +381,16 @@ Namespace Forms
             tlpCardsRow.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
             tlpCardsRow.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
 
-            Dim card1 = UITheme.CreateKpiCard("VENTAS DE HOY", "$ 0,00", "Total facturado en el día", UITheme.ColorSuccess)
+            Dim tituloCard1 As String = If(AuthService.IsVendor, "MIS VENTAS DEL TURNO", "VENTAS DE HOY")
+            Dim subCard1 As String = If(AuthService.IsVendor, "Cobrado en tu caja actual", "Total facturado en el día")
+            Dim card1 = UITheme.CreateKpiCard(tituloCard1, "$ 0,00", subCard1, UITheme.ColorSuccess)
             card1.Dock = DockStyle.Fill
             card1.Margin = New Padding(0, 4, 10, 8)
             lblKpiVentasHoy = CType(card1.Controls(2), Label)
 
-            Dim card2 = UITheme.CreateKpiCard("TICKETS EMITIDOS", "0", "Ventas completadas", UITheme.ColorPrimary)
+            Dim tituloCard2 As String = If(AuthService.IsVendor, "MIS TICKETS DEL TURNO", "TICKETS EMITIDOS")
+            Dim subCard2 As String = If(AuthService.IsVendor, "Emitidos en tu turno hoy", "Ventas completadas")
+            Dim card2 = UITheme.CreateKpiCard(tituloCard2, "0", subCard2, UITheme.ColorPrimary)
             card2.Dock = DockStyle.Fill
             card2.Margin = New Padding(6, 4, 6, 8)
             lblKpiTicketsHoy = CType(card2.Controls(2), Label)
@@ -440,7 +454,7 @@ Namespace Forms
                 .AutoScroll = False
             }
 
-            ' Operaciones para Vendedor (POS y Caja)
+            ' Operaciones para Vendedor (POS, Mis ventas del turno y Caja)
             If AuthService.IsVendor Then
                 Dim btnAccionPOS As New Button() With {
                     .Text = "Realizar Nueva Venta",
@@ -453,6 +467,18 @@ Namespace Forms
                 UITheme.StyleButton(btnAccionPOS, "Primary")
                 AddHandler btnAccionPOS.Click, AddressOf Nav_POS
                 flpAcciones.Controls.Add(btnAccionPOS)
+
+                Dim btnAccionMisVentas As New Button() With {
+                    .Text = "Mis Ventas del Turno / Cambios",
+                    .Height = 44,
+                    .AutoSize = True,
+                    .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    .Padding = New Padding(16, 0, 16, 0),
+                    .Margin = New Padding(0, 0, 10, 8)
+                }
+                UITheme.StyleButton(btnAccionMisVentas, "Success")
+                AddHandler btnAccionMisVentas.Click, AddressOf Nav_MisVentas
+                flpAcciones.Controls.Add(btnAccionMisVentas)
 
                 Dim btnAccionCaja As New Button() With {
                     .Text = "Arqueo / Cierre de Caja",
@@ -596,11 +622,11 @@ Namespace Forms
         Public Sub LoadDashboardData()
             Try
                 Dim resumen = reporteService.GetResumenHoy()
-                lblKpiVentasHoy.Text = resumen.TotalVendido.ToString("C2")
-                lblKpiTicketsHoy.Text = resumen.CantidadTickets.ToString()
                 lblKpiStockCritico.Text = resumen.ArticulosStockBajo.ToString()
 
                 If AuthService.IsAdmin Then
+                    lblKpiVentasHoy.Text = resumen.TotalVendido.ToString("C2")
+                    lblKpiTicketsHoy.Text = resumen.CantidadTickets.ToString()
                     lblCajaStatus.Visible = False
                     If lblKpiCajaTurno IsNot Nothing Then
                         Dim usrList = usuarioService.GetUsuarios()
@@ -610,6 +636,22 @@ Namespace Forms
                     lblCajaStatus.Visible = True
                     Dim userId = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.Id, 1)
                     Dim caja = cajaService.GetCajaAbierta(userId)
+
+                    If AuthService.IsVendor Then
+                        ' El vendedor solo ve la recaudación y tickets de su propio turno activo (nunca la facturación global del local)
+                        If caja IsNot Nothing Then
+                            Dim desglose = cajaService.GetDesgloseMediosTurno(caja.Id)
+                            lblKpiVentasHoy.Text = desglose.TotalVendido.ToString("C2")
+                            lblKpiTicketsHoy.Text = desglose.CantidadTickets.ToString()
+                        Else
+                            lblKpiVentasHoy.Text = "$ 0,00"
+                            lblKpiTicketsHoy.Text = "0"
+                        End If
+                    Else
+                        lblKpiVentasHoy.Text = resumen.TotalVendido.ToString("C2")
+                        lblKpiTicketsHoy.Text = resumen.CantidadTickets.ToString()
+                    End If
+
                     If caja IsNot Nothing Then
                         lblCajaStatus.Text = $"Caja Abierta  ·  Turno #{caja.Id}"
                         lblCajaStatus.ForeColor = UITheme.ColorSuccess
@@ -688,6 +730,12 @@ Namespace Forms
             OpenChildForm(New FrmCaja())
         End Sub
 
+        Private Sub Nav_MisVentas(sender As Object, e As EventArgs)
+            If Not AuthService.IsVendor Then Return
+            If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
+            OpenChildForm(New FrmMisVentasTurno())
+        End Sub
+
         Private Sub Nav_ControlCajas(sender As Object, e As EventArgs)
             If Not AuthService.IsManager Then
                 MessageBox.Show("El control de cierres y arqueos de caja está reservado exclusivamente para el rol de Gerente.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
@@ -737,10 +785,21 @@ Namespace Forms
 
         Private Sub BtnLogout_Click(sender As Object, e As EventArgs)
             If MessageBox.Show("¿Deseas cerrar tu sesión actual?", "Cerrar Sesión", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.Yes Then
+                _cerrandoPorLogout = True
+                If timerClock IsNot Nothing Then timerClock.Stop()
+                If activeChildForm IsNot Nothing Then
+                    activeChildForm.Close()
+                    activeChildForm = Nothing
+                End If
                 AuthService.Logout()
-                Me.Hide()
                 Dim frmLog As New FrmLogin()
+                AddHandler frmLog.FormClosed, Sub(s, ev)
+                                                  If AuthService.CurrentUser Is Nothing Then
+                                                      Application.Exit()
+                                                  End If
+                                              End Sub
                 frmLog.Show()
+                Me.Close()
             End If
         End Sub
 

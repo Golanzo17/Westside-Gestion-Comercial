@@ -28,6 +28,7 @@ Namespace Forms
         Private usuarioService As New UsuarioService()
         Private configService As New ConfiguracionService()
 
+        Private cboRapidoFechas As ComboBox
         Private dtpDesde As DateTimePicker
         Private dtpHasta As DateTimePicker
         Private cboVendedorGeneral As ComboBox
@@ -35,14 +36,27 @@ Namespace Forms
         Private btnDescargarPdf As Button
         Private btnAnularVenta As Button
 
+        ' Tarjetas KPI Financieras
         Private lblTotalVentas As Label
-        Private lblCantTickets As Label
-        Private lblEfectivo As Label
-        Private lblDigital As Label
+        Private lblTotalVentasSub As Label
+        Private lblCostoMercaderia As Label
+        Private lblCostoMercaderiaSub As Label
+        Private lblGananciaNeta As Label
+        Private lblGananciaNetaSub As Label
+        Private lblTicketPromedio As Label
+        Private lblTicketPromedioSub As Label
 
         Private tabs As TabControl
         Private tabVentas As TabPage
+        Private cboClienteGeneral As ComboBox
+        Private cboMetodoPagoGeneral As ComboBox
+        Private cboEstadoGeneral As ComboBox
         Private dgvVentas As DataGridView
+
+        ' Pestaña: Anulaciones y Notas de Crédito
+        Private tabAnulaciones As TabPage
+        Private lblResumenAnulaciones As Label
+        Private dgvAnulaciones As DataGridView
 
         ' Pestaña: Ventas por Cliente
         Private tabClientes As TabPage
@@ -66,11 +80,13 @@ Namespace Forms
         Private btnVerDetalleTicketVendedor As Button
         Private btnDescargarPdfTicketVendedor As Button
 
-        ' Pestaña: Ranking de Prendas
+        ' Pestaña: Ranking de Prendas y Stock Inmovilizado
         Private tabRanking As TabPage
         Private rbMayorSalida As RadioButton
         Private rbMayorMargen As RadioButton
+        Private rbStockInmovilizado As RadioButton
         Private cboLimiteRanking As ComboBox
+        Private lblResumenRanking As Label
         Private dgvRanking As DataGridView
 
         Private isLoading As Boolean = True
@@ -145,21 +161,35 @@ Namespace Forms
                 .WrapContents = True
             }
 
-            Dim lblD As New Label() With {.Text = "Desde:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 4, 4)}
-            dtpDesde = New DateTimePicker() With {.Size = New Size(120, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddDays(-7), .Margin = New Padding(0, 3, 0, 4)}
+            Dim lblPeriodo As New Label() With {.Text = "Período:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 4, 4)}
+            cboRapidoFechas = New ComboBox() With {
+                .DropDownStyle = ComboBoxStyle.DropDownList,
+                .Width = 140,
+                .Margin = New Padding(0, 3, 0, 4)
+            }
+            UITheme.StyleComboBox(cboRapidoFechas)
+            cboRapidoFechas.Items.AddRange({"Hoy", "Ayer", "Esta semana", "Este mes", "Últimos 30 días", "Últimos 90 días", "Todo el historial"})
+            cboRapidoFechas.SelectedIndex = 4 ' Últimos 30 días por defecto
+            AddHandler cboRapidoFechas.SelectedIndexChanged, AddressOf CboRapidoFechas_SelectedIndexChanged
+
+            Dim lblD As New Label() With {.Text = "Desde:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 4, 4)}
+            dtpDesde = New DateTimePicker() With {.Size = New Size(115, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today.AddDays(-30), .Margin = New Padding(0, 3, 0, 4)}
 
             Dim lblH As New Label() With {.Text = "Hasta:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 4, 4)}
-            dtpHasta = New DateTimePicker() With {.Size = New Size(120, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today, .Margin = New Padding(0, 3, 0, 4)}
+            dtpHasta = New DateTimePicker() With {.Size = New Size(115, 28), .Format = DateTimePickerFormat.Short, .Value = DateTime.Today, .Margin = New Padding(0, 3, 0, 4)}
 
             Dim lblVendGen As New Label() With {.Text = "Vendedor:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 6, 4, 4)}
             cboVendedorGeneral = New ComboBox() With {
                 .DropDownStyle = ComboBoxStyle.DropDownList,
-                .Width = 210,
+                .Width = 200,
                 .Margin = New Padding(0, 3, 0, 4)
             }
             UITheme.StyleComboBox(cboVendedorGeneral)
             AddHandler cboVendedorGeneral.SelectedIndexChanged, Sub()
-                                                                    If Not isLoading Then LoadVentasGenerales()
+                                                                    If Not isLoading Then
+                                                                        LoadVentasGenerales()
+                                                                        LoadAnulaciones()
+                                                                    End If
                                                                 End Sub
 
             btnFiltrar = New Button() With {.Text = "Generar Reportes", .Height = 32, .AutoSize = True, .AutoSizeMode = AutoSizeMode.GrowAndShrink, .Padding = New Padding(12, 0, 12, 0), .Margin = New Padding(10, 1, 0, 4)}
@@ -175,10 +205,10 @@ Namespace Forms
             btnAnularVenta.Visible = AuthService.IsAdminOrManager
             AddHandler btnAnularVenta.Click, AddressOf BtnAnularVenta_Click
 
-            flpFilter.Controls.AddRange({lblD, dtpDesde, lblH, dtpHasta, lblVendGen, cboVendedorGeneral, btnFiltrar, btnDescargarPdf, btnAnularVenta})
+            flpFilter.Controls.AddRange({lblPeriodo, cboRapidoFechas, lblD, dtpDesde, lblH, dtpHasta, lblVendGen, cboVendedorGeneral, btnFiltrar, btnDescargarPdf, btnAnularVenta})
             pnlFilter.Controls.Add(flpFilter)
 
-            ' Tarjetas KPI para balance global del período (responsivas en 4 columnas iguales)
+            ' Tarjetas KPI Financieras del período (responsivas en 4 columnas iguales)
             Dim pnlKpis As New Panel() With {
                 .Dock = DockStyle.Top,
                 .Height = 125,
@@ -198,59 +228,64 @@ Namespace Forms
             tlpKpis.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
             tlpKpis.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
 
-            Dim cardTot = UITheme.CreateKpiCard("TOTAL FACTURADO", "$ 0,00", "En el período seleccionado", UITheme.ColorSuccess)
+            Dim cardTot = UITheme.CreateKpiCard("FACTURACIÓN TOTAL", "$ 0,00", "0 tickets emitidos", UITheme.ColorPrimary)
             cardTot.Dock = DockStyle.Fill
             cardTot.Margin = New Padding(3, 3, 6, 3)
             lblTotalVentas = CType(cardTot.Controls(2), Label)
+            lblTotalVentasSub = CType(cardTot.Controls(3), Label)
 
-            Dim cardCant = UITheme.CreateKpiCard("CANTIDAD VENTAS", "0", "Tickets emitidos", UITheme.ColorPrimary)
-            cardCant.Dock = DockStyle.Fill
-            cardCant.Margin = New Padding(6, 3, 6, 3)
-            lblCantTickets = CType(cardCant.Controls(2), Label)
+            Dim cardCosto = UITheme.CreateKpiCard("COSTO MERCADERÍA", "$ 0,00", "Costo de prendas vendidas", UITheme.ColorWarning)
+            cardCosto.Dock = DockStyle.Fill
+            cardCosto.Margin = New Padding(6, 3, 6, 3)
+            lblCostoMercaderia = CType(cardCosto.Controls(2), Label)
+            lblCostoMercaderiaSub = CType(cardCosto.Controls(3), Label)
 
-            Dim cardEf = UITheme.CreateKpiCard("COBRADO EN EFECTIVO", "$ 0,00", "Total en billetes", UITheme.ColorWarning)
-            cardEf.Dock = DockStyle.Fill
-            cardEf.Margin = New Padding(6, 3, 6, 3)
-            lblEfectivo = CType(cardEf.Controls(2), Label)
+            Dim cardGanancia = UITheme.CreateKpiCard("GANANCIA NETA (MARGEN)", "$ 0,00", "Rentabilidad real (0,0 %)", UITheme.ColorSuccess)
+            cardGanancia.Dock = DockStyle.Fill
+            cardGanancia.Margin = New Padding(6, 3, 6, 3)
+            lblGananciaNeta = CType(cardGanancia.Controls(2), Label)
+            lblGananciaNetaSub = CType(cardGanancia.Controls(3), Label)
 
-            Dim cardDig = UITheme.CreateKpiCard("COBRADO DIGITAL", "$ 0,00", "Tarjetas y transferencias", UITheme.ColorInfo)
-            cardDig.Dock = DockStyle.Fill
-            cardDig.Margin = New Padding(6, 3, 3, 3)
-            lblDigital = CType(cardDig.Controls(2), Label)
+            Dim cardProm = UITheme.CreateKpiCard("TICKET PROMEDIO", "$ 0,00", "Gasto promedio por compra", UITheme.ColorInfo)
+            cardProm.Dock = DockStyle.Fill
+            cardProm.Margin = New Padding(6, 3, 3, 3)
+            lblTicketPromedio = CType(cardProm.Controls(2), Label)
+            lblTicketPromedioSub = CType(cardProm.Controls(3), Label)
 
             tlpKpis.Controls.Add(cardTot, 0, 0)
-            tlpKpis.Controls.Add(cardCant, 1, 0)
-            tlpKpis.Controls.Add(cardEf, 2, 0)
-            tlpKpis.Controls.Add(cardDig, 3, 0)
+            tlpKpis.Controls.Add(cardCosto, 1, 0)
+            tlpKpis.Controls.Add(cardGanancia, 2, 0)
+            tlpKpis.Controls.Add(cardProm, 3, 0)
             pnlKpis.Controls.Add(tlpKpis)
 
-            ' TabControl con 3 secciones analíticas
+            ' TabControl con 5 secciones analíticas
             tabs = New TabControl() With {
                 .Dock = DockStyle.Fill,
                 .Padding = New Point(14, 7),
                 .Font = UITheme.FontBold
             }
 
-            ' Tab 1: Comprobantes y Ventas Globales
+            ' Tab 1: Comprobantes y Ventas Globales (con filtros dinámicos)
             tabVentas = New TabPage("Listado General de Ventas") With {.BackColor = UITheme.ColorBackground}
-            dgvVentas = New DataGridView() With {.Dock = DockStyle.Fill}
-            UITheme.StyleDataGrid(dgvVentas)
-            ConfigurarColumnasVentas()
-            AddHandler dgvVentas.CellDoubleClick, AddressOf DgvVentas_CellDoubleClick
-            tabVentas.Controls.Add(dgvVentas)
+            ConstruirTabVentas()
             tabs.TabPages.Add(tabVentas)
 
-            ' Tab 2: Ventas por Cliente (con filtro y desglose)
+            ' Tab 2: Gestión de Anulaciones y Notas de Crédito
+            tabAnulaciones = New TabPage("Anulaciones y Devoluciones") With {.BackColor = UITheme.ColorBackground}
+            ConstruirTabAnulaciones()
+            tabs.TabPages.Add(tabAnulaciones)
+
+            ' Tab 3: Ventas por Cliente (con filtro y desglose)
             tabClientes = New TabPage("Ventas por Cliente y Fecha") With {.BackColor = UITheme.ColorBackground}
             ConstruirTabClientes()
             tabs.TabPages.Add(tabClientes)
 
-            ' Tab 3: Ventas por Vendedor (con filtro y desglose)
+            ' Tab 4: Ventas por Vendedor (con filtro y desglose)
             tabVendedores = New TabPage("Ventas por Vendedor y Fecha") With {.BackColor = UITheme.ColorBackground}
             ConstruirTabVendedores()
             tabs.TabPages.Add(tabVendedores)
 
-            ' Tab 4: Ranking de Prendas (Mayor Salida y Mayor Margen)
+            ' Tab 5: Ranking de Prendas (Mayor Salida, Mayor Margen y Stock Inmovilizado)
             tabRanking = New TabPage("Ranking de Prendas y Rentabilidad") With {.BackColor = UITheme.ColorBackground}
             ConstruirTabRanking()
             tabs.TabPages.Add(tabRanking)
@@ -260,6 +295,106 @@ Namespace Forms
             Me.Controls.Add(pnlKpis)
             Me.Controls.Add(pnlFilter)
             Me.Controls.Add(pnlHeader)
+        End Sub
+
+        Private Sub ConstruirTabVentas()
+            Dim pnlVentasToolbar As New Panel() With {
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .MinimumSize = New Size(0, 48),
+                .BackColor = UITheme.ColorSurface
+            }
+            Dim flpVentas As New FlowLayoutPanel() With {
+                .Dock = DockStyle.Top,
+                .AutoSize = True,
+                .AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                .Padding = New Padding(10, 10, 10, 6),
+                .WrapContents = True
+            }
+
+            Dim lblCliGen As New Label() With {.Text = "Cliente:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 6, 4, 4)}
+            cboClienteGeneral = New ComboBox() With {
+                .DropDownStyle = ComboBoxStyle.DropDownList,
+                .Width = 230,
+                .Margin = New Padding(0, 3, 0, 4)
+            }
+            UITheme.StyleComboBox(cboClienteGeneral)
+            AddHandler cboClienteGeneral.SelectedIndexChanged, Sub()
+                                                                   If Not isLoading Then LoadVentasGenerales()
+                                                               End Sub
+
+            Dim lblMetodoGen As New Label() With {.Text = "Medio de Pago:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(12, 6, 4, 4)}
+            cboMetodoPagoGeneral = New ComboBox() With {
+                .DropDownStyle = ComboBoxStyle.DropDownList,
+                .Width = 175,
+                .Margin = New Padding(0, 3, 0, 4)
+            }
+            UITheme.StyleComboBox(cboMetodoPagoGeneral)
+            cboMetodoPagoGeneral.Items.AddRange({"[ Todos los medios ]", "Efectivo", "Tarjeta Débito", "Tarjeta Crédito", "Transferencia / QR", "Múltiple"})
+            cboMetodoPagoGeneral.SelectedIndex = 0
+            AddHandler cboMetodoPagoGeneral.SelectedIndexChanged, Sub()
+                                                                      If Not isLoading Then LoadVentasGenerales()
+                                                                  End Sub
+
+            Dim lblEstGen As New Label() With {.Text = "Estado:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(12, 6, 4, 4)}
+            cboEstadoGeneral = New ComboBox() With {
+                .DropDownStyle = ComboBoxStyle.DropDownList,
+                .Width = 160,
+                .Margin = New Padding(0, 3, 0, 4)
+            }
+            UITheme.StyleComboBox(cboEstadoGeneral)
+            cboEstadoGeneral.Items.AddRange({"[ Todos los estados ]", "Completada", "Anulada"})
+            cboEstadoGeneral.SelectedIndex = 0
+            AddHandler cboEstadoGeneral.SelectedIndexChanged, Sub()
+                                                                  If Not isLoading Then LoadVentasGenerales()
+                                                              End Sub
+
+            Dim lblHint As New Label() With {
+                .Text = "💡 Doble clic en un ticket para ver prendas o reimprimir en PDF",
+                .Font = UITheme.FontSmall,
+                .ForeColor = UITheme.ColorTextSecondary,
+                .AutoSize = True,
+                .Margin = New Padding(16, 7, 0, 4)
+            }
+
+            flpVentas.Controls.AddRange({lblCliGen, cboClienteGeneral, lblMetodoGen, cboMetodoPagoGeneral, lblEstGen, cboEstadoGeneral, lblHint})
+            pnlVentasToolbar.Controls.Add(flpVentas)
+
+            dgvVentas = New DataGridView() With {.Dock = DockStyle.Fill}
+            UITheme.StyleDataGrid(dgvVentas)
+            ConfigurarColumnasVentas()
+            AddHandler dgvVentas.CellDoubleClick, AddressOf DgvVentas_CellDoubleClick
+
+            tabVentas.Controls.Add(dgvVentas)
+            tabVentas.Controls.Add(pnlVentasToolbar)
+        End Sub
+
+        Private Sub ConstruirTabAnulaciones()
+            Dim pnlAnulacionesToolbar As New Panel() With {
+                .Dock = DockStyle.Top,
+                .Height = 44,
+                .BackColor = UITheme.ColorSurface,
+                .Padding = New Padding(12, 8, 12, 8)
+            }
+
+            lblResumenAnulaciones = New Label() With {
+                .Dock = DockStyle.Fill,
+                .AutoSize = False,
+                .AutoEllipsis = True,
+                .TextAlign = ContentAlignment.MiddleLeft,
+                .Font = UITheme.FontBold,
+                .ForeColor = UITheme.ColorDanger,
+                .Text = "Cargando registro de anulaciones y devoluciones..."
+            }
+            pnlAnulacionesToolbar.Controls.Add(lblResumenAnulaciones)
+
+            dgvAnulaciones = New DataGridView() With {.Dock = DockStyle.Fill}
+            UITheme.StyleDataGrid(dgvAnulaciones)
+            ConfigurarColumnasAnulaciones()
+            AddHandler dgvAnulaciones.CellDoubleClick, AddressOf DgvAnulaciones_CellDoubleClick
+
+            tabAnulaciones.Controls.Add(dgvAnulaciones)
+            tabAnulaciones.Controls.Add(pnlAnulacionesToolbar)
         End Sub
 
         Private Sub ConstruirTabClientes()
@@ -313,13 +448,23 @@ Namespace Forms
             flpClientes.Controls.AddRange({lblCli, cboClientesFiltro, lblOrd, cboOrdenClientes, lblResumenClientes})
             pnlClientesToolbar.Controls.Add(flpClientes)
 
-            ' SplitContainer: Clientes arriba, comprobantes abajo
+            ' SplitContainer: Clientes arriba, comprobantes abajo (adaptable en altura)
             Dim scClientes As New SplitContainer() With {
                 .Dock = DockStyle.Fill,
                 .Orientation = Orientation.Horizontal,
-                .SplitterDistance = 270,
-                .SplitterWidth = 6
+                .SplitterDistance = 230,
+                .SplitterWidth = 6,
+                .Panel1MinSize = 110,
+                .Panel2MinSize = 120
             }
+            AddHandler scClientes.Resize, Sub(s, ev)
+                                              If scClientes.Height > 260 Then
+                                                  Try
+                                                      scClientes.SplitterDistance = Math.Max(120, CInt(scClientes.Height * 0.48))
+                                                  Catch
+                                                  End Try
+                                              End If
+                                          End Sub
 
             ' Grilla principal de Clientes
             dgvClientesReporte = New DataGridView() With {.Dock = DockStyle.Fill}
@@ -436,13 +581,23 @@ Namespace Forms
             flpVendedores.Controls.AddRange({lblVend, cboVendedoresFiltro, lblOrdVend, cboOrdenVendedores, lblResumenVendedores})
             pnlVendedoresToolbar.Controls.Add(flpVendedores)
 
-            ' SplitContainer: Vendedores arriba, comprobantes abajo
+            ' SplitContainer: Vendedores arriba, comprobantes abajo (adaptable en altura)
             Dim scVendedores As New SplitContainer() With {
                 .Dock = DockStyle.Fill,
                 .Orientation = Orientation.Horizontal,
-                .SplitterDistance = 270,
-                .SplitterWidth = 6
+                .SplitterDistance = 230,
+                .SplitterWidth = 6,
+                .Panel1MinSize = 110,
+                .Panel2MinSize = 120
             }
+            AddHandler scVendedores.Resize, Sub(s, ev)
+                                                If scVendedores.Height > 260 Then
+                                                    Try
+                                                        scVendedores.SplitterDistance = Math.Max(120, CInt(scVendedores.Height * 0.48))
+                                                    Catch
+                                                    End Try
+                                                End If
+                                            End Sub
 
             ' Grilla principal de Vendedores
             dgvVendedoresReporte = New DataGridView() With {.Dock = DockStyle.Fill}
@@ -523,35 +678,46 @@ Namespace Forms
                 .WrapContents = True
             }
 
-            Dim lblCrit As New Label() With {.Text = "Criterio de Ranking:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 5, 8, 0)}
+            Dim lblCrit As New Label() With {.Text = "Criterio:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(0, 5, 8, 0)}
 
             rbMayorSalida = New RadioButton() With {
-                .Text = "Mayor Salida (Unidades Vendidas)",
+                .Text = "Mayor Salida (Unidades)",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorPrimaryDark,
                 .AutoSize = True,
                 .Checked = True,
-                .Margin = New Padding(0, 3, 14, 0)
+                .Margin = New Padding(0, 3, 12, 0)
             }
             AddHandler rbMayorSalida.CheckedChanged, Sub()
                                                          If Not isLoading AndAlso rbMayorSalida.Checked Then LoadRanking()
                                                      End Sub
 
             rbMayorMargen = New RadioButton() With {
-                .Text = "Mayor Margen de Ganancia (Rentabilidad $)",
+                .Text = "Mayor Margen (Rentabilidad $)",
                 .Font = UITheme.FontBold,
                 .ForeColor = UITheme.ColorSuccessDark,
                 .AutoSize = True,
-                .Margin = New Padding(0, 3, 14, 0)
+                .Margin = New Padding(0, 3, 12, 0)
             }
             AddHandler rbMayorMargen.CheckedChanged, Sub()
                                                          If Not isLoading AndAlso rbMayorMargen.Checked Then LoadRanking()
                                                      End Sub
 
-            Dim lblLim As New Label() With {.Text = "Mostrar:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(10, 5, 4, 0)}
+            rbStockInmovilizado = New RadioButton() With {
+                .Text = "Stock Inmovilizado (Sin rotación)",
+                .Font = UITheme.FontBold,
+                .ForeColor = UITheme.ColorWarning,
+                .AutoSize = True,
+                .Margin = New Padding(0, 3, 12, 0)
+            }
+            AddHandler rbStockInmovilizado.CheckedChanged, Sub()
+                                                               If Not isLoading AndAlso rbStockInmovilizado.Checked Then LoadRanking()
+                                                           End Sub
+
+            Dim lblLim As New Label() With {.Text = "Mostrar:", .Font = UITheme.FontBold, .AutoSize = True, .Margin = New Padding(8, 5, 4, 0)}
             cboLimiteRanking = New ComboBox() With {
                 .DropDownStyle = ComboBoxStyle.DropDownList,
-                .Width = 120,
+                .Width = 110,
                 .Margin = New Padding(0, 2, 0, 0)
             }
             UITheme.StyleComboBox(cboLimiteRanking)
@@ -561,7 +727,15 @@ Namespace Forms
                                                                   If Not isLoading Then LoadRanking()
                                                               End Sub
 
-            flpRanking.Controls.AddRange({lblCrit, rbMayorSalida, rbMayorMargen, lblLim, cboLimiteRanking})
+            lblResumenRanking = New Label() With {
+                .AutoSize = True,
+                .Font = UITheme.FontBold,
+                .ForeColor = UITheme.ColorTextPrimary,
+                .Margin = New Padding(14, 5, 0, 0),
+                .Text = ""
+            }
+
+            flpRanking.Controls.AddRange({lblCrit, rbMayorSalida, rbMayorMargen, rbStockInmovilizado, lblLim, cboLimiteRanking, lblResumenRanking})
             pnlRankingToolbar.Controls.Add(flpRanking)
 
             dgvRanking = New DataGridView() With {.Dock = DockStyle.Fill}
@@ -573,15 +747,22 @@ Namespace Forms
         End Sub
 
         Private Sub CargarComboClientes()
+            cboClienteGeneral.Items.Clear()
+            cboClienteGeneral.Items.Add(New FiltroComboItem(0, "[ Todos los clientes ]"))
+
             cboClientesFiltro.Items.Clear()
             cboClientesFiltro.Items.Add(New FiltroComboItem(0, "[ Todos los clientes ]"))
 
             Dim clientes = clienteService.GetClientes("", True)
             For Each c In clientes
                 Dim desc = $"{c.Apellido}, {c.Nombre} (DNI: {c.DniCuit})"
+                cboClienteGeneral.Items.Add(New FiltroComboItem(c.Id, desc))
                 cboClientesFiltro.Items.Add(New FiltroComboItem(c.Id, desc))
             Next
 
+            If cboClienteGeneral.Items.Count > 0 Then
+                cboClienteGeneral.SelectedIndex = 0
+            End If
             If cboClientesFiltro.Items.Count > 0 Then
                 cboClientesFiltro.SelectedIndex = 0
             End If
@@ -612,227 +793,283 @@ Namespace Forms
         End Sub
 
         Private Sub ConfigurarColumnasVentas()
+            dgvVentas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvVentas.Columns.Clear()
             dgvVentas.Columns.Add("Id", "ID")
             dgvVentas.Columns("Id").Visible = False
 
             dgvVentas.Columns.Add("Ticket", "Nº Ticket")
-            dgvVentas.Columns("Ticket").Width = 140
+            dgvVentas.Columns("Ticket").FillWeight = 13
+            dgvVentas.Columns("Ticket").MinimumWidth = 110
 
             dgvVentas.Columns.Add("Fecha", "Fecha y Hora")
-            dgvVentas.Columns("Fecha").Width = 135
+            dgvVentas.Columns("Fecha").FillWeight = 13
+            dgvVentas.Columns("Fecha").MinimumWidth = 115
 
             dgvVentas.Columns.Add("Vendedor", "Vendedor")
-            dgvVentas.Columns("Vendedor").Width = 140
+            dgvVentas.Columns("Vendedor").FillWeight = 14
+            dgvVentas.Columns("Vendedor").MinimumWidth = 100
 
             dgvVentas.Columns.Add("Cliente", "Cliente")
-            dgvVentas.Columns("Cliente").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvVentas.Columns("Cliente").FillWeight = 18
+            dgvVentas.Columns("Cliente").MinimumWidth = 120
 
             dgvVentas.Columns.Add("Metodo", "Medio Pago")
-            dgvVentas.Columns("Metodo").Width = 130
+            dgvVentas.Columns("Metodo").FillWeight = 12
+            dgvVentas.Columns("Metodo").MinimumWidth = 95
 
             dgvVentas.Columns.Add("Subtotal", "Subtotal")
-            dgvVentas.Columns("Subtotal").Width = 110
+            dgvVentas.Columns("Subtotal").FillWeight = 10
+            dgvVentas.Columns("Subtotal").MinimumWidth = 85
             dgvVentas.Columns("Subtotal").DefaultCellStyle.Format = "C2"
 
             dgvVentas.Columns.Add("Descuento", "Desc. ($)")
-            dgvVentas.Columns("Descuento").Width = 90
+            dgvVentas.Columns("Descuento").FillWeight = 9
+            dgvVentas.Columns("Descuento").MinimumWidth = 75
             dgvVentas.Columns("Descuento").DefaultCellStyle.Format = "C2"
 
             dgvVentas.Columns.Add("Total", "Total Facturado")
-            dgvVentas.Columns("Total").Width = 130
+            dgvVentas.Columns("Total").FillWeight = 12
+            dgvVentas.Columns("Total").MinimumWidth = 100
             dgvVentas.Columns("Total").DefaultCellStyle.Format = "C2"
             dgvVentas.Columns("Total").DefaultCellStyle.Font = UITheme.FontBold
 
             dgvVentas.Columns.Add("Estado", "Estado")
-            dgvVentas.Columns("Estado").Width = 110
+            dgvVentas.Columns("Estado").FillWeight = 9
+            dgvVentas.Columns("Estado").MinimumWidth = 80
         End Sub
 
         Private Sub ConfigurarColumnasClientesReporte()
+            dgvClientesReporte.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvClientesReporte.Columns.Clear()
             dgvClientesReporte.Columns.Add("Id", "ID")
             dgvClientesReporte.Columns("Id").Visible = False
 
             dgvClientesReporte.Columns.Add("Cliente", "Cliente")
-            dgvClientesReporte.Columns("Cliente").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvClientesReporte.Columns("Cliente").FillWeight = 20
+            dgvClientesReporte.Columns("Cliente").MinimumWidth = 130
 
             dgvClientesReporte.Columns.Add("Dni", "DNI / CUIT")
-            dgvClientesReporte.Columns("Dni").Width = 115
+            dgvClientesReporte.Columns("Dni").FillWeight = 11
+            dgvClientesReporte.Columns("Dni").MinimumWidth = 90
 
             dgvClientesReporte.Columns.Add("Telefono", "Teléfono")
-            dgvClientesReporte.Columns("Telefono").Width = 110
+            dgvClientesReporte.Columns("Telefono").FillWeight = 11
+            dgvClientesReporte.Columns("Telefono").MinimumWidth = 90
 
             dgvClientesReporte.Columns.Add("Compras", "Tickets")
-            dgvClientesReporte.Columns("Compras").Width = 85
+            dgvClientesReporte.Columns("Compras").FillWeight = 8
+            dgvClientesReporte.Columns("Compras").MinimumWidth = 65
             dgvClientesReporte.Columns("Compras").DefaultCellStyle.Font = UITheme.FontBold
             dgvClientesReporte.Columns("Compras").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvClientesReporte.Columns.Add("Unidades", "Prendas Adquiridas")
-            dgvClientesReporte.Columns("Unidades").Width = 130
+            dgvClientesReporte.Columns("Unidades").FillWeight = 12
+            dgvClientesReporte.Columns("Unidades").MinimumWidth = 95
             dgvClientesReporte.Columns("Unidades").DefaultCellStyle.Font = UITheme.FontBold
             dgvClientesReporte.Columns("Unidades").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvClientesReporte.Columns.Add("Total", "Total Facturado")
-            dgvClientesReporte.Columns("Total").Width = 130
+            dgvClientesReporte.Columns("Total").FillWeight = 13
+            dgvClientesReporte.Columns("Total").MinimumWidth = 105
             dgvClientesReporte.Columns("Total").DefaultCellStyle.Format = "C2"
             dgvClientesReporte.Columns("Total").DefaultCellStyle.Font = UITheme.FontBold
 
             dgvClientesReporte.Columns.Add("Margen", "Margen Ganancia")
-            dgvClientesReporte.Columns("Margen").Width = 130
+            dgvClientesReporte.Columns("Margen").FillWeight = 13
+            dgvClientesReporte.Columns("Margen").MinimumWidth = 105
             dgvClientesReporte.Columns("Margen").DefaultCellStyle.Format = "C2"
             dgvClientesReporte.Columns("Margen").DefaultCellStyle.Font = UITheme.FontBold
             dgvClientesReporte.Columns("Margen").DefaultCellStyle.ForeColor = UITheme.ColorSuccessDark
 
             dgvClientesReporte.Columns.Add("Rentabilidad", "% Margen")
-            dgvClientesReporte.Columns("Rentabilidad").Width = 90
+            dgvClientesReporte.Columns("Rentabilidad").FillWeight = 9
+            dgvClientesReporte.Columns("Rentabilidad").MinimumWidth = 75
             dgvClientesReporte.Columns("Rentabilidad").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvClientesReporte.Columns.Add("UltimaCompra", "Última Compra")
-            dgvClientesReporte.Columns("UltimaCompra").Width = 130
+            dgvClientesReporte.Columns("UltimaCompra").FillWeight = 12
+            dgvClientesReporte.Columns("UltimaCompra").MinimumWidth = 105
         End Sub
 
         Private Sub ConfigurarColumnasTicketsCliente()
+            dgvTicketsCliente.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvTicketsCliente.Columns.Clear()
             dgvTicketsCliente.Columns.Add("Id", "ID")
             dgvTicketsCliente.Columns("Id").Visible = False
 
             dgvTicketsCliente.Columns.Add("Ticket", "Nº Ticket")
-            dgvTicketsCliente.Columns("Ticket").Width = 140
+            dgvTicketsCliente.Columns("Ticket").FillWeight = 15
+            dgvTicketsCliente.Columns("Ticket").MinimumWidth = 110
 
             dgvTicketsCliente.Columns.Add("Fecha", "Fecha y Hora")
-            dgvTicketsCliente.Columns("Fecha").Width = 135
+            dgvTicketsCliente.Columns("Fecha").FillWeight = 15
+            dgvTicketsCliente.Columns("Fecha").MinimumWidth = 115
 
             dgvTicketsCliente.Columns.Add("Vendedor", "Vendedor")
-            dgvTicketsCliente.Columns("Vendedor").Width = 140
+            dgvTicketsCliente.Columns("Vendedor").FillWeight = 18
+            dgvTicketsCliente.Columns("Vendedor").MinimumWidth = 110
 
             dgvTicketsCliente.Columns.Add("Metodo", "Medio Pago")
-            dgvTicketsCliente.Columns("Metodo").Width = 120
+            dgvTicketsCliente.Columns("Metodo").FillWeight = 13
+            dgvTicketsCliente.Columns("Metodo").MinimumWidth = 95
 
             dgvTicketsCliente.Columns.Add("Subtotal", "Subtotal")
-            dgvTicketsCliente.Columns("Subtotal").Width = 100
+            dgvTicketsCliente.Columns("Subtotal").FillWeight = 12
+            dgvTicketsCliente.Columns("Subtotal").MinimumWidth = 85
             dgvTicketsCliente.Columns("Subtotal").DefaultCellStyle.Format = "C2"
 
             dgvTicketsCliente.Columns.Add("Descuento", "Desc. ($)")
-            dgvTicketsCliente.Columns("Descuento").Width = 90
+            dgvTicketsCliente.Columns("Descuento").FillWeight = 10
+            dgvTicketsCliente.Columns("Descuento").MinimumWidth = 75
             dgvTicketsCliente.Columns("Descuento").DefaultCellStyle.Format = "C2"
 
             dgvTicketsCliente.Columns.Add("Total", "Total Facturado")
-            dgvTicketsCliente.Columns("Total").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvTicketsCliente.Columns("Total").FillWeight = 14
+            dgvTicketsCliente.Columns("Total").MinimumWidth = 100
             dgvTicketsCliente.Columns("Total").DefaultCellStyle.Format = "C2"
             dgvTicketsCliente.Columns("Total").DefaultCellStyle.Font = UITheme.FontBold
 
             dgvTicketsCliente.Columns.Add("Estado", "Estado")
-            dgvTicketsCliente.Columns("Estado").Width = 110
+            dgvTicketsCliente.Columns("Estado").FillWeight = 10
+            dgvTicketsCliente.Columns("Estado").MinimumWidth = 80
         End Sub
 
         Private Sub ConfigurarColumnasVendedoresReporte()
+            dgvVendedoresReporte.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvVendedoresReporte.Columns.Clear()
             dgvVendedoresReporte.Columns.Add("Id", "ID")
             dgvVendedoresReporte.Columns("Id").Visible = False
 
             dgvVendedoresReporte.Columns.Add("Vendedor", "Vendedor")
-            dgvVendedoresReporte.Columns("Vendedor").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvVendedoresReporte.Columns("Vendedor").FillWeight = 20
+            dgvVendedoresReporte.Columns("Vendedor").MinimumWidth = 130
 
             dgvVendedoresReporte.Columns.Add("Username", "Usuario")
-            dgvVendedoresReporte.Columns("Username").Width = 115
+            dgvVendedoresReporte.Columns("Username").FillWeight = 11
+            dgvVendedoresReporte.Columns("Username").MinimumWidth = 85
 
             dgvVendedoresReporte.Columns.Add("Dni", "DNI")
-            dgvVendedoresReporte.Columns("Dni").Width = 110
+            dgvVendedoresReporte.Columns("Dni").FillWeight = 11
+            dgvVendedoresReporte.Columns("Dni").MinimumWidth = 85
 
             dgvVendedoresReporte.Columns.Add("Ventas", "Tickets")
-            dgvVendedoresReporte.Columns("Ventas").Width = 85
+            dgvVendedoresReporte.Columns("Ventas").FillWeight = 8
+            dgvVendedoresReporte.Columns("Ventas").MinimumWidth = 65
             dgvVendedoresReporte.Columns("Ventas").DefaultCellStyle.Font = UITheme.FontBold
             dgvVendedoresReporte.Columns("Ventas").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvVendedoresReporte.Columns.Add("Unidades", "Prendas Vendidas")
-            dgvVendedoresReporte.Columns("Unidades").Width = 130
+            dgvVendedoresReporte.Columns("Unidades").FillWeight = 12
+            dgvVendedoresReporte.Columns("Unidades").MinimumWidth = 95
             dgvVendedoresReporte.Columns("Unidades").DefaultCellStyle.Font = UITheme.FontBold
             dgvVendedoresReporte.Columns("Unidades").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvVendedoresReporte.Columns.Add("Total", "Total Facturado")
-            dgvVendedoresReporte.Columns("Total").Width = 130
+            dgvVendedoresReporte.Columns("Total").FillWeight = 13
+            dgvVendedoresReporte.Columns("Total").MinimumWidth = 105
             dgvVendedoresReporte.Columns("Total").DefaultCellStyle.Format = "C2"
             dgvVendedoresReporte.Columns("Total").DefaultCellStyle.Font = UITheme.FontBold
 
             dgvVendedoresReporte.Columns.Add("Margen", "Margen Ganancia")
-            dgvVendedoresReporte.Columns("Margen").Width = 130
+            dgvVendedoresReporte.Columns("Margen").FillWeight = 13
+            dgvVendedoresReporte.Columns("Margen").MinimumWidth = 105
             dgvVendedoresReporte.Columns("Margen").DefaultCellStyle.Format = "C2"
             dgvVendedoresReporte.Columns("Margen").DefaultCellStyle.Font = UITheme.FontBold
             dgvVendedoresReporte.Columns("Margen").DefaultCellStyle.ForeColor = UITheme.ColorSuccessDark
 
             dgvVendedoresReporte.Columns.Add("Rentabilidad", "% Margen")
-            dgvVendedoresReporte.Columns("Rentabilidad").Width = 90
+            dgvVendedoresReporte.Columns("Rentabilidad").FillWeight = 9
+            dgvVendedoresReporte.Columns("Rentabilidad").MinimumWidth = 75
             dgvVendedoresReporte.Columns("Rentabilidad").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvVendedoresReporte.Columns.Add("UltimaVenta", "Última Venta")
-            dgvVendedoresReporte.Columns("UltimaVenta").Width = 130
+            dgvVendedoresReporte.Columns("UltimaVenta").FillWeight = 12
+            dgvVendedoresReporte.Columns("UltimaVenta").MinimumWidth = 105
         End Sub
 
         Private Sub ConfigurarColumnasTicketsVendedor()
+            dgvTicketsVendedor.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvTicketsVendedor.Columns.Clear()
             dgvTicketsVendedor.Columns.Add("Id", "ID")
             dgvTicketsVendedor.Columns("Id").Visible = False
 
             dgvTicketsVendedor.Columns.Add("Ticket", "Nº Ticket")
-            dgvTicketsVendedor.Columns("Ticket").Width = 140
+            dgvTicketsVendedor.Columns("Ticket").FillWeight = 15
+            dgvTicketsVendedor.Columns("Ticket").MinimumWidth = 110
 
             dgvTicketsVendedor.Columns.Add("Fecha", "Fecha y Hora")
-            dgvTicketsVendedor.Columns("Fecha").Width = 135
+            dgvTicketsVendedor.Columns("Fecha").FillWeight = 15
+            dgvTicketsVendedor.Columns("Fecha").MinimumWidth = 115
 
             dgvTicketsVendedor.Columns.Add("Cliente", "Cliente")
-            dgvTicketsVendedor.Columns("Cliente").Width = 160
+            dgvTicketsVendedor.Columns("Cliente").FillWeight = 18
+            dgvTicketsVendedor.Columns("Cliente").MinimumWidth = 115
 
             dgvTicketsVendedor.Columns.Add("Metodo", "Medio Pago")
-            dgvTicketsVendedor.Columns("Metodo").Width = 120
+            dgvTicketsVendedor.Columns("Metodo").FillWeight = 13
+            dgvTicketsVendedor.Columns("Metodo").MinimumWidth = 95
 
             dgvTicketsVendedor.Columns.Add("Subtotal", "Subtotal")
-            dgvTicketsVendedor.Columns("Subtotal").Width = 100
+            dgvTicketsVendedor.Columns("Subtotal").FillWeight = 12
+            dgvTicketsVendedor.Columns("Subtotal").MinimumWidth = 85
             dgvTicketsVendedor.Columns("Subtotal").DefaultCellStyle.Format = "C2"
 
             dgvTicketsVendedor.Columns.Add("Descuento", "Desc. ($)")
-            dgvTicketsVendedor.Columns("Descuento").Width = 90
+            dgvTicketsVendedor.Columns("Descuento").FillWeight = 10
+            dgvTicketsVendedor.Columns("Descuento").MinimumWidth = 75
             dgvTicketsVendedor.Columns("Descuento").DefaultCellStyle.Format = "C2"
 
             dgvTicketsVendedor.Columns.Add("Total", "Total Facturado")
-            dgvTicketsVendedor.Columns("Total").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvTicketsVendedor.Columns("Total").FillWeight = 14
+            dgvTicketsVendedor.Columns("Total").MinimumWidth = 100
             dgvTicketsVendedor.Columns("Total").DefaultCellStyle.Format = "C2"
             dgvTicketsVendedor.Columns("Total").DefaultCellStyle.Font = UITheme.FontBold
 
             dgvTicketsVendedor.Columns.Add("Estado", "Estado")
-            dgvTicketsVendedor.Columns("Estado").Width = 110
+            dgvTicketsVendedor.Columns("Estado").FillWeight = 10
+            dgvTicketsVendedor.Columns("Estado").MinimumWidth = 80
         End Sub
 
         Private Sub ConfigurarColumnasRanking()
+            dgvRanking.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvRanking.Columns.Clear()
             dgvRanking.Columns.Add("Prenda", "Prenda / Modelo")
-            dgvRanking.Columns("Prenda").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvRanking.Columns("Prenda").FillWeight = 32
+            dgvRanking.Columns("Prenda").MinimumWidth = 160
 
             dgvRanking.Columns.Add("Talle", "Talle")
-            dgvRanking.Columns("Talle").Width = 90
+            dgvRanking.Columns("Talle").FillWeight = 9
+            dgvRanking.Columns("Talle").MinimumWidth = 65
             dgvRanking.Columns("Talle").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvRanking.Columns.Add("Cantidad", "Unidades Vendidas")
-            dgvRanking.Columns("Cantidad").Width = 140
+            dgvRanking.Columns("Cantidad").FillWeight = 13
+            dgvRanking.Columns("Cantidad").MinimumWidth = 100
             dgvRanking.Columns("Cantidad").DefaultCellStyle.Font = UITheme.FontBold
             dgvRanking.Columns("Cantidad").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvRanking.Columns.Add("Recaudado", "Recaudación Total")
-            dgvRanking.Columns("Recaudado").Width = 140
+            dgvRanking.Columns("Recaudado").FillWeight = 14
+            dgvRanking.Columns("Recaudado").MinimumWidth = 110
             dgvRanking.Columns("Recaudado").DefaultCellStyle.Format = "C2"
             dgvRanking.Columns("Recaudado").DefaultCellStyle.Font = UITheme.FontBold
 
             dgvRanking.Columns.Add("Costo", "Costo Total")
-            dgvRanking.Columns("Costo").Width = 125
+            dgvRanking.Columns("Costo").FillWeight = 12
+            dgvRanking.Columns("Costo").MinimumWidth = 95
             dgvRanking.Columns("Costo").DefaultCellStyle.Format = "C2"
 
             dgvRanking.Columns.Add("Margen", "Margen Ganancia")
-            dgvRanking.Columns("Margen").Width = 140
+            dgvRanking.Columns("Margen").FillWeight = 14
+            dgvRanking.Columns("Margen").MinimumWidth = 110
             dgvRanking.Columns("Margen").DefaultCellStyle.Format = "C2"
             dgvRanking.Columns("Margen").DefaultCellStyle.Font = UITheme.FontBold
             dgvRanking.Columns("Margen").DefaultCellStyle.ForeColor = UITheme.ColorSuccessDark
 
             dgvRanking.Columns.Add("PctMargen", "% Rentabilidad")
-            dgvRanking.Columns("PctMargen").Width = 105
+            dgvRanking.Columns("PctMargen").FillWeight = 10
+            dgvRanking.Columns("PctMargen").MinimumWidth = 85
             dgvRanking.Columns("PctMargen").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             If AuthService.IsVendor Then
@@ -842,11 +1079,132 @@ Namespace Forms
             End If
         End Sub
 
+        Private Sub ConfigurarColumnasStockInmovilizado()
+            dgvRanking.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            dgvRanking.Columns.Clear()
+
+            dgvRanking.Columns.Add("Codigo", "Código")
+            dgvRanking.Columns("Codigo").FillWeight = 12
+            dgvRanking.Columns("Codigo").MinimumWidth = 90
+
+            dgvRanking.Columns.Add("Prenda", "Prenda / Modelo")
+            dgvRanking.Columns("Prenda").FillWeight = 26
+            dgvRanking.Columns("Prenda").MinimumWidth = 140
+
+            dgvRanking.Columns.Add("Talle", "Talle")
+            dgvRanking.Columns("Talle").FillWeight = 8
+            dgvRanking.Columns("Talle").MinimumWidth = 60
+            dgvRanking.Columns("Talle").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+            dgvRanking.Columns.Add("Color", "Color")
+            dgvRanking.Columns("Color").FillWeight = 10
+            dgvRanking.Columns("Color").MinimumWidth = 75
+            dgvRanking.Columns("Color").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+            dgvRanking.Columns.Add("StockActual", "Stock Inmovilizado")
+            dgvRanking.Columns("StockActual").FillWeight = 11
+            dgvRanking.Columns("StockActual").MinimumWidth = 90
+            dgvRanking.Columns("StockActual").DefaultCellStyle.Font = UITheme.FontBold
+            dgvRanking.Columns("StockActual").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+            dgvRanking.Columns.Add("CostoInmovilizado", "Capital en Costo ($)")
+            dgvRanking.Columns("CostoInmovilizado").FillWeight = 13
+            dgvRanking.Columns("CostoInmovilizado").MinimumWidth = 105
+            dgvRanking.Columns("CostoInmovilizado").DefaultCellStyle.Format = "C2"
+            dgvRanking.Columns("CostoInmovilizado").DefaultCellStyle.Font = UITheme.FontBold
+            dgvRanking.Columns("CostoInmovilizado").DefaultCellStyle.ForeColor = UITheme.ColorWarning
+
+            dgvRanking.Columns.Add("ValorVenta", "Valor Venta ($)")
+            dgvRanking.Columns("ValorVenta").FillWeight = 13
+            dgvRanking.Columns("ValorVenta").MinimumWidth = 105
+            dgvRanking.Columns("ValorVenta").DefaultCellStyle.Format = "C2"
+
+            dgvRanking.Columns.Add("UltimaVenta", "Última Venta Histórica")
+            dgvRanking.Columns("UltimaVenta").FillWeight = 17
+            dgvRanking.Columns("UltimaVenta").MinimumWidth = 130
+        End Sub
+
+        Private Sub ConfigurarColumnasAnulaciones()
+            dgvAnulaciones.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            dgvAnulaciones.Columns.Clear()
+            dgvAnulaciones.Columns.Add("Id", "ID")
+            dgvAnulaciones.Columns("Id").Visible = False
+
+            dgvAnulaciones.Columns.Add("Ticket", "Nº Ticket")
+            dgvAnulaciones.Columns("Ticket").FillWeight = 13
+            dgvAnulaciones.Columns("Ticket").MinimumWidth = 105
+
+            dgvAnulaciones.Columns.Add("Fecha", "Fecha y Hora")
+            dgvAnulaciones.Columns("Fecha").FillWeight = 13
+            dgvAnulaciones.Columns("Fecha").MinimumWidth = 110
+
+            dgvAnulaciones.Columns.Add("Cliente", "Cliente")
+            dgvAnulaciones.Columns("Cliente").FillWeight = 15
+            dgvAnulaciones.Columns("Cliente").MinimumWidth = 110
+
+            dgvAnulaciones.Columns.Add("Vendedor", "Vendedor Original")
+            dgvAnulaciones.Columns("Vendedor").FillWeight = 14
+            dgvAnulaciones.Columns("Vendedor").MinimumWidth = 105
+
+            dgvAnulaciones.Columns.Add("AutorizadoPor", "Autorizado Por")
+            dgvAnulaciones.Columns("AutorizadoPor").FillWeight = 14
+            dgvAnulaciones.Columns("AutorizadoPor").MinimumWidth = 105
+            dgvAnulaciones.Columns("AutorizadoPor").DefaultCellStyle.Font = UITheme.FontBold
+
+            dgvAnulaciones.Columns.Add("Metodo", "Medio Pago")
+            dgvAnulaciones.Columns("Metodo").FillWeight = 11
+            dgvAnulaciones.Columns("Metodo").MinimumWidth = 90
+
+            dgvAnulaciones.Columns.Add("Total", "Monto Revertido")
+            dgvAnulaciones.Columns("Total").FillWeight = 12
+            dgvAnulaciones.Columns("Total").MinimumWidth = 100
+            dgvAnulaciones.Columns("Total").DefaultCellStyle.Format = "C2"
+            dgvAnulaciones.Columns("Total").DefaultCellStyle.Font = UITheme.FontBold
+            dgvAnulaciones.Columns("Total").DefaultCellStyle.ForeColor = UITheme.ColorDanger
+
+            dgvAnulaciones.Columns.Add("Motivo", "Motivo de Anulación / Devolución")
+            dgvAnulaciones.Columns("Motivo").FillWeight = 22
+            dgvAnulaciones.Columns("Motivo").MinimumWidth = 150
+        End Sub
+
+        Private Sub CboRapidoFechas_SelectedIndexChanged(sender As Object, e As EventArgs)
+            If isLoading Then Return
+            Dim hoy = DateTime.Today
+
+            Select Case cboRapidoFechas.SelectedIndex
+                Case 0 ' Hoy
+                    dtpDesde.Value = hoy
+                    dtpHasta.Value = hoy
+                Case 1 ' Ayer
+                    dtpDesde.Value = hoy.AddDays(-1)
+                    dtpHasta.Value = hoy.AddDays(-1)
+                Case 2 ' Esta semana
+                    Dim diaSemana = CInt(hoy.DayOfWeek)
+                    Dim delta = If(diaSemana = 0, 6, diaSemana - 1)
+                    dtpDesde.Value = hoy.AddDays(-delta)
+                    dtpHasta.Value = hoy
+                Case 3 ' Este mes
+                    dtpDesde.Value = New DateTime(hoy.Year, hoy.Month, 1)
+                    dtpHasta.Value = hoy
+                Case 4 ' Últimos 30 días
+                    dtpDesde.Value = hoy.AddDays(-30)
+                    dtpHasta.Value = hoy
+                Case 5 ' Últimos 90 días
+                    dtpDesde.Value = hoy.AddDays(-90)
+                    dtpHasta.Value = hoy
+                Case 6 ' Todo el historial
+                    dtpDesde.Value = New DateTime(2020, 1, 1)
+                    dtpHasta.Value = hoy
+            End Select
+            LoadReportes()
+        End Sub
+
         ''' <summary>
         ''' Carga sincronizada de todas las pestañas de reporte según el rango de fechas.
         ''' </summary>
         Private Sub LoadReportes()
             LoadVentasGenerales()
+            LoadAnulaciones()
             LoadVentasPorCliente()
             LoadVentasPorVendedor()
             LoadRanking()
@@ -862,37 +1220,77 @@ Namespace Forms
                 vendedorId = item.Id
             End If
 
-            Dim ventas = ventaService.GetVentas(desde, hasta, "", 0, vendedorId)
-            dgvVentas.Rows.Clear()
+            Dim clienteId As Integer = 0
+            If cboClienteGeneral IsNot Nothing AndAlso cboClienteGeneral.SelectedItem IsNot Nothing Then
+                Dim itemCli = CType(cboClienteGeneral.SelectedItem, FiltroComboItem)
+                clienteId = itemCli.Id
+            End If
 
-            Dim totalPeriodo As Decimal = 0D
-            Dim totalEfec As Decimal = 0D
-            Dim totalDig As Decimal = 0D
-            Dim validTickets As Integer = 0
+            Dim metodoFiltro As String = ""
+            If cboMetodoPagoGeneral IsNot Nothing AndAlso cboMetodoPagoGeneral.SelectedIndex > 0 Then
+                metodoFiltro = cboMetodoPagoGeneral.SelectedItem.ToString()
+            End If
+
+            Dim estadoFiltro As String = ""
+            If cboEstadoGeneral IsNot Nothing AndAlso cboEstadoGeneral.SelectedIndex > 0 Then
+                estadoFiltro = cboEstadoGeneral.SelectedItem.ToString()
+            End If
+
+            Dim ventas = ventaService.GetVentas(desde, hasta, "", clienteId, vendedorId, metodoFiltro, estadoFiltro)
+            dgvVentas.Rows.Clear()
 
             For Each v In ventas
                 Dim rIdx = dgvVentas.Rows.Add(v.Id, v.NumeroTicket, v.Fecha.ToString("dd/MM/yyyy HH:mm"), v.UsuarioNombre, v.ClienteNombre, v.MetodoPago, v.Subtotal, v.DescuentoMonto, v.Total, v.Estado)
-                If v.Estado = "Completada" Then
-                    totalPeriodo += v.Total
-                    validTickets += 1
-                    If v.MetodoPago = "Efectivo" Then
-                        totalEfec += v.Total
-                    ElseIf v.MetodoPago = "Múltiple" Then
-                        Dim efecMixto = Math.Max(0D, Math.Min(v.MontoEfectivo.GetValueOrDefault(0D), v.Total))
-                        totalEfec += efecMixto
-                        totalDig += (v.Total - efecMixto)
-                    Else
-                        totalDig += v.Total
-                    End If
-                Else
+                If v.Estado <> "Completada" Then
                     dgvVentas.Rows(rIdx).DefaultCellStyle.ForeColor = UITheme.ColorTextMuted
                 End If
             Next
 
-            lblTotalVentas.Text = totalPeriodo.ToString("C2")
-            lblCantTickets.Text = validTickets.ToString()
-            lblEfectivo.Text = totalEfec.ToString("C2")
-            lblDigital.Text = totalDig.ToString("C2")
+            ' Actualizar las 4 tarjetas KPI Financieras (inteligencia comercial)
+            Dim metricas = reporteService.GetMetricasFinancierasPeriodo(desde, hasta, vendedorId, clienteId, metodoFiltro)
+            lblTotalVentas.Text = metricas.TotalFacturado.ToString("C2")
+            lblTotalVentasSub.Text = $"{metricas.CantidadTickets} tickets | Efec: {metricas.TotalEfectivo:C2} | Dig: {metricas.TotalDigital:C2}"
+
+            lblCostoMercaderia.Text = metricas.CostoMercaderia.ToString("C2")
+            lblCostoMercaderiaSub.Text = "Costo de prendas vendidas"
+
+            lblGananciaNeta.Text = metricas.GananciaNeta.ToString("C2")
+            lblGananciaNetaSub.Text = $"Rentabilidad real ({metricas.PorcentajeMargen:N1} %)"
+
+            lblTicketPromedio.Text = metricas.TicketPromedio.ToString("C2")
+            lblTicketPromedioSub.Text = $"Gasto promedio ({metricas.CantidadTickets} compras)"
+        End Sub
+
+        Private Sub LoadAnulaciones()
+            Dim desde = dtpDesde.Value.Date
+            Dim hasta = dtpHasta.Value.Date
+
+            Dim vendedorId As Integer = 0
+            If cboVendedorGeneral IsNot Nothing AndAlso cboVendedorGeneral.SelectedItem IsNot Nothing Then
+                Dim item = CType(cboVendedorGeneral.SelectedItem, FiltroComboItem)
+                vendedorId = item.Id
+            End If
+
+            Dim anuladas = ventaService.GetVentas(desde, hasta, "", 0, vendedorId, "", "Anulada")
+            dgvAnulaciones.Rows.Clear()
+
+            Dim totalRevertido As Decimal = 0D
+            For Each v In anuladas
+                totalRevertido += v.Total
+                dgvAnulaciones.Rows.Add(
+                    v.Id,
+                    v.NumeroTicket,
+                    v.Fecha.ToString("dd/MM/yyyy HH:mm"),
+                    v.ClienteNombre,
+                    v.UsuarioNombre,
+                    v.AutorizadoPorNombre,
+                    v.MetodoPago,
+                    v.Total,
+                    v.MotivoAnulacion
+                )
+            Next
+
+            lblResumenAnulaciones.Text = $"Ventas anuladas / devueltas en el período: {anuladas.Count}  |  Total revertido: {totalRevertido:C2}  (Doble clic para ver prendas devueltas)"
         End Sub
 
         Private Sub LoadVentasPorCliente()
@@ -1043,8 +1441,6 @@ Namespace Forms
             Dim desde = dtpDesde.Value.Date
             Dim hasta = dtpHasta.Value.Date
 
-            Dim criterio = If(rbMayorMargen.Checked, CriterioRankingProducto.MayorMargen, CriterioRankingProducto.MayorSalida)
-
             Dim limite = 20
             If cboLimiteRanking.SelectedItem IsNot Nothing Then
                 Select Case cboLimiteRanking.SelectedItem.ToString()
@@ -1059,18 +1455,65 @@ Namespace Forms
                 End Select
             End If
 
+            If rbStockInmovilizado IsNot Nothing AndAlso rbStockInmovilizado.Checked Then
+                ConfigurarColumnasStockInmovilizado()
+                Dim inmovilizados = reporteService.GetStockInmovilizado(desde, hasta, limite)
+                dgvRanking.Rows.Clear()
+
+                Dim totalUnidInmov = 0
+                Dim totalCapitalInmov As Decimal = 0D
+                For Each item In inmovilizados
+                    totalUnidInmov += item.StockActual
+                    totalCapitalInmov += item.CostoInmovilizado
+                    Dim ultVentaStr As String
+                    If item.UltimaVenta.HasValue Then
+                        Dim dias = Math.Max(0, CInt((DateTime.Today - item.UltimaVenta.Value.Date).TotalDays))
+                        ultVentaStr = $"{item.UltimaVenta.Value:dd/MM/yyyy} (hace {dias} días)"
+                    Else
+                        ultVentaStr = "Nunca vendida"
+                    End If
+                    dgvRanking.Rows.Add(item.CodigoBarra, item.Nombre, item.Talle, item.Color, item.StockActual, item.CostoInmovilizado, item.ValorVenta, ultVentaStr)
+                Next
+
+                If lblResumenRanking IsNot Nothing Then
+                    lblResumenRanking.Text = $"Variantes sin rotación: {inmovilizados.Count} ({totalUnidInmov} prendas) | Capital inmovilizado: {totalCapitalInmov:C2}"
+                    lblResumenRanking.ForeColor = UITheme.ColorWarning
+                End If
+                Return
+            End If
+
+            ConfigurarColumnasRanking()
+            Dim criterio = If(rbMayorMargen.Checked, CriterioRankingProducto.MayorMargen, CriterioRankingProducto.MayorSalida)
             Dim top = reporteService.GetTopProductosVendidos(limite, desde, hasta, criterio)
             dgvRanking.Rows.Clear()
 
+            Dim totalUnidadesRanking = 0
+            Dim totalMargenRanking As Decimal = 0D
             For Each p In top
+                totalUnidadesRanking += p.CantidadVendida
+                totalMargenRanking += p.MargenGanancia
                 Dim pctStr = $"{p.PorcentajeMargen:N1} %"
                 dgvRanking.Rows.Add(p.Nombre, p.Talle, p.CantidadVendida, p.TotalRecaudado, p.CostoTotal, p.MargenGanancia, pctStr)
             Next
+
+            If lblResumenRanking IsNot Nothing Then
+                lblResumenRanking.Text = $"Prendas vendidas en ranking: {totalUnidadesRanking} | Margen acumulado: {totalMargenRanking:C2}"
+                lblResumenRanking.ForeColor = UITheme.ColorSuccessDark
+            End If
         End Sub
 
         Private Sub DgvVentas_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
             If e.RowIndex >= 0 Then
                 Dim row = dgvVentas.Rows(e.RowIndex)
+                Dim ventaId As Integer = Convert.ToInt32(row.Cells("Id").Value)
+                Dim ticketNum As String = row.Cells("Ticket").Value.ToString()
+                MostrarModalDetalleVenta(ventaId, ticketNum)
+            End If
+        End Sub
+
+        Private Sub DgvAnulaciones_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
+            If e.RowIndex >= 0 Then
+                Dim row = dgvAnulaciones.Rows(e.RowIndex)
                 Dim ventaId As Integer = Convert.ToInt32(row.Cells("Id").Value)
                 Dim ticketNum As String = row.Cells("Ticket").Value.ToString()
                 MostrarModalDetalleVenta(ventaId, ticketNum)
@@ -1132,12 +1575,19 @@ Namespace Forms
                 Else
                     MessageBox.Show("Seleccione una venta en el listado general para descargar su ticket en PDF.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
                 End If
+            ElseIf tabs.SelectedTab Is tabAnulaciones Then
+                If dgvAnulaciones.CurrentRow IsNot Nothing AndAlso dgvAnulaciones.CurrentRow.Cells("Id").Value IsNot Nothing Then
+                    Dim ventaId As Integer = Convert.ToInt32(dgvAnulaciones.CurrentRow.Cells("Id").Value)
+                    DescargarTicketPdfPorId(ventaId)
+                Else
+                    MessageBox.Show("Seleccione un comprobante anulado para descargar su ticket en PDF.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                End If
             ElseIf tabs.SelectedTab Is tabClientes Then
                 BtnDescargarPdfTicketCliente_Click(sender, e)
             ElseIf tabs.SelectedTab Is tabVendedores Then
                 BtnDescargarPdfTicketVendedor_Click(sender, e)
             Else
-                MessageBox.Show("Seleccione un comprobante en las pestañas de Ventas, Clientes o Vendedores para descargar su ticket en PDF.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                MessageBox.Show("Seleccione un comprobante en las pestañas de Ventas, Anulaciones, Clientes o Vendedores para descargar su ticket en PDF.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
             End If
         End Sub
 
@@ -1183,48 +1633,58 @@ Namespace Forms
 
             Dim modal As New Form() With {
                 .Text = $"Detalle del Comprobante #{ticketNumero}",
-                .Size = New Size(720, 420),
+                .Size = New Size(760, 440),
+                .MinimumSize = New Size(640, 360),
                 .StartPosition = FormStartPosition.CenterParent,
-                .FormBorderStyle = FormBorderStyle.FixedDialog,
-                .MaximizeBox = False,
+                .FormBorderStyle = FormBorderStyle.Sizable,
+                .MaximizeBox = True,
                 .MinimizeBox = False,
                 .BackColor = UITheme.ColorBackground
             }
 
             Dim pnlHead As New Panel() With {
                 .Dock = DockStyle.Top,
-                .Height = 50,
+                .Height = 52,
                 .BackColor = UITheme.ColorSecondary,
                 .Padding = New Padding(15, 12, 15, 12)
             }
+            Dim estadoExtra = If(venta.Estado.Equals("Anulada", StringComparison.OrdinalIgnoreCase), $" [ANULADA - Autorizó: {venta.AutorizadoPorNombre}]", "")
             Dim lblHead As New Label() With {
-                .Text = $"Prendas adquiridas en Ticket #{ticketNumero}",
+                .Text = $"Prendas adquiridas en Ticket #{ticketNumero}{estadoExtra}",
                 .Font = UITheme.FontSubheading,
                 .ForeColor = Color.White,
                 .AutoSize = True,
-                .Location = New Point(15, 12)
+                .Location = New Point(15, 13)
             }
             pnlHead.Controls.Add(lblHead)
 
             Dim dgvModal As New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvModal)
+            dgvModal.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvModal.Columns.Add("Codigo", "Código")
-            dgvModal.Columns("Codigo").Width = 110
+            dgvModal.Columns("Codigo").FillWeight = 15
+            dgvModal.Columns("Codigo").MinimumWidth = 90
             dgvModal.Columns.Add("Articulo", "Prenda / Modelo")
-            dgvModal.Columns("Articulo").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvModal.Columns("Articulo").FillWeight = 32
+            dgvModal.Columns("Articulo").MinimumWidth = 140
             dgvModal.Columns.Add("Talle", "Talle")
-            dgvModal.Columns("Talle").Width = 80
+            dgvModal.Columns("Talle").FillWeight = 10
+            dgvModal.Columns("Talle").MinimumWidth = 60
             dgvModal.Columns.Add("Color", "Color")
-            dgvModal.Columns("Color").Width = 80
+            dgvModal.Columns("Color").FillWeight = 11
+            dgvModal.Columns("Color").MinimumWidth = 70
             dgvModal.Columns.Add("Precio", "Precio Unit.")
-            dgvModal.Columns("Precio").Width = 110
+            dgvModal.Columns("Precio").FillWeight = 14
+            dgvModal.Columns("Precio").MinimumWidth = 90
             dgvModal.Columns("Precio").DefaultCellStyle.Format = "C2"
             dgvModal.Columns.Add("Cantidad", "Cant.")
-            dgvModal.Columns("Cantidad").Width = 70
+            dgvModal.Columns("Cantidad").FillWeight = 9
+            dgvModal.Columns("Cantidad").MinimumWidth = 55
             dgvModal.Columns("Cantidad").DefaultCellStyle.Font = UITheme.FontBold
             dgvModal.Columns("Cantidad").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
             dgvModal.Columns.Add("Subtotal", "Subtotal")
-            dgvModal.Columns("Subtotal").Width = 110
+            dgvModal.Columns("Subtotal").FillWeight = 14
+            dgvModal.Columns("Subtotal").MinimumWidth = 90
             dgvModal.Columns("Subtotal").DefaultCellStyle.Format = "C2"
             dgvModal.Columns("Subtotal").DefaultCellStyle.Font = UITheme.FontBold
 
@@ -1234,18 +1694,28 @@ Namespace Forms
 
             Dim pnlBottom As New Panel() With {
                 .Dock = DockStyle.Bottom,
-                .Height = 50,
+                .Height = 52,
                 .BackColor = UITheme.ColorSurface
             }
+
+            Dim btnExportarPdfModal As New Button() With {
+                .Text = "📄 Reimprimir / Guardar PDF",
+                .Size = New Size(210, 34),
+                .Location = New Point(modal.ClientSize.Width - 340, 9),
+                .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
+            }
+            UITheme.StyleButton(btnExportarPdfModal, "Primary")
+            AddHandler btnExportarPdfModal.Click, Sub() GuardarTicketEnPdf(modal, venta)
+
             Dim btnCerrar As New Button() With {
                 .Text = "Cerrar",
-                .Size = New Size(100, 32),
-                .Location = New Point(modal.ClientSize.Width - 120, 9),
+                .Size = New Size(100, 34),
+                .Location = New Point(modal.ClientSize.Width - 118, 9),
                 .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
             }
             UITheme.StyleButton(btnCerrar, "Secondary")
             AddHandler btnCerrar.Click, Sub() modal.Close()
-            pnlBottom.Controls.Add(btnCerrar)
+            pnlBottom.Controls.AddRange({btnExportarPdfModal, btnCerrar})
 
             modal.Controls.Add(dgvModal)
             modal.Controls.Add(pnlBottom)

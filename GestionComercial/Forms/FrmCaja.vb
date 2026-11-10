@@ -1,8 +1,8 @@
 ' ARCHIVO: FrmCaja.vb
 ' PROPÓSITO: Control de turnos de caja, registro de gastos y arqueo ciego de efectivo.
 ' Esta ventana garantiza el control sobre el dinero físico en el salón:
-' 1. Visualización de Balances: Muestra en tarjetas el fondo inicial, las ventas en efectivo,
-'    las ventas digitales (tarjetas), los egresos y el monto que debe haber en el cajón.
+' 1. Visualización de Balances: Muestra en tarjetas el estado de la caja y los totales recaudados
+'    en el turno separados por Efectivo, Tarjetas (Posnet) y Transferencias / QR.
 ' 2. Seguridad en Retiros: Si el cajero registra un retiro o egreso de efectivo, el sistema
 '    exige la autorización presencial de un Administrador o Gerente.
 ' 3. Arqueo y Cierre: Al finalizar el turno, pide contar los billetes en mano (montoReal),
@@ -23,17 +23,16 @@ Namespace Forms
         Private cajaActual As Caja = Nothing
 
         Private lblEstadoCaja As Label
+        Private lblSubEstadoCaja As Label
         Private lblVentasEfectivo As Label
-        Private lblVentasDigital As Label
-        Private lblEfectivoEsperado As Label
+        Private lblVentasTarjetas As Label
+        Private lblVentasTransferencia As Label
 
         Private btnAbrirCaja As Button
         Private btnNuevoMovimiento As Button
         Private btnCerrarCaja As Button
         Private btnRefrescar As Button
         Private dgvMovimientos As DataGridView
-
-        Private tabControlCaja As TabControl
 
         Public Sub New()
             InitializeUI()
@@ -55,7 +54,7 @@ Namespace Forms
                 .Padding = New Padding(20, 15, 20, 15)
             }
             Dim lblTitle As New Label() With {
-                .Text = "Caja diaria, movimientos y arqueo",
+                .Text = "Caja diaria, movimientos manuales y arqueo de turno",
                 .Font = UITheme.FontHeading,
                 .ForeColor = Color.White,
                 .AutoSize = True,
@@ -83,33 +82,34 @@ Namespace Forms
             tlpKpis.ColumnStyles.Add(New ColumnStyle(SizeType.Percent, 25.0F))
             tlpKpis.RowStyles.Add(New RowStyle(SizeType.Percent, 100.0F))
 
-            ' Tarjeta 1: Estado
-            Dim cardEstado = UITheme.CreateKpiCard("ESTADO DE CAJA", "CERRADA", "Turno actual", UITheme.ColorDanger)
+            ' Tarjeta 1: Estado de Caja y Fondo Inicial
+            Dim cardEstado = UITheme.CreateKpiCard("ESTADO DE CAJA", "CERRADA", "Sin turno activo", UITheme.ColorDanger)
             cardEstado.Dock = DockStyle.Fill
             cardEstado.Margin = New Padding(3, 3, 6, 3)
             lblEstadoCaja = CType(cardEstado.Controls(2), Label)
+            lblSubEstadoCaja = CType(cardEstado.Controls(3), Label)
             tlpKpis.Controls.Add(cardEstado, 0, 0)
 
             ' Tarjeta 2: Ventas Efectivo
-            Dim cardEfec = UITheme.CreateKpiCard("VENTAS EFECTIVO", "$ 0,00", "+ Monto inicial", UITheme.ColorSuccess)
+            Dim cardEfec = UITheme.CreateKpiCard("VENTAS EFECTIVO", "$ 0,00", "Cobrado en billetes", UITheme.ColorSuccess)
             cardEfec.Dock = DockStyle.Fill
             cardEfec.Margin = New Padding(6, 3, 6, 3)
             lblVentasEfectivo = CType(cardEfec.Controls(2), Label)
             tlpKpis.Controls.Add(cardEfec, 1, 0)
 
-            ' Tarjeta 3: Ventas Digitales
-            Dim cardDig = UITheme.CreateKpiCard("TARJETAS / QR", "$ 0,00", "Débito, crédito, transf.", UITheme.ColorInfo)
-            cardDig.Dock = DockStyle.Fill
-            cardDig.Margin = New Padding(6, 3, 6, 3)
-            lblVentasDigital = CType(cardDig.Controls(2), Label)
-            tlpKpis.Controls.Add(cardDig, 2, 0)
+            ' Tarjeta 3: Ventas con Tarjetas (Posnet)
+            Dim cardTarj = UITheme.CreateKpiCard("TARJETAS (POSNET)", "$ 0,00", "Débito y Crédito", UITheme.ColorInfo)
+            cardTarj.Dock = DockStyle.Fill
+            cardTarj.Margin = New Padding(6, 3, 6, 3)
+            lblVentasTarjetas = CType(cardTarj.Controls(2), Label)
+            tlpKpis.Controls.Add(cardTarj, 2, 0)
 
-            ' Tarjeta 4: Efectivo Esperado
-            Dim cardTotal = UITheme.CreateKpiCard("EFECTIVO EN CAJA", "$ 0,00", "Total esperado a rendir", UITheme.ColorPrimary)
-            cardTotal.Dock = DockStyle.Fill
-            cardTotal.Margin = New Padding(6, 3, 3, 3)
-            lblEfectivoEsperado = CType(cardTotal.Controls(2), Label)
-            tlpKpis.Controls.Add(cardTotal, 3, 0)
+            ' Tarjeta 4: Ventas por Transferencia / QR
+            Dim cardTransf = UITheme.CreateKpiCard("TRANSFERENCIA / QR", "$ 0,00", "MercadoPago / Bancos", UITheme.ColorPrimary)
+            cardTransf.Dock = DockStyle.Fill
+            cardTransf.Margin = New Padding(6, 3, 3, 3)
+            lblVentasTransferencia = CType(cardTransf.Controls(2), Label)
+            tlpKpis.Controls.Add(cardTransf, 3, 0)
 
             pnlKpis.Controls.Add(tlpKpis)
 
@@ -148,51 +148,58 @@ Namespace Forms
             flpToolbar.Controls.AddRange({btnAbrirCaja, btnNuevoMovimiento, btnCerrarCaja, btnRefrescar})
             pnlToolbar.Controls.Add(flpToolbar)
 
-            ' Grilla de Movimientos de Turno Actual
+            ' Grilla de Movimientos Manuales del Turno Actual
             Dim pnlGrid As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(15)}
             dgvMovimientos = New DataGridView() With {.Dock = DockStyle.Fill}
             UITheme.StyleDataGrid(dgvMovimientos)
             ConfigurarColumnas()
             pnlGrid.Controls.Add(dgvMovimientos)
 
-            ' Pestañas de control de caja
-            tabControlCaja = New TabControl() With {
-                .Dock = DockStyle.Fill,
-                .Padding = New Point(12, 6)
-            }
-
-            ' Pestaña 1: Turno Actual
-            Dim tabTurnoActual As New TabPage("Caja diaria / Turno en curso") With {.BackColor = UITheme.ColorBackground}
-            tabTurnoActual.Controls.Add(pnlGrid)
-            tabTurnoActual.Controls.Add(pnlToolbar)
-            tabTurnoActual.Controls.Add(pnlKpis)
-            tabControlCaja.TabPages.Add(tabTurnoActual)
-
-            ' Orden exacto de Docking en FrmCaja: TabControl primero, Header último
-            Me.Controls.Add(tabControlCaja)
+            ' Orden de Docking: Fill primero, Top de abajo hacia arriba
+            Me.Controls.Add(pnlGrid)
+            Me.Controls.Add(pnlToolbar)
+            Me.Controls.Add(pnlKpis)
             Me.Controls.Add(pnlHeader)
         End Sub
 
         Private Sub ConfigurarColumnas()
             dgvMovimientos.Columns.Clear()
+            dgvMovimientos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
             dgvMovimientos.Columns.Add("Hora", "Hora")
-            dgvMovimientos.Columns("Hora").Width = 100
+            dgvMovimientos.Columns("Hora").FillWeight = 10
+            dgvMovimientos.Columns("Hora").MinimumWidth = 75
+            dgvMovimientos.Columns("Hora").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvMovimientos.Columns("Hora").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvMovimientos.Columns.Add("Tipo", "Tipo")
-            dgvMovimientos.Columns("Tipo").Width = 110
+            dgvMovimientos.Columns("Tipo").FillWeight = 11
+            dgvMovimientos.Columns("Tipo").MinimumWidth = 80
+            dgvMovimientos.Columns("Tipo").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvMovimientos.Columns("Tipo").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvMovimientos.Columns.Add("Concepto", "Concepto / Detalle")
-            dgvMovimientos.Columns("Concepto").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvMovimientos.Columns("Concepto").FillWeight = 28
+            dgvMovimientos.Columns("Concepto").MinimumWidth = 130
 
             dgvMovimientos.Columns.Add("Monto", "Monto ($)")
-            dgvMovimientos.Columns("Monto").Width = 130
+            dgvMovimientos.Columns("Monto").FillWeight = 13
+            dgvMovimientos.Columns("Monto").MinimumWidth = 95
             dgvMovimientos.Columns("Monto").DefaultCellStyle.Format = "C2"
+            dgvMovimientos.Columns("Monto").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvMovimientos.Columns("Monto").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
             dgvMovimientos.Columns.Add("Usuario", "Registrado Por")
-            dgvMovimientos.Columns("Usuario").Width = 160
+            dgvMovimientos.Columns("Usuario").FillWeight = 14
+            dgvMovimientos.Columns("Usuario").MinimumWidth = 100
+
+            dgvMovimientos.Columns.Add("AutorizadoPor", "Autorizado Por")
+            dgvMovimientos.Columns("AutorizadoPor").FillWeight = 14
+            dgvMovimientos.Columns("AutorizadoPor").MinimumWidth = 100
 
             dgvMovimientos.Columns.Add("Referencia", "Comprobante Ref.")
-            dgvMovimientos.Columns("Referencia").Width = 150
+            dgvMovimientos.Columns("Referencia").FillWeight = 12
+            dgvMovimientos.Columns("Referencia").MinimumWidth = 90
         End Sub
 
         Private Sub LoadCajaData()
@@ -206,28 +213,35 @@ Namespace Forms
                 btnNuevoMovimiento.Enabled = True
                 btnCerrarCaja.Enabled = True
 
-                lblVentasEfectivo.Text = cajaActual.TotalVentasEfectivo.ToString("C2")
-                lblVentasDigital.Text = cajaActual.TotalVentasDigital.ToString("C2")
+                Dim desglose = cajaService.GetDesgloseMediosTurno(cajaActual.Id)
+                lblVentasEfectivo.Text = desglose.TotalEfectivo.ToString("C2")
+                lblVentasTarjetas.Text = desglose.TotalTarjetas.ToString("C2")
+                lblVentasTransferencia.Text = desglose.TotalTransferencia.ToString("C2")
 
                 Dim esperado As Decimal = cajaActual.MontoInicial + cajaActual.TotalVentasEfectivo + cajaActual.TotalIngresos - cajaActual.TotalEgresos
-                lblEfectivoEsperado.Text = If(AuthService.IsAdminOrManager, esperado.ToString("C2"), "Oculto (Arqueo Ciego)")
+                If lblSubEstadoCaja IsNot Nothing Then
+                    lblSubEstadoCaja.Text = If(AuthService.IsAdminOrManager, $"En cajón: {esperado:C2}", $"Fondo inic.: {cajaActual.MontoInicial:C2} · Arqueo ciego")
+                End If
 
                 ' Cargar movimientos
                 Dim movs = cajaService.GetMovimientosCaja(cajaActual.Id)
                 dgvMovimientos.Rows.Clear()
                 For Each m In movs
-                    dgvMovimientos.Rows.Add(m.Fecha.ToString("HH:mm:ss"), m.Tipo, m.Concepto, m.Monto, m.UsuarioNombre, m.Referencia)
+                    dgvMovimientos.Rows.Add(m.Fecha.ToString("HH:mm:ss"), m.Tipo, m.Concepto, m.Monto, m.UsuarioNombre, m.AutorizadoPorNombre, m.Referencia)
                 Next
             Else
                 lblEstadoCaja.Text = "CERRADA"
                 lblEstadoCaja.ForeColor = UITheme.ColorDanger
+                If lblSubEstadoCaja IsNot Nothing Then
+                    lblSubEstadoCaja.Text = "Sin turno activo"
+                End If
                 btnAbrirCaja.Enabled = True
                 btnNuevoMovimiento.Enabled = False
                 btnCerrarCaja.Enabled = False
 
                 lblVentasEfectivo.Text = "$ 0,00"
-                lblVentasDigital.Text = "$ 0,00"
-                lblEfectivoEsperado.Text = "$ 0,00"
+                lblVentasTarjetas.Text = "$ 0,00"
+                lblVentasTransferencia.Text = "$ 0,00"
                 dgvMovimientos.Rows.Clear()
             End If
         End Sub

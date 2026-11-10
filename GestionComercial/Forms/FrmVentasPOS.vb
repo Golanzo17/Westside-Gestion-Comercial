@@ -47,8 +47,12 @@ Namespace Forms
         Private btnVaciarCarrito As Button
 
         ' Cliente
+        Private txtBuscarCliente As TextBox
+        Private btnBuscarCliente As Button
+        Private lstSugerenciasCliente As ListBox
         Private cboClientes As ComboBox
         Private btnNuevoCliente As Button
+        Private _actualizandoCliente As Boolean = False
 
         ' Métodos de Pago y Totales
         Private cboMetodoPago As ComboBox
@@ -117,35 +121,64 @@ Namespace Forms
                 .AutoSize = True
             }
 
-            ' Selección de Cliente
-            Dim lblCli As New Label() With {.Text = "Cliente:", .Font = UITheme.FontBold, .Location = New Point(15, 50), .AutoSize = True}
-            cboClientes = New ComboBox() With {.Location = New Point(15, 70), .Size = New Size(255, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
-            UITheme.StyleComboBox(cboClientes)
-            btnNuevoCliente = New Button() With {.Text = "+", .Location = New Point(276, 68), .Size = New Size(38, 28)}
+            ' Selección y Búsqueda de Cliente por Nombre o DNI
+            Dim lblCli As New Label() With {.Text = "Cliente (Buscar por Nombre o DNI):", .Font = UITheme.FontBold, .Location = New Point(15, 46), .AutoSize = True}
+            txtBuscarCliente = New TextBox() With {
+                .Location = New Point(15, 66),
+                .Size = New Size(212, 26),
+                .PlaceholderText = "Nombre, apellido o DNI..."
+            }
+            UITheme.StyleTextBox(txtBuscarCliente)
+            AddHandler txtBuscarCliente.TextChanged, AddressOf TxtBuscarCliente_TextChanged
+            AddHandler txtBuscarCliente.KeyDown, AddressOf TxtBuscarCliente_KeyDown
+
+            btnBuscarCliente = New Button() With {.Text = "🔍", .Location = New Point(232, 65), .Size = New Size(40, 28)}
+            UITheme.StyleButton(btnBuscarCliente, "Primary")
+            AddHandler btnBuscarCliente.Click, AddressOf BtnBuscarCliente_Click
+
+            btnNuevoCliente = New Button() With {.Text = "+", .Location = New Point(276, 65), .Size = New Size(38, 28)}
             UITheme.StyleButton(btnNuevoCliente, "Secondary")
             AddHandler btnNuevoCliente.Click, AddressOf BtnNuevoCliente_Click
 
+            cboClientes = New ComboBox() With {.Location = New Point(15, 98), .Size = New Size(300, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            UITheme.StyleComboBox(cboClientes)
+            AddHandler cboClientes.SelectedIndexChanged, Sub()
+                                                             If Not _actualizandoCliente Then
+                                                                 lstSugerenciasCliente.Visible = False
+                                                             End If
+                                                         End Sub
+
+            lstSugerenciasCliente = New ListBox() With {
+                .Location = New Point(15, 94),
+                .Size = New Size(300, 130),
+                .Font = UITheme.FontRegular,
+                .Visible = False,
+                .IntegralHeight = False
+            }
+            AddHandler lstSugerenciasCliente.Click, AddressOf LstSugerenciasCliente_Click
+            AddHandler lstSugerenciasCliente.KeyDown, AddressOf LstSugerenciasCliente_KeyDown
+
             ' Medio de Pago
-            Dim lblMetodo As New Label() With {.Text = "Medio de Pago:", .Font = UITheme.FontBold, .Location = New Point(15, 110), .AutoSize = True}
-            cboMetodoPago = New ComboBox() With {.Location = New Point(15, 130), .Size = New Size(300, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
+            Dim lblMetodo As New Label() With {.Text = "Medio de Pago:", .Font = UITheme.FontBold, .Location = New Point(15, 136), .AutoSize = True}
+            cboMetodoPago = New ComboBox() With {.Location = New Point(15, 156), .Size = New Size(300, 26), .DropDownStyle = ComboBoxStyle.DropDownList}
             UITheme.StyleComboBox(cboMetodoPago)
             cboMetodoPago.Items.AddRange({"Efectivo", "Tarjeta Débito", "Tarjeta Crédito", "Transferencia / QR", "Múltiple"})
             cboMetodoPago.SelectedIndex = 0
             AddHandler cboMetodoPago.SelectedIndexChanged, AddressOf RecalcularTotales
 
             ' Descuento %
-            Dim lblDesc As New Label() With {.Text = "Descuento (%):", .Font = UITheme.FontRegular, .Location = New Point(15, 170), .AutoSize = True}
-            numDescuentoPorc = New NumericUpDown() With {.Location = New Point(15, 190), .Size = New Size(120, 26), .Minimum = 0, .Maximum = 100, .Value = 0}
+            Dim lblDesc As New Label() With {.Text = "Descuento (%):", .Font = UITheme.FontRegular, .Location = New Point(15, 196), .AutoSize = True}
+            numDescuentoPorc = New NumericUpDown() With {.Location = New Point(15, 216), .Size = New Size(120, 26), .Minimum = 0, .Maximum = 100, .Value = 0}
             AddHandler numDescuentoPorc.ValueChanged, AddressOf RecalcularTotales
             AddHandler numDescuentoPorc.Leave, Sub() ValidarDescuentoVendedor()
 
             ' Subtotal
-            Dim lblSubt As New Label() With {.Text = "Subtotal:", .Font = UITheme.FontRegular, .Location = New Point(170, 170), .AutoSize = True}
-            txtSubtotal = New Label() With {.Text = "$ 0,00", .Font = UITheme.FontBold, .Location = New Point(170, 192), .AutoSize = True}
+            Dim lblSubt As New Label() With {.Text = "Subtotal:", .Font = UITheme.FontRegular, .Location = New Point(170, 196), .AutoSize = True}
+            txtSubtotal = New Label() With {.Text = "$ 0,00", .Font = UITheme.FontBold, .Location = New Point(170, 218), .AutoSize = True}
 
             ' Tarjeta Destacada TOTAL
             Dim pnlTotalCard As New Panel() With {
-                .Location = New Point(15, 235),
+                .Location = New Point(15, 260),
                 .Size = New Size(300, 90),
                 .BackColor = UITheme.ColorSurfaceAccent,
                 .Padding = New Padding(12)
@@ -156,18 +189,18 @@ Namespace Forms
             pnlTotalCard.Controls.AddRange({lblTotalTitle, lblTotalPagar})
 
             ' Efectivo y Vuelto
-            Dim lblAbonado As New Label() With {.Text = "Monto Abonado ($):", .Font = UITheme.FontBold, .Location = New Point(15, 340), .AutoSize = True}
-            txtMontoAbonado = New TextBox() With {.Location = New Point(15, 360), .Size = New Size(140, 28), .Font = UITheme.FontBold}
+            Dim lblAbonado As New Label() With {.Text = "Monto Abonado ($):", .Font = UITheme.FontBold, .Location = New Point(15, 365), .AutoSize = True}
+            txtMontoAbonado = New TextBox() With {.Location = New Point(15, 385), .Size = New Size(140, 28), .Font = UITheme.FontBold}
             UITheme.StyleTextBox(txtMontoAbonado)
             AddHandler txtMontoAbonado.TextChanged, AddressOf TxtMontoAbonado_TextChanged
 
-            Dim lblVueltoTitle As New Label() With {.Text = "Vuelto:", .Font = UITheme.FontBold, .Location = New Point(170, 340), .AutoSize = True}
-            lblVuelto = New Label() With {.Text = "$ 0,00", .Font = New Font("Segoe UI", 13.0F, FontStyle.Bold), .ForeColor = UITheme.ColorSuccess, .Location = New Point(170, 360), .AutoSize = True}
+            Dim lblVueltoTitle As New Label() With {.Text = "Vuelto:", .Font = UITheme.FontBold, .Location = New Point(170, 365), .AutoSize = True}
+            lblVuelto = New Label() With {.Text = "$ 0,00", .Font = New Font("Segoe UI", 13.0F, FontStyle.Bold), .ForeColor = UITheme.ColorSuccess, .Location = New Point(170, 385), .AutoSize = True}
 
             ' Botón Finalizar Venta
             btnFinalizarVenta = New Button() With {
                 .Text = "COBRAR VENTA  (F5)",
-                .Location = New Point(15, 415),
+                .Location = New Point(15, 440),
                 .Size = New Size(300, 50),
                 .Font = New Font("Segoe UI", 11.0F, FontStyle.Bold)
             }
@@ -175,11 +208,13 @@ Namespace Forms
             AddHandler btnFinalizarVenta.Click, AddressOf BtnFinalizarVenta_Click
 
             pnlCobro.Controls.AddRange({
-                lblCobroHeader, lblCli, cboClientes, btnNuevoCliente,
+                lblCobroHeader, lblCli, txtBuscarCliente, btnBuscarCliente, btnNuevoCliente,
+                cboClientes, lstSugerenciasCliente,
                 lblMetodo, cboMetodoPago, lblDesc, numDescuentoPorc,
                 lblSubt, txtSubtotal, pnlTotalCard, lblAbonado, txtMontoAbonado,
                 lblVueltoTitle, lblVuelto, btnFinalizarVenta
             })
+            lstSugerenciasCliente.BringToFront()
 
             ' Panel izquierdo: búsqueda y carrito
             Dim pnlIzquierda As New Panel() With {
@@ -361,31 +396,52 @@ Namespace Forms
 
         Private Sub ConfigurarColumnasCarrito()
             dgvCarrito.Columns.Clear()
+            dgvCarrito.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
             dgvCarrito.Columns.Add("ProductoId", "ID")
             dgvCarrito.Columns("ProductoId").Visible = False
 
             dgvCarrito.Columns.Add("Codigo", "Código")
-            dgvCarrito.Columns("Codigo").Width = 100
+            dgvCarrito.Columns("Codigo").FillWeight = 13
+            dgvCarrito.Columns("Codigo").MinimumWidth = 80
+            dgvCarrito.Columns("Codigo").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvCarrito.Columns("Codigo").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvCarrito.Columns.Add("Descripcion", "Prenda / Artículo")
-            dgvCarrito.Columns("Descripcion").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            dgvCarrito.Columns("Descripcion").FillWeight = 32
+            dgvCarrito.Columns("Descripcion").MinimumWidth = 130
 
             dgvCarrito.Columns.Add("Talle", "Talle")
-            dgvCarrito.Columns("Talle").Width = 80
+            dgvCarrito.Columns("Talle").FillWeight = 9
+            dgvCarrito.Columns("Talle").MinimumWidth = 55
+            dgvCarrito.Columns("Talle").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvCarrito.Columns("Talle").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvCarrito.Columns.Add("Color", "Color")
-            dgvCarrito.Columns("Color").Width = 90
+            dgvCarrito.Columns("Color").FillWeight = 11
+            dgvCarrito.Columns("Color").MinimumWidth = 65
+            dgvCarrito.Columns("Color").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvCarrito.Columns("Color").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvCarrito.Columns.Add("Cantidad", "Cant.")
-            dgvCarrito.Columns("Cantidad").Width = 70
+            dgvCarrito.Columns("Cantidad").FillWeight = 8
+            dgvCarrito.Columns("Cantidad").MinimumWidth = 50
+            dgvCarrito.Columns("Cantidad").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+            dgvCarrito.Columns("Cantidad").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
 
             dgvCarrito.Columns.Add("PrecioUnitario", "Precio Unit.")
-            dgvCarrito.Columns("PrecioUnitario").Width = 140
+            dgvCarrito.Columns("PrecioUnitario").FillWeight = 13
+            dgvCarrito.Columns("PrecioUnitario").MinimumWidth = 85
             dgvCarrito.Columns("PrecioUnitario").DefaultCellStyle.Format = "C2"
+            dgvCarrito.Columns("PrecioUnitario").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvCarrito.Columns("PrecioUnitario").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
 
             dgvCarrito.Columns.Add("Subtotal", "Subtotal")
-            dgvCarrito.Columns("Subtotal").Width = 140
+            dgvCarrito.Columns("Subtotal").FillWeight = 14
+            dgvCarrito.Columns("Subtotal").MinimumWidth = 90
             dgvCarrito.Columns("Subtotal").DefaultCellStyle.Format = "C2"
+            dgvCarrito.Columns("Subtotal").DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight
+            dgvCarrito.Columns("Subtotal").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
         End Sub
 
         Private Sub LoadInitialData()
@@ -393,12 +449,161 @@ Namespace Forms
         End Sub
 
         Private Sub CargarClientes()
-            cboClientes.Items.Clear()
-            listaClientes = clienteService.GetClientes("", True)
-            For Each c In listaClientes
-                cboClientes.Items.Add(c)
-            Next
-            If cboClientes.Items.Count > 0 Then cboClientes.SelectedIndex = 0
+            _actualizandoCliente = True
+            Try
+                cboClientes.Items.Clear()
+                listaClientes = clienteService.GetClientes("", True)
+                For Each c In listaClientes
+                    cboClientes.Items.Add(c)
+                Next
+                ' Por defecto la selección de cliente queda vacía para obligar a elegir uno conscientemente
+                cboClientes.SelectedIndex = -1
+                If lstSugerenciasCliente IsNot Nothing Then lstSugerenciasCliente.Visible = False
+            Finally
+                _actualizandoCliente = False
+            End Try
+        End Sub
+
+        Private Sub TxtBuscarCliente_TextChanged(sender As Object, e As EventArgs)
+            If _actualizandoCliente Then Return
+
+            Dim term As String = txtBuscarCliente.Text.Trim()
+            If String.IsNullOrWhiteSpace(term) Then
+                lstSugerenciasCliente.Visible = False
+                _actualizandoCliente = True
+                Try
+                    Dim prevSel = TryCast(cboClientes.SelectedItem, Cliente)
+                    cboClientes.Items.Clear()
+                    For Each c In listaClientes
+                        cboClientes.Items.Add(c)
+                    Next
+                    If prevSel IsNot Nothing Then
+                        For i = 0 To cboClientes.Items.Count - 1
+                            If CType(cboClientes.Items(i), Cliente).Id = prevSel.Id Then
+                                cboClientes.SelectedIndex = i
+                                Exit For
+                            End If
+                        Next
+                    Else
+                        cboClientes.SelectedIndex = -1
+                    End If
+                Finally
+                    _actualizandoCliente = False
+                End Try
+                Return
+            End If
+
+            Dim coincidentes = FiltrarClientesLocal(term)
+            lstSugerenciasCliente.Items.Clear()
+            If coincidentes.Count > 0 Then
+                For Each c In coincidentes
+                    lstSugerenciasCliente.Items.Add(c)
+                Next
+                lstSugerenciasCliente.Visible = True
+                lstSugerenciasCliente.BringToFront()
+            Else
+                lstSugerenciasCliente.Visible = False
+            End If
+        End Sub
+
+        Private Function FiltrarClientesLocal(term As String) As List(Of Cliente)
+            Return listaClientes.Where(Function(c)
+                                           Return (c.NombreCompleto IsNot Nothing AndAlso c.NombreCompleto.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0) OrElse
+                                                  (c.Nombre IsNot Nothing AndAlso c.Nombre.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0) OrElse
+                                                  (c.Apellido IsNot Nothing AndAlso c.Apellido.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0) OrElse
+                                                  (c.DniCuit IsNot Nothing AndAlso c.DniCuit.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0)
+                                       End Function).ToList()
+        End Function
+
+        Private Sub TxtBuscarCliente_KeyDown(sender As Object, e As KeyEventArgs)
+            If e.KeyCode = Keys.Down AndAlso lstSugerenciasCliente.Visible Then
+                lstSugerenciasCliente.Focus()
+                If lstSugerenciasCliente.Items.Count > 0 Then lstSugerenciasCliente.SelectedIndex = 0
+                e.Handled = True
+            ElseIf e.KeyCode = Keys.Enter Then
+                e.SuppressKeyPress = True
+                If lstSugerenciasCliente.Visible AndAlso lstSugerenciasCliente.SelectedIndex >= 0 Then
+                    ConfirmarSugerenciaCliente()
+                Else
+                    EjecutarBusquedaCliente()
+                End If
+            ElseIf e.KeyCode = Keys.Escape Then
+                lstSugerenciasCliente.Visible = False
+            End If
+        End Sub
+
+        Private Sub LstSugerenciasCliente_Click(sender As Object, e As EventArgs)
+            ConfirmarSugerenciaCliente()
+        End Sub
+
+        Private Sub LstSugerenciasCliente_KeyDown(sender As Object, e As KeyEventArgs)
+            If e.KeyCode = Keys.Enter Then
+                e.SuppressKeyPress = True
+                ConfirmarSugerenciaCliente()
+            ElseIf e.KeyCode = Keys.Escape Then
+                lstSugerenciasCliente.Visible = False
+                txtBuscarCliente.Focus()
+            End If
+        End Sub
+
+        Private Sub ConfirmarSugerenciaCliente()
+            Dim cli = TryCast(lstSugerenciasCliente.SelectedItem, Cliente)
+            If cli IsNot Nothing Then
+                SeleccionarClienteEnCombo(cli)
+            End If
+        End Sub
+
+        Private Sub BtnBuscarCliente_Click(sender As Object, e As EventArgs)
+            EjecutarBusquedaCliente()
+        End Sub
+
+        Private Sub EjecutarBusquedaCliente()
+            Dim term As String = txtBuscarCliente.Text.Trim()
+            If String.IsNullOrWhiteSpace(term) Then
+                lstSugerenciasCliente.Visible = False
+                cboClientes.DroppedDown = True
+                Return
+            End If
+
+            Dim coincidentes = FiltrarClientesLocal(term)
+            If coincidentes.Count = 0 Then
+                lstSugerenciasCliente.Visible = False
+                MessageBox.Show("No se encontró ningún cliente con ese nombre o DNI.", "Cliente No Encontrado", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                txtBuscarCliente.SelectAll()
+                txtBuscarCliente.Focus()
+                Return
+            End If
+
+            ' Si hay coincidencia exacta de DNI o un único resultado, lo seleccionamos directo
+            Dim exactoDni = coincidentes.FirstOrDefault(Function(c) String.Equals(c.DniCuit, term, StringComparison.OrdinalIgnoreCase))
+            If exactoDni IsNot Nothing Then
+                SeleccionarClienteEnCombo(exactoDni)
+            ElseIf coincidentes.Count = 1 Then
+                SeleccionarClienteEnCombo(coincidentes(0))
+            Else
+                ' Si hay varios resultados, seleccionamos el primero y mostramos sugerencias para elegir
+                SeleccionarClienteEnCombo(coincidentes(0), mantenerSugerencias:=False)
+            End If
+        End Sub
+
+        Private Sub SeleccionarClienteEnCombo(cli As Cliente, Optional mantenerSugerencias As Boolean = False)
+            _actualizandoCliente = True
+            Try
+                If Not mantenerSugerencias Then lstSugerenciasCliente.Visible = False
+
+                ' Asegurar que todos los clientes estén en el combo y seleccionar el elegido
+                cboClientes.Items.Clear()
+                Dim idxSel As Integer = -1
+                For i = 0 To listaClientes.Count - 1
+                    cboClientes.Items.Add(listaClientes(i))
+                    If listaClientes(i).Id = cli.Id Then idxSel = i
+                Next
+                cboClientes.SelectedIndex = idxSel
+                txtBuscarCliente.Text = $"{cli.NombreCompleto} ({cli.DniCuit})"
+                txtBuscarCliente.SelectionStart = txtBuscarCliente.Text.Length
+            Finally
+                _actualizandoCliente = False
+            End Try
         End Sub
 
         Private Sub TxtBuscarArticulo_TextChanged(sender As Object, e As EventArgs)
@@ -751,15 +956,15 @@ Namespace Forms
                 End If
             End If
 
-            ' Obtener cliente seleccionado
+            ' Obtener y validar cliente seleccionado (obligatorio elegir uno)
             Dim clienteSel = TryCast(cboClientes.SelectedItem, Cliente)
-            If clienteSel IsNot Nothing Then
-                ventaActual.ClienteId = clienteSel.Id
-                ventaActual.ClienteNombre = clienteSel.NombreCompleto
-            Else
-                ventaActual.ClienteId = 1
-                ventaActual.ClienteNombre = "Consumidor Final"
+            If clienteSel Is Nothing Then
+                MessageBox.Show("Por favor busque y seleccione un cliente antes de cobrar la venta.", "Cliente Requerido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                txtBuscarCliente.Focus()
+                Return
             End If
+            ventaActual.ClienteId = clienteSel.Id
+            ventaActual.ClienteNombre = clienteSel.NombreCompleto
 
             ventaActual.UsuarioId = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.Id, 1)
             ventaActual.UsuarioNombre = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.NombreCompleto, "Caja")
@@ -782,16 +987,46 @@ Namespace Forms
             End If
             ventaActual.Vuelto = Math.Max(0D, ventaActual.MontoAbonado - ventaActual.Total)
 
+            ' Confirmación previa antes de impactar stock y caja
+            Dim totalPrendas As Integer = ventaActual.Detalles.Sum(Function(d) d.Cantidad)
+            Dim resumenConfirmacion As String =
+                $"¿Desea confirmar y registrar la venta?" & Environment.NewLine & Environment.NewLine &
+                $"• Cliente: {ventaActual.ClienteNombre}" & Environment.NewLine &
+                $"• Artículos: {totalPrendas} u." & Environment.NewLine &
+                $"• Medio de Pago: {ventaActual.MetodoPago}" & Environment.NewLine &
+                $"• TOTAL A COBRAR: {ventaActual.Total:C2}"
+
+            If ventaActual.MetodoPago = "Efectivo" AndAlso ventaActual.Vuelto > 0 Then
+                resumenConfirmacion &= Environment.NewLine & $"• Abona con: {ventaActual.MontoAbonado:C2}  (Vuelto: {ventaActual.Vuelto:C2})"
+            End If
+
+            Dim confirmar = MessageBox.Show(
+                Me,
+                resumenConfirmacion,
+                "Confirmar Cobro de Venta",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button1
+            )
+            If confirmar <> DialogResult.Yes Then
+                Return
+            End If
+
             ' Procesar la venta en la base de datos
             Dim errMsg As String = ""
             If ventaService.ProcesarVenta(ventaActual, errMsg) Then
                 ' Mostrar Ticket de Venta
                 MostrarTicketImpresion(ventaActual)
 
-                ' Resetear carrito
+                ' Resetear carrito y limpiar selección de cliente para la próxima venta
                 ventaActual = New Venta()
                 _descuentoAutorizado = False
                 numDescuentoPorc.Value = 0
+                _actualizandoCliente = True
+                txtBuscarCliente.Clear()
+                cboClientes.SelectedIndex = -1
+                lstSugerenciasCliente.Visible = False
+                _actualizandoCliente = False
                 RefrescarGrillaCarrito()
                 RecalcularTotales()
                 txtMontoAbonado.Clear()

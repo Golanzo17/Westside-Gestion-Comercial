@@ -28,6 +28,11 @@ Namespace Forms
             InitializeUI()
             ' Verificamos la base de datos antes de que el usuario intente ingresar
             CheckInitialConnection()
+            AddHandler Me.FormClosed, Sub(s, ev)
+                                          If AuthService.CurrentUser Is Nothing Then
+                                              Application.Exit()
+                                          End If
+                                      End Sub
         End Sub
 
         Private Sub InitializeUI()
@@ -173,7 +178,6 @@ Namespace Forms
                 ' Acceso concedido
                 Me.Hide()
                 Dim frm As New FrmMain()
-                AddHandler frm.FormClosed, Sub() Me.Close()
                 frm.Show()
             Else
                 If errMsg.Contains("Unable to connect", StringComparison.OrdinalIgnoreCase) OrElse errMsg.Contains("no such table", StringComparison.OrdinalIgnoreCase) Then

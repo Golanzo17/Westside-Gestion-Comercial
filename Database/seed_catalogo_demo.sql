@@ -83,3 +83,60 @@ INSERT OR IGNORE INTO producto_talles (producto_id, talle_id, color, stock_actua
 SELECT p.id, v.talle_id, v.color, v.stock_actual, v.stock_minimo, v.sku
 FROM v
 INNER JOIN productos p ON p.codigo_barra = v.codigo_barra;
+
+-- =======================================================================
+-- CARTERA DEMO DE CLIENTES — CORRIENTES CAPITAL (50 clientes realistas)
+-- =======================================================================
+UPDATE clientes SET direccion = 'Junín 1245', ciudad = 'Corrientes Capital', telefono = '3794-451230' WHERE id = 2 AND ciudad = 'Buenos Aires';
+
+INSERT OR IGNORE INTO clientes (dni_cuit, nombre, apellido, telefono, email, direccion, ciudad, fecha_nacimiento, notas, activo) VALUES
+('38451201', 'Camila', 'Meza', '3794-612045', 'camila.meza@gmail.com', 'Junín 1340, Centro', 'Corrientes Capital', '1995-03-14', 'Clienta frecuente - Prefiere talle S/M', 1),
+('36892104', 'Matías', 'Romero', '3794-523190', 'mati.romero.ctes@gmail.com', 'Av. 3 de Abril 845', 'Corrientes Capital', '1992-07-22', 'Compra indumentaria urbana y buzos', 1),
+('41205893', 'Valentina', 'Gómez', '3794-784512', 'valen.gomez99@hotmail.com', 'Pellegrini 1120, Barrio Cambá Cuá', 'Corrientes Capital', '1999-11-05', 'Descuento estudiante universitario UNNE', 1),
+('34110298', 'Lucas', 'Ojeda', '3794-339011', 'lucasojeda.ctes@gmail.com', 'Av. Independencia 3420', 'Corrientes Capital', '1989-01-19', 'Cliente habitual - Pago con débito', 1),
+('42980115', 'Sofía', 'Ledesma', '3794-891204', 'sofi.ledesma@gmail.com', 'Hipólito Yrigoyen 1580', 'Corrientes Capital', '2001-05-30', 'Prefiere líneas oversize y jeans wide leg', 1),
+('31540872', 'Diego', 'Aguirre', '3794-402198', 'diego.aguirre78@yahoo.com.ar', 'San Lorenzo 930, Centro', 'Corrientes Capital', '1985-09-12', 'Solicita factura para estudio contable', 1),
+('39765431', 'Florencia', 'Benítez', '3794-654320', 'flor.benitez.ctes@gmail.com', '9 de Julio 1455', 'Corrientes Capital', '1996-12-03', 'Clienta VIP - Temporada otoño/invierno', 1),
+('37219044', 'Nicolás', 'Villalba', '3794-510982', 'nico.villalba@gmail.com', 'Av. Libertad 4850, B° Loma Linda', 'Corrientes Capital', '1993-04-17', 'Suele abonar por transferencia MercadoPago', 1),
+('43512098', 'Martina', 'Ramírez', '3794-723401', 'martu.ramirez@gmail.com', 'Catamarca 780, Barrio Cambá Cuá', 'Corrientes Capital', '2002-08-25', 'Compra vestidos y accesorios', 1),
+('33890124', 'Sebastián', 'Almirón', '3794-489012', 'seba.almiron@outlook.com', 'Av. Maipú 2150', 'Corrientes Capital', '1988-06-09', 'Cliente regular - Talle L/XL', 1),
+('40112389', 'Agustina', 'Maidana', '3794-609123', 'agus.maidana@gmail.com', 'Córdoba 1210, Centro', 'Corrientes Capital', '1997-02-11', 'Prefiere pagos con QR', 1),
+('35678910', 'Facundo', 'Sánchez', '3794-556701', 'facu.sanchez.ctes@gmail.com', 'Av. Gobernador Ruiz 2480, B° Yapeyú', 'Corrientes Capital', '1991-10-28', 'Compra jeans y calzado urbano', 1),
+('44098231', 'Julieta', 'Sotelo', '3794-812390', 'juli.sotelo@gmail.com', 'San Martín 1640, B° Libertad', 'Corrientes Capital', '2003-01-15', 'Estudiante - Compra remeras y tops', 1),
+('29876543', 'Gustavo', 'Cardozo', '3794-412098', 'gustavo.cardozo@gmail.com', 'Av. Costanera Gral. San Martín 920', 'Corrientes Capital', '1983-03-04', 'Cliente preferencial', 1),
+('38901245', 'Micaela', 'Barrios', '3794-678912', 'mica.barrios@hotmail.com', 'Mendoza 1085, Centro', 'Corrientes Capital', '1995-07-19', 'Habitual en liquidaciones de temporada', 1),
+('36123987', 'Joaquín', 'Valenzuela', '3794-534890', 'joaquin.valenzuela@gmail.com', 'Belgrano 1750, B° Deportes', 'Corrientes Capital', '1992-11-21', 'Compra camperas y buzos hoodie', 1),
+('41876509', 'Lucía', 'Duarte', '3794-745091', 'lucia.duarte.ctes@gmail.com', 'La Rioja 840, Centro', 'Corrientes Capital', '1999-04-02', 'Clienta frecuente de fin de semana', 1),
+('32456789', 'Rodrigo', 'Ayala', '3794-467823', 'rodrigo.ayala@gmail.com', 'Av. Cazadores Correntinos 3120, B° 17 de Agosto', 'Corrientes Capital', '1986-08-14', 'Paga con tarjeta de crédito', 1),
+('40567123', 'Antonella', 'Quintana', '3794-690145', 'anto.quintana@gmail.com', 'Salta 690, B° Cambá Cuá', 'Corrientes Capital', '1998-09-27', 'Excelente historial de compras', 1),
+('37890456', 'Ezequiel', 'Miño', '3794-578234', 'eze.mino.ctes@gmail.com', 'Cosme Maciel 140, B° Mil Viviendas', 'Corrientes Capital', '1994-05-06', 'Talle M en remeras, 40 en pantalón', 1),
+('42345678', 'Rocío', 'Acosta', '3794-790123', 'rocio.acosta@gmail.com', 'San Juan 1190, Centro', 'Corrientes Capital', '2000-12-18', 'Compra indumentaria femenina y accesorios', 1),
+('30987654', 'Hernán', 'Lezcano', '3794-423901', 'hernan.lezcano@yahoo.com.ar', 'Av. Armenia 3890, B° Jardín', 'Corrientes Capital', '1984-02-23', 'Compra regalos familiares', 1),
+('39123456', 'Milagros', 'Ríos', '3794-634590', 'mili.rios.ctes@gmail.com', '25 de Mayo 1320, Centro', 'Corrientes Capital', '1996-06-11', 'Prefiere aviso de ingresos por WhatsApp', 1),
+('35432198', 'Maximiliano', 'Cabrera', '3794-501289', 'maxi.cabrera@gmail.com', 'Bolívar 1820, B° San Martín', 'Corrientes Capital', '1990-10-08', 'Cliente habitual', 1),
+('43890123', 'Candela', 'Moreira', '3794-834512', 'cande.moreira@gmail.com', 'Tucumán 950, Centro', 'Corrientes Capital', '2002-03-29', 'Compra tops, polleras y jeans mom', 1),
+('34789012', 'Federico', 'Vega', '3794-490871', 'fede.vega.ctes@gmail.com', 'Av. Teniente Ibáñez 1650', 'Corrientes Capital', '1989-07-16', 'Pago en efectivo o débito', 1),
+('41098765', 'Paula', 'Escobar', '3794-712098', 'paula.escobar@hotmail.com', 'Moreno 1490, B° Libertad', 'Corrientes Capital', '1998-01-31', 'Clienta frecuente', 1),
+('36543210', 'Ignacio', 'Páez', '3794-545678', 'nacho.paez@gmail.com', 'Rivadavia 1610, B° Berón de Astrada', 'Corrientes Capital', '1992-08-04', 'Compra línea deportiva y urbana', 1),
+('44567890', 'Abril', 'Encinas', '3794-856701', 'abril.encinas@gmail.com', 'Buenos Aires 1040, Centro', 'Corrientes Capital', '2004-04-12', 'Estudiante - Compra conjuntos y accesorios', 1),
+('31890432', 'Cristian', 'Báez', '3794-434509', 'cristian.baez.ctes@gmail.com', 'Las Margaritas 450, B° Molina Punta', 'Corrientes Capital', '1985-11-26', 'Cliente desde apertura del local', 1),
+('39876123', 'Aldana', 'Medina', '3794-667890', 'aldana.medina@gmail.com', 'Quintana 1150, Centro', 'Corrientes Capital', '1996-05-19', 'Talle S - Compra vestidos y blusas', 1),
+('37654321', 'Leandro', 'Correa', '3794-589012', 'leandro.correa@gmail.com', 'Av. Chacabuco 2310, B° Villa Chiquita', 'Corrientes Capital', '1993-09-07', 'Suele comprar con transferencia', 1),
+('42109876', 'Brenda', 'Luque', '3794-765432', 'brenda.luque.ctes@gmail.com', 'Plácido Martínez 1280', 'Corrientes Capital', '2000-02-14', 'Clienta habitual', 1),
+('33210987', 'Alejandro', 'Maciel', '3794-478901', 'ale.maciel@gmail.com', 'Pitágoras 3900, B° Laguna Seca', 'Corrientes Capital', '1987-12-20', 'Paga con tarjeta de débito', 1),
+('40890123', 'Solange', 'Núñez', '3794-701234', 'sol.nunez@gmail.com', 'Santa Fe 870, Centro', 'Corrientes Capital', '1998-06-28', 'Compra sweaters y abrigos', 1),
+('35901234', 'Gonzalo', 'Castillo', '3794-512345', 'gonza.castillo.ctes@gmail.com', 'Lavalle 2140, B° San Benito', 'Corrientes Capital', '1991-03-10', 'Cliente frecuente - Talle L', 1),
+('43123456', 'Melina', 'Gauna', '3794-823456', 'meli.gauna@gmail.com', 'Entre Ríos 1020, Centro', 'Corrientes Capital', '2001-10-15', 'Compra jeans y camperas puffer', 1),
+('28901234', 'Marcelo', 'Insaurralde', '3794-401234', 'marcelo.insaurralde@gmail.com', 'Paraguay 1390, B° Aldana', 'Corrientes Capital', '1981-07-01', 'Cliente corporativo / familiar', 1),
+('38567890', 'Daiana', 'Saucedo', '3794-645678', 'dai.saucedo@hotmail.com', 'Brasil 1520, B° Mariano Moreno', 'Corrientes Capital', '1995-01-22', 'Habitual de promociones en efectivo', 1),
+('36789012', 'Franco', 'Verón', '3794-567890', 'franco.veron.ctes@gmail.com', 'Alberdi 1980, B° San Benito', 'Corrientes Capital', '1992-04-09', 'Compra remeras oversize y gorras', 1),
+('41567890', 'Victoria', 'Cáceres', '3794-734567', 'vicky.caceres@gmail.com', 'Chaco 1180, B° Cambá Cuá', 'Corrientes Capital', '1999-08-17', 'Clienta frecuente', 1),
+('34567890', 'Emanuel', 'Godoy', '3794-489123', 'ema.godoy@gmail.com', 'Av. Raúl Alfonsín 4120, B° Centenario', 'Corrientes Capital', '1989-11-03', 'Compra pantalones cargo y bermudas', 1),
+('42789012', 'Priscila', 'Monzón', '3794-778901', 'pri.monzon@gmail.com', 'Misiones 960, B° Deportes', 'Corrientes Capital', '2000-05-24', 'Prefiere pagos con transferencia QR', 1),
+('32890123', 'Ramiro', 'Giménez', '3794-456789', 'ramiro.gimenez.ctes@gmail.com', 'Gobernador Pampín 1420', 'Corrientes Capital', '1987-02-08', 'Cliente habitual', 1),
+('40234567', 'Carolina', 'Peralta', '3794-689012', 'caro.peralta@gmail.com', 'Don Bosco 1140, B° Cambá Cuá', 'Corrientes Capital', '1997-09-13', 'Excelente clienta - Temporada primavera/verano', 1),
+('37123456', 'Nahuel', 'Segovia', '3794-523456', 'nahuel.segovia@gmail.com', 'Cabo de Hornos 320, B° Mil Viviendas', 'Corrientes Capital', '1993-06-30', 'Compra joggers y buzos', 1),
+('43678901', 'Guadalupe', 'Retamozo', '3794-845678', 'guada.retamozo@gmail.com', 'Padre Borgatti 1350, B° Bañado Norte', 'Corrientes Capital', '2002-12-01', 'Talle XS/S', 1),
+('35109876', 'Santiago', 'Sandoval', '3794-509876', 'santi.sandoval@gmail.com', 'Necochea 1760, B° Sur', 'Corrientes Capital', '1990-04-25', 'Cliente habitual', 1),
+('41901234', 'Bianca', 'Espíndola', '3794-756789', 'bianca.espindola@gmail.com', 'Ayacucho 2050, B° Pedro Ferré', 'Corrientes Capital', '1999-07-07', 'Compra vestidos de fiesta y calzado', 1),
+('38234567', 'Tomás', 'Zacarías', '3794-623456', 'tomas.zacarias.ctes@gmail.com', 'Vélez Sarsfield 1290, B° Libertad', 'Corrientes Capital', '1994-10-19', 'Cliente frecuente - Pago con débito', 1);

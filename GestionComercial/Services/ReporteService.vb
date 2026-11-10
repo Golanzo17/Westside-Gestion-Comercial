@@ -89,6 +89,32 @@ Namespace Services
         Public Property StockMinimo As Integer = 0
     End Class
 
+    ' DTO para las 4 tarjetas KPI financieras de inteligencia comercial (FrmReportes)
+    Public Class MetricasFinancierasPeriodo
+        Public Property TotalFacturado As Decimal = 0D
+        Public Property CostoMercaderia As Decimal = 0D
+        Public Property GananciaNeta As Decimal = 0D
+        Public Property PorcentajeMargen As Decimal = 0D
+        Public Property TicketPromedio As Decimal = 0D
+        Public Property CantidadTickets As Integer = 0
+        Public Property TotalEfectivo As Decimal = 0D
+        Public Property TotalDigital As Decimal = 0D
+    End Class
+
+    ' DTO para el reporte de stock inmovilizado (prendas con stock físico que no se vendieron en el período)
+    Public Class PrendaStockInmovilizado
+        Public Property ProductoId As Integer
+        Public Property CodigoBarra As String = String.Empty
+        Public Property Nombre As String = String.Empty
+        Public Property Talle As String = String.Empty
+        Public Property Color As String = "Único"
+        Public Property StockActual As Integer = 0
+        Public Property CostoUnitario As Decimal = 0D
+        Public Property CostoInmovilizado As Decimal = 0D
+        Public Property ValorVenta As Decimal = 0D
+        Public Property UltimaVenta As Nullable(Of DateTime) = Nothing
+    End Class
+
     Public Class ReporteService
 
         ' Consulta agregada de KPIs para el Dashboard del día de hoy (ventas, tickets y medios de pago).
@@ -395,6 +421,135 @@ Namespace Services
                 Next
             Catch ex As Exception
                 AppLogger.LogError("ReporteService.GetAlertasStockBajo", ex)
+            End Try
+            Return list
+        End Function
+
+        Public Function GetMetricasFinancierasPeriodo(fechaDesde As DateTime, fechaHasta As DateTime, Optional usuarioId As Integer = 0, Optional clienteId As Integer = 0, Optional metodoPago As String = "") As MetricasFinancierasPeriodo
+            Dim m As New MetricasFinancierasPeriodo()
+            Try
+                Dim filtro As String = "WHERE DATE(v.fecha) >= @desde AND DATE(v.fecha) <= @hasta AND v.estado = 'Completada' "
+                Dim params As New Dictionary(Of String, Object) From {
+                    {"@desde", fechaDesde.ToString("yyyy-MM-dd")},
+                    {"@hasta", fechaHasta.ToString("yyyy-MM-dd")}
+                }
+
+                If usuarioId > 0 Then
+                    filtro &= "AND v.usuario_id = @usrId "
+                    params.Add("@usrId", usuarioId)
+                End If
+                If clienteId > 0 Then
+                    filtro &= "AND v.cliente_id = @cliId "
+                    params.Add("@cliId", clienteId)
+                End If
+                If Not String.IsNullOrWhiteSpace(metodoPago) Then
+                    filtro &= "AND v.metodo_pago = @metodo "
+                    params.Add("@metodo", metodoPago.Trim())
+                End If
+
+                Dim query As String = "SELECT " &
+                                      "COUNT(v.id) AS cantidad_tickets, " &
+                                      "IFNULL(SUM(v.total), 0) AS total_facturado, " &
+                                      "IFNULL(SUM(IFNULL(dv.costo_venta, 0)), 0) AS costo_total, " &
+                                      "IFNULL(SUM(CASE WHEN v.metodo_pago = 'Efectivo' THEN v.total WHEN v.metodo_pago = 'Múltiple' THEN IFNULL(v.monto_efectivo, 0) ELSE 0 END), 0) AS total_efectivo, " &
+                                      "IFNULL(SUM(CASE WHEN v.metodo_pago = 'Efectivo' THEN 0 WHEN v.metodo_pago = 'Múltiple' THEN (v.total - IFNULL(v.monto_efectivo, 0)) ELSE v.total END), 0) AS total_digital " &
+                                      "FROM `ventas` v " &
+                                      "LEFT JOIN ( " &
+                                      "    SELECT dv_in.venta_id, SUM(COALESCE(NULLIF(dv_in.costo_unitario, 0), p.precio_costo, 0) * dv_in.cantidad) AS costo_venta " &
+                                      "    FROM `detalle_ventas` dv_in " &
+                                      "    INNER JOIN `productos` p ON dv_in.producto_id = p.id " &
+                                      "    GROUP BY dv_in.venta_id " &
+                                      ") dv ON v.id = dv.venta_id " &
+                                      filtro & ";"
+
+                Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, params)
+                If dt.Rows.Count > 0 Then
+                    Dim row = dt.Rows(0)
+                    m.CantidadTickets = Convert.ToInt32(row("cantidad_tickets"))
+                    m.TotalFacturado = Math.Round(Convert.ToDecimal(row("total_facturado")), 2, MidpointRounding.AwayFromZero)
+                    m.CostoMercaderia = Math.Round(Convert.ToDecimal(row("costo_total")), 2, MidpointRounding.AwayFromZero)
+                    m.GananciaNeta = Math.Round(m.TotalFacturado - m.CostoMercaderia, 2, MidpointRounding.AwayFromZero)
+                    m.PorcentajeMargen = If(m.TotalFacturado > 0D, Math.Round((m.GananciaNeta / m.TotalFacturado) * 100D, 1, MidpointRounding.AwayFromZero), 0D)
+                    m.TicketPromedio = If(m.CantidadTickets > 0, Math.Round(m.TotalFacturado / m.CantidadTickets, 2, MidpointRounding.AwayFromZero), 0D)
+                    m.TotalEfectivo = Math.Round(Convert.ToDecimal(row("total_efectivo")), 2, MidpointRounding.AwayFromZero)
+                    m.TotalDigital = Math.Round(Convert.ToDecimal(row("total_digital")), 2, MidpointRounding.AwayFromZero)
+                End If
+            Catch ex As Exception
+                AppLogger.LogError("ReporteService.GetMetricasFinancierasPeriodo", ex)
+            End Try
+            Return m
+        End Function
+
+        Public Function GetStockInmovilizado(fechaDesde As DateTime, fechaHasta As DateTime, Optional limite As Integer = 0) As List(Of PrendaStockInmovilizado)
+            Dim list As New List(Of PrendaStockInmovilizado)()
+            Try
+                Dim limitClause As String = If(limite > 0, "LIMIT @limite;", ";")
+                Dim query As String = "SELECT " &
+                                      "pt.producto_id, " &
+                                      "p.codigo_barra, " &
+                                      "p.nombre, " &
+                                      "t.nombre AS talle_nombre, " &
+                                      "pt.color, " &
+                                      "pt.stock_actual, " &
+                                      "p.precio_costo, " &
+                                      "p.precio_venta, " &
+                                      "(pt.stock_actual * p.precio_costo) AS costo_inmovilizado, " &
+                                      "(pt.stock_actual * p.precio_venta) AS valor_venta, " &
+                                      "hist.ultima_venta " &
+                                      "FROM `producto_talles` pt " &
+                                      "INNER JOIN `productos` p ON pt.producto_id = p.id " &
+                                      "INNER JOIN `talles` t ON pt.talle_id = t.id " &
+                                      "LEFT JOIN ( " &
+                                      "    SELECT dv.producto_id, dv.talle_id, dv.color, SUM(dv.cantidad) AS vendidas_periodo " &
+                                      "    FROM `detalle_ventas` dv " &
+                                      "    INNER JOIN `ventas` v ON dv.venta_id = v.id " &
+                                      "    WHERE v.estado = 'Completada' AND DATE(v.fecha) >= @desde AND DATE(v.fecha) <= @hasta " &
+                                      "    GROUP BY dv.producto_id, dv.talle_id, dv.color " &
+                                      ") vp ON pt.producto_id = vp.producto_id AND pt.talle_id = vp.talle_id AND pt.color = vp.color " &
+                                      "LEFT JOIN ( " &
+                                      "    SELECT dv2.producto_id, dv2.talle_id, dv2.color, MAX(v2.fecha) AS ultima_venta " &
+                                      "    FROM `detalle_ventas` dv2 " &
+                                      "    INNER JOIN `ventas` v2 ON dv2.venta_id = v2.id " &
+                                      "    WHERE v2.estado = 'Completada' " &
+                                      "    GROUP BY dv2.producto_id, dv2.talle_id, dv2.color " &
+                                      ") hist ON pt.producto_id = hist.producto_id AND pt.talle_id = hist.talle_id AND pt.color = hist.color " &
+                                      "WHERE p.activo = 1 AND pt.stock_actual > 0 AND IFNULL(vp.vendidas_periodo, 0) = 0 " &
+                                      "ORDER BY CASE WHEN hist.ultima_venta IS NULL THEN 0 ELSE 1 END ASC, hist.ultima_venta ASC, costo_inmovilizado DESC " &
+                                      limitClause
+
+                Dim params As New Dictionary(Of String, Object) From {
+                    {"@desde", fechaDesde.ToString("yyyy-MM-dd")},
+                    {"@hasta", fechaHasta.ToString("yyyy-MM-dd")}
+                }
+                If limite > 0 Then
+                    params.Add("@limite", limite)
+                End If
+
+                Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, params)
+                For Each row As DataRow In dt.Rows
+                    Dim ultimaFecha As Nullable(Of DateTime) = Nothing
+                    If Not Convert.IsDBNull(row("ultima_venta")) Then
+                        Dim parsed As DateTime
+                        If DateTime.TryParse(row("ultima_venta").ToString(), parsed) Then
+                            ultimaFecha = parsed
+                        End If
+                    End If
+
+                    list.Add(New PrendaStockInmovilizado() With {
+                        .ProductoId = Convert.ToInt32(row("producto_id")),
+                        .CodigoBarra = row("codigo_barra").ToString(),
+                        .Nombre = row("nombre").ToString(),
+                        .Talle = row("talle_nombre").ToString(),
+                        .Color = row("color").ToString(),
+                        .StockActual = Convert.ToInt32(row("stock_actual")),
+                        .CostoUnitario = Math.Round(Convert.ToDecimal(row("precio_costo")), 2, MidpointRounding.AwayFromZero),
+                        .CostoInmovilizado = Math.Round(Convert.ToDecimal(row("costo_inmovilizado")), 2, MidpointRounding.AwayFromZero),
+                        .ValorVenta = Math.Round(Convert.ToDecimal(row("valor_venta")), 2, MidpointRounding.AwayFromZero),
+                        .UltimaVenta = ultimaFecha
+                    })
+                Next
+            Catch ex As Exception
+                AppLogger.LogError("ReporteService.GetStockInmovilizado", ex)
             End Try
             Return list
         End Function

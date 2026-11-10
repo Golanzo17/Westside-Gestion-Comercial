@@ -365,7 +365,9 @@ Namespace UI
                 .Font = FontCaption,
                 .ForeColor = ColorTextSecondary,
                 .Location = New Point(16, 12),
-                .AutoSize = True
+                .AutoSize = False,
+                .Size = New Size(198, 18),
+                .AutoEllipsis = True
             }
             pnl.Controls.Add(lblTitle)
 
@@ -374,7 +376,9 @@ Namespace UI
                 .Font = FontKpiValue,
                 .ForeColor = ColorTextPrimary,
                 .Location = New Point(16, 32),
-                .AutoSize = True
+                .AutoSize = False,
+                .Size = New Size(198, 40),
+                .AutoEllipsis = True
             }
             pnl.Controls.Add(lblValue)
 
@@ -383,12 +387,20 @@ Namespace UI
                 .Font = FontSmall,
                 .ForeColor = ColorTextMuted,
                 .Location = New Point(16, 76),
-                .AutoSize = True
+                .AutoSize = False,
+                .Size = New Size(198, 22),
+                .AutoEllipsis = True
             }
             pnl.Controls.Add(lblSub)
 
-            ' Borde sutil y elegante de 1px usando Paint y repintado al redimensionar
-            AddHandler pnl.Resize, Sub(s, ev) pnl.Invalidate()
+            ' Ajuste responsivo del ancho de textos y borde sutil de 1px al redimensionar
+            AddHandler pnl.Resize, Sub(s, ev)
+                                       Dim availW = Math.Max(60, pnl.ClientSize.Width - 24)
+                                       lblTitle.Width = availW
+                                       lblValue.Width = availW
+                                       lblSub.Width = availW
+                                       pnl.Invalidate()
+                                   End Sub
             AddHandler pnl.Paint, Sub(s, ev)
                                       Using pen As New Pen(ColorBorder, 1)
                                           ev.Graphics.DrawRectangle(pen, 0, 0, pnl.Width - 1, pnl.Height - 1)

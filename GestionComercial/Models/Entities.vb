@@ -1,4 +1,4 @@
-﻿' ARCHIVO: Entities.vb
+' ARCHIVO: Entities.vb
 ' PROPÓSITO: Modelos de dominio y DTOs (Data Transfer Objects) del sistema.
 ' En este archivo definimos las clases que representan la información de nuestro local
 ' en memoria. Cada clase se corresponde con una tabla de la base de datos:
@@ -168,6 +168,7 @@ Namespace Models
         Public Property UsuarioId As Integer
         Public Property UsuarioNombre As String = String.Empty
         Public Property AutorizadoPorId As Nullable(Of Integer)
+        Public Property AutorizadoPorNombre As String = String.Empty
         Public Property Fecha As DateTime = DateTime.Now
         Public Property Tipo As String = "Ingreso" ' Ingreso, Egreso
         Public Property Concepto As String = String.Empty
@@ -183,6 +184,7 @@ Namespace Models
         Public Property UsuarioId As Integer
         Public Property UsuarioNombre As String = String.Empty
         Public Property AutorizadoPorId As Nullable(Of Integer)
+        Public Property AutorizadoPorNombre As String = String.Empty
         Public Property ClienteId As Integer = 1
         Public Property ClienteNombre As String = "Consumidor Final"
         Public Property CajaId As Integer
@@ -199,6 +201,22 @@ Namespace Models
         Public Property Estado As String = "Completada" ' Completada, Anulada
         Public Property Observaciones As String = String.Empty
         Public Property Detalles As List(Of DetalleVenta) = New List(Of DetalleVenta)()
+
+        Public ReadOnly Property MotivoAnulacion As String
+            Get
+                If String.IsNullOrWhiteSpace(Observaciones) Then
+                    Return "Sin motivo especificado"
+                End If
+                Dim idx = Observaciones.IndexOf("ANULADA:", StringComparison.OrdinalIgnoreCase)
+                If idx >= 0 Then
+                    Dim extraido = Observaciones.Substring(idx + 8).Trim()
+                    If Not String.IsNullOrWhiteSpace(extraido) Then
+                        Return extraido
+                    End If
+                End If
+                Return Observaciones.Trim(" "c, "|"c)
+            End Get
+        End Property
     End Class
 
     ' Renglón de detalle de una venta con los datos puntuales de la prenda al momento de la transacción.

@@ -14,11 +14,19 @@ Imports GestionComercial.Data
 Imports GestionComercial.Models
 
 Namespace Services
+    Public Class DesgloseTurnoCaja
+        Public Property CantidadTickets As Integer = 0
+        Public Property TotalVendido As Decimal = 0D
+        Public Property TotalEfectivo As Decimal = 0D
+        Public Property TotalTarjetas As Decimal = 0D
+        Public Property TotalTransferencia As Decimal = 0D
+    End Class
+
     Public Class CajaService
 
         ' Busca si existe una caja con estado "Abierta".
-        ' Si se indica usuarioId (> 0), prioriza la caja abierta por ese usuario y, si no tiene una propia,
-        ' devuelve la caja abierta activa del salón comercial.
+        ' Si se indica usuarioId (> 0), busca exclusivamente la caja abierta por ese usuario
+        ' (garantizando que un vendedor jamás vea ni opere la caja de otro empleado).
         Public Function GetCajaAbierta(Optional usuarioId As Integer = 0) As Caja
             If usuarioId > 0 Then
                 Dim queryUsuario As String = "SELECT c.*, u.nombre_completo AS usuario_nombre " &
@@ -30,6 +38,7 @@ Namespace Services
                 If dtUser.Rows.Count > 0 Then
                     Return MapCaja(dtUser.Rows(0))
                 End If
+                Return Nothing
             End If
 
             Dim query As String = "SELECT c.*, u.nombre_completo AS usuario_nombre " &
@@ -172,9 +181,10 @@ Namespace Services
 
         Public Function GetMovimientosCaja(cajaId As Integer) As List(Of MovimientoCaja)
             Dim list As New List(Of MovimientoCaja)()
-            Dim query As String = "SELECT mc.*, u.nombre_completo AS usuario_nombre " &
+            Dim query As String = "SELECT mc.*, u.nombre_completo AS usuario_nombre, IFNULL(ua.nombre_completo, '') AS autorizado_por_nombre " &
                                  "FROM `movimientos_caja` mc " &
                                  "INNER JOIN `usuarios` u ON mc.usuario_id = u.id " &
+                                 "LEFT JOIN `usuarios` ua ON mc.autorizado_por_id = ua.id " &
                                  "WHERE mc.caja_id = @cajaId ORDER BY mc.fecha DESC;"
 
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, New Dictionary(Of String, Object) From {{"@cajaId", cajaId}})
@@ -184,12 +194,21 @@ Namespace Services
                     autId = Convert.ToInt32(row("autorizado_por_id"))
                 End If
 
+                Dim autNombre As String = ""
+                If row.Table.Columns.Contains("autorizado_por_nombre") AndAlso Not Convert.IsDBNull(row("autorizado_por_nombre")) Then
+                    autNombre = row("autorizado_por_nombre").ToString()
+                End If
+                If String.IsNullOrWhiteSpace(autNombre) Then
+                    autNombre = "-"
+                End If
+
                 list.Add(New MovimientoCaja() With {
                     .Id = Convert.ToInt32(row("id")),
                     .CajaId = Convert.ToInt32(row("caja_id")),
                     .UsuarioId = Convert.ToInt32(row("usuario_id")),
                     .UsuarioNombre = row("usuario_nombre").ToString(),
                     .AutorizadoPorId = autId,
+                    .AutorizadoPorNombre = autNombre,
                     .Fecha = Convert.ToDateTime(row("fecha")),
                     .Tipo = row("tipo").ToString(),
                     .Concepto = row("concepto").ToString(),
@@ -330,6 +349,38 @@ Namespace Services
                 AppLogger.LogError("Error en GetResumenMediosPagoCaja", ex)
                 Return New DataTable()
             End Try
+        End Function
+
+        ''' <summary>
+        ''' Calcula el desglose real del turno actual separando Efectivo, Tarjetas (Débito/Crédito) y Transferencia/QR.
+        ''' </summary>
+        Public Function GetDesgloseMediosTurno(cajaId As Integer) As DesgloseTurnoCaja
+            Dim res As New DesgloseTurnoCaja()
+            If cajaId <= 0 Then Return res
+
+            Try
+                Dim query As String = "SELECT " &
+                                      "COUNT(*) AS cant_tickets, " &
+                                      "IFNULL(SUM(`total`), 0) AS total_vendido, " &
+                                      "IFNULL(SUM(CASE WHEN `metodo_pago` = 'Efectivo' THEN `total` WHEN `metodo_pago` = 'Múltiple' THEN IFNULL(`monto_efectivo`, 0) ELSE 0 END), 0) AS total_efectivo, " &
+                                      "IFNULL(SUM(CASE WHEN `metodo_pago` LIKE 'Tarjeta%' THEN `total` ELSE 0 END), 0) AS total_tarjetas, " &
+                                      "IFNULL(SUM(CASE WHEN `metodo_pago` LIKE 'Transferencia%' THEN `total` WHEN `metodo_pago` = 'Múltiple' THEN (`total` - IFNULL(`monto_efectivo`, 0)) ELSE 0 END), 0) AS total_transferencia " &
+                                      "FROM `ventas` " &
+                                      "WHERE `caja_id` = @cajaId AND `estado` = 'Completada';"
+
+                Dim dt = DatabaseHelper.ExecuteQuery(query, New Dictionary(Of String, Object) From {{"@cajaId", cajaId}})
+                If dt.Rows.Count > 0 Then
+                    Dim r = dt.Rows(0)
+                    res.CantidadTickets = Convert.ToInt32(r("cant_tickets"))
+                    res.TotalVendido = Math.Round(Convert.ToDecimal(r("total_vendido")), 2, MidpointRounding.AwayFromZero)
+                    res.TotalEfectivo = Math.Round(Convert.ToDecimal(r("total_efectivo")), 2, MidpointRounding.AwayFromZero)
+                    res.TotalTarjetas = Math.Round(Convert.ToDecimal(r("total_tarjetas")), 2, MidpointRounding.AwayFromZero)
+                    res.TotalTransferencia = Math.Round(Convert.ToDecimal(r("total_transferencia")), 2, MidpointRounding.AwayFromZero)
+                End If
+            Catch ex As Exception
+                AppLogger.LogError("Error en GetDesgloseMediosTurno", ex)
+            End Try
+            Return res
         End Function
 
         Private Function MapCaja(row As DataRow) As Caja

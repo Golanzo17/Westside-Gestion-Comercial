@@ -284,6 +284,16 @@ Namespace Services
         End Function
 
         ''' <summary>
+        ''' Solicita autorización de un Gerente mediante un diálogo modal (incluso si el usuario actual es Administrador),
+        ''' garantizando el principio de control dual (cuatro ojos) para operaciones críticas de respaldo y restauración.
+        ''' </summary>
+        Public Function SolicitarAutorizacionGerente(owner As Form, motivo As String) As Boolean
+            Using dlg As New FrmAutorizacionSupervisor("Autorización de Gerente Requerida", "Gerente", motivo, {"Gerente"})
+                Return dlg.ShowDialog(owner) = DialogResult.OK
+            End Using
+        End Function
+
+        ''' <summary>
         ''' Solicita autorización de un Administrador o Gerente mediante diálogo modal si el usuario actual es Vendedor.
         ''' Si el usuario actual ya es Administrador o Gerente, retorna True directamente.
         ''' </summary>
@@ -299,11 +309,11 @@ Namespace Services
         End Function
 
         ''' <summary>
-        ''' Solicita autorización de un Administrador mediante un diálogo modal si el usuario actual no es Administrador.
-        ''' Si el usuario actual ya es Administrador, retorna True directamente.
+        ''' Solicita autorización de un Administrador mediante un diálogo modal si el usuario actual no es Administrador,
+        ''' o siempre que forzarConfirmacionClave sea True (para operaciones críticas como crear/restaurar copias de seguridad).
         ''' </summary>
-        Public Function SolicitarAutorizacionAdmin(owner As Form, motivo As String) As Boolean
-            If IsAdmin Then
+        Public Function SolicitarAutorizacionAdmin(owner As Form, motivo As String, Optional forzarConfirmacionClave As Boolean = False) As Boolean
+            If IsAdmin AndAlso Not forzarConfirmacionClave Then
                 LastAuthorizingSupervisor = CurrentUser
                 Return True
             End If

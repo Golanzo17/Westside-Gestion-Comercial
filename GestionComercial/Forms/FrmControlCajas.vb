@@ -170,34 +170,36 @@ Namespace Forms
                 btnFiltrar, btnLimpiar, btnExportarCSV, btnRefrescar
             })
 
-            AddHandler pnlFiltros.Resize, Sub(s, ev)
-                                              Dim w = pnlFiltros.ClientSize.Width
-                                              If w <= 100 Then Return
-                                              If w >= 960 Then
-                                                  lblF1.Left = 15 : cboRapidoFechas.Left = 15 : cboRapidoFechas.Width = 140
-                                                  lblF2.Left = 165 : dtpDesde.Left = 165 : dtpDesde.Width = 115
-                                                  lblF3.Left = 290 : dtpHasta.Left = 290 : dtpHasta.Width = 115
-                                                  lblF4.Left = 415 : cboVendedor.Left = 415 : cboVendedor.Width = 180
-                                                  lblF5.Left = 605 : cboEstado.Left = 605 : cboEstado.Width = 140
-                                                  lblF6.Left = 755 : cboDiscrepancia.Left = 755 : cboDiscrepancia.Width = Math.Min(220, w - 770)
-                                              Else
-                                                  ' Modo compacto responsivo para pantallas de 1024px - 1200px
-                                                  Dim avail = w - 30
-                                                  Dim w1 = Math.Max(95, CInt(avail * 0.14))
-                                                  Dim w2 = Math.Max(95, CInt(avail * 0.13))
-                                                  Dim w3 = Math.Max(95, CInt(avail * 0.13))
-                                                  Dim w4 = Math.Max(110, CInt(avail * 0.19))
-                                                  Dim w5 = Math.Max(105, CInt(avail * 0.16))
-                                                  Dim x = 15
-                                                  lblF1.Left = x : cboRapidoFechas.Left = x : cboRapidoFechas.Width = w1 : x += w1 + 6
-                                                  lblF2.Left = x : dtpDesde.Left = x : dtpDesde.Width = w2 : x += w2 + 6
-                                                  lblF3.Left = x : dtpHasta.Left = x : dtpHasta.Width = w3 : x += w3 + 6
-                                                  lblF4.Left = x : cboVendedor.Left = x : cboVendedor.Width = w4 : x += w4 + 6
-                                                  lblF5.Left = x : cboEstado.Left = x : cboEstado.Width = w5 : x += w5 + 6
-                                                  lblF6.Left = x : cboDiscrepancia.Left = x : cboDiscrepancia.Width = Math.Max(110, w - 15 - x)
-                                              End If
-                                              pnlFiltros.Invalidate()
-                                          End Sub
+            Dim ajustarFiltros As Action = Sub()
+                                               Dim w = pnlFiltros.ClientSize.Width
+                                               If w <= 100 Then Return
+                                               If w >= 960 Then
+                                                   lblF1.Left = 15 : cboRapidoFechas.Left = 15 : cboRapidoFechas.Width = 140
+                                                   lblF2.Left = 165 : dtpDesde.Left = 165 : dtpDesde.Width = 115
+                                                   lblF3.Left = 290 : dtpHasta.Left = 290 : dtpHasta.Width = 115
+                                                   lblF4.Left = 415 : cboVendedor.Left = 415 : cboVendedor.Width = 180
+                                                   lblF5.Left = 605 : cboEstado.Left = 605 : cboEstado.Width = 140
+                                                   lblF6.Left = 755 : cboDiscrepancia.Left = 755 : cboDiscrepancia.Width = Math.Min(220, w - 770)
+                                               Else
+                                                   ' Modo compacto responsivo para pantallas de 1024px - 1200px
+                                                   Dim avail = w - 30
+                                                   Dim w1 = Math.Max(95, CInt(avail * 0.14))
+                                                   Dim w2 = Math.Max(95, CInt(avail * 0.13))
+                                                   Dim w3 = Math.Max(95, CInt(avail * 0.13))
+                                                   Dim w4 = Math.Max(110, CInt(avail * 0.19))
+                                                   Dim w5 = Math.Max(105, CInt(avail * 0.16))
+                                                   Dim x = 15
+                                                   lblF1.Left = x : cboRapidoFechas.Left = x : cboRapidoFechas.Width = w1 : x += w1 + 6
+                                                   lblF2.Left = x : dtpDesde.Left = x : dtpDesde.Width = w2 : x += w2 + 6
+                                                   lblF3.Left = x : dtpHasta.Left = x : dtpHasta.Width = w3 : x += w3 + 6
+                                                   lblF4.Left = x : cboVendedor.Left = x : cboVendedor.Width = w4 : x += w4 + 6
+                                                   lblF5.Left = x : cboEstado.Left = x : cboEstado.Width = w5 : x += w5 + 6
+                                                   lblF6.Left = x : cboDiscrepancia.Left = x : cboDiscrepancia.Width = Math.Max(110, w - 15 - x)
+                                               End If
+                                               pnlFiltros.Invalidate()
+                                           End Sub
+            AddHandler pnlFiltros.Resize, Sub(s, ev) ajustarFiltros()
+            AddHandler Me.Shown, Sub(s, ev) ajustarFiltros()
 
             ' ─── Fila Superior de Tarjetas KPI (TableLayoutPanel responsivo) ───
             Dim pnlKpis As New Panel() With {
@@ -703,7 +705,8 @@ Namespace Forms
             Dim movs = cajaService.GetMovimientosCaja(id)
             Using dlg As New Form()
                 dlg.Text = $"Movimientos de Efectivo - Turno #{id}"
-                dlg.Size = New Size(760, 480)
+                dlg.Size = New Size(820, 480)
+                dlg.MinimumSize = New Size(680, 380)
                 dlg.StartPosition = FormStartPosition.CenterParent
                 dlg.BackColor = UITheme.ColorBackground
 
@@ -713,27 +716,37 @@ Namespace Forms
 
                 Dim dgv As New DataGridView() With {.Dock = DockStyle.Fill}
                 UITheme.StyleDataGrid(dgv)
+                dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
                 dgv.Columns.Add("Fecha", "Fecha y Hora")
-                dgv.Columns("Fecha").Width = 130
+                dgv.Columns("Fecha").FillWeight = 14
+                dgv.Columns("Fecha").MinimumWidth = 110
                 dgv.Columns.Add("Tipo", "Tipo")
-                dgv.Columns("Tipo").Width = 100
+                dgv.Columns("Tipo").FillWeight = 10
+                dgv.Columns("Tipo").MinimumWidth = 75
                 dgv.Columns.Add("Concepto", "Concepto")
-                dgv.Columns("Concepto").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+                dgv.Columns("Concepto").FillWeight = 28
+                dgv.Columns("Concepto").MinimumWidth = 130
                 dgv.Columns.Add("Monto", "Monto")
-                dgv.Columns("Monto").Width = 120
+                dgv.Columns("Monto").FillWeight = 13
+                dgv.Columns("Monto").MinimumWidth = 95
                 dgv.Columns("Monto").DefaultCellStyle.Format = "C2"
                 dgv.Columns("Monto").DefaultCellStyle.Font = UITheme.FontBold
                 dgv.Columns.Add("Usuario", "Registrado Por")
-                dgv.Columns("Usuario").Width = 150
+                dgv.Columns("Usuario").FillWeight = 14
+                dgv.Columns("Usuario").MinimumWidth = 100
+                dgv.Columns.Add("AutorizadoPor", "Autorizado Por")
+                dgv.Columns("AutorizadoPor").FillWeight = 14
+                dgv.Columns("AutorizadoPor").MinimumWidth = 100
                 dgv.Columns.Add("Ref", "Comprobante Ref.")
-                dgv.Columns("Ref").Width = 120
+                dgv.Columns("Ref").FillWeight = 12
+                dgv.Columns("Ref").MinimumWidth = 90
 
                 For Each m In movs
-                    dgv.Rows.Add(m.Fecha.ToString("dd/MM/yyyy HH:mm"), m.Tipo, m.Concepto, m.Monto, m.UsuarioNombre, m.Referencia)
+                    dgv.Rows.Add(m.Fecha.ToString("dd/MM/yyyy HH:mm"), m.Tipo, m.Concepto, m.Monto, m.UsuarioNombre, m.AutorizadoPorNombre, m.Referencia)
                 Next
 
                 Dim pnlBot As New Panel() With {.Dock = DockStyle.Bottom, .Height = 50, .BackColor = UITheme.ColorSurfaceMuted}
-                Dim btnC = New Button() With {.Text = "Cerrar", .Location = New Point(630, 9), .Size = New Size(100, 32), .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right}
+                Dim btnC = New Button() With {.Text = "Cerrar", .Location = New Point(dlg.ClientSize.Width - 120, 9), .Size = New Size(100, 32), .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right}
                 UITheme.StyleButton(btnC, "Secondary")
                 AddHandler btnC.Click, Sub() dlg.Close()
                 pnlBot.Controls.Add(btnC)
@@ -753,7 +766,8 @@ Namespace Forms
             Dim ventas = cajaService.GetVentasPorCaja(id)
             Using dlg As New Form()
                 dlg.Text = $"Comprobantes de Venta - Turno #{id}"
-                dlg.Size = New Size(850, 500)
+                dlg.Size = New Size(860, 500)
+                dlg.MinimumSize = New Size(680, 380)
                 dlg.StartPosition = FormStartPosition.CenterParent
                 dlg.BackColor = UITheme.ColorBackground
 
@@ -763,27 +777,34 @@ Namespace Forms
 
                 Dim dgv As New DataGridView() With {.Dock = DockStyle.Fill}
                 UITheme.StyleDataGrid(dgv)
+                dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
                 dgv.Columns.Add("Ticket", "Nº Ticket")
-                dgv.Columns("Ticket").Width = 140
+                dgv.Columns("Ticket").FillWeight = 16
+                dgv.Columns("Ticket").MinimumWidth = 110
                 dgv.Columns.Add("Hora", "Hora")
-                dgv.Columns("Hora").Width = 100
+                dgv.Columns("Hora").FillWeight = 11
+                dgv.Columns("Hora").MinimumWidth = 75
                 dgv.Columns.Add("Cliente", "Cliente")
-                dgv.Columns("Cliente").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+                dgv.Columns("Cliente").FillWeight = 27
+                dgv.Columns("Cliente").MinimumWidth = 120
                 dgv.Columns.Add("Metodo", "Medio de Pago")
-                dgv.Columns("Metodo").Width = 130
+                dgv.Columns("Metodo").FillWeight = 16
+                dgv.Columns("Metodo").MinimumWidth = 95
                 dgv.Columns.Add("Total", "Total")
-                dgv.Columns("Total").Width = 120
+                dgv.Columns("Total").FillWeight = 16
+                dgv.Columns("Total").MinimumWidth = 95
                 dgv.Columns("Total").DefaultCellStyle.Format = "C2"
                 dgv.Columns("Total").DefaultCellStyle.Font = UITheme.FontBold
                 dgv.Columns.Add("Estado", "Estado")
-                dgv.Columns("Estado").Width = 110
+                dgv.Columns("Estado").FillWeight = 14
+                dgv.Columns("Estado").MinimumWidth = 85
 
                 For Each v In ventas
                     dgv.Rows.Add(v.NumeroTicket, v.Fecha.ToString("HH:mm:ss"), v.ClienteNombre, v.MetodoPago, v.Total, v.Estado)
                 Next
 
                 Dim pnlBot As New Panel() With {.Dock = DockStyle.Bottom, .Height = 50, .BackColor = UITheme.ColorSurfaceMuted}
-                Dim btnC = New Button() With {.Text = "Cerrar", .Location = New Point(720, 9), .Size = New Size(100, 32), .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right}
+                Dim btnC = New Button() With {.Text = "Cerrar", .Location = New Point(dlg.ClientSize.Width - 120, 9), .Size = New Size(100, 32), .Anchor = AnchorStyles.Bottom Or AnchorStyles.Right}
                 UITheme.StyleButton(btnC, "Secondary")
                 AddHandler btnC.Click, Sub() dlg.Close()
                 pnlBot.Controls.Add(btnC)
