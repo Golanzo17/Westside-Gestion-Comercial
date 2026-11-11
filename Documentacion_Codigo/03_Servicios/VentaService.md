@@ -60,6 +60,40 @@ Permite dar de baja un ticket emitido por error:
 
 ---
 
+### 4. `ProcesarCambioPrenda(ventaId, detalleId, nuevoTalleId, nuevoColor, usuarioId, motivo, ByRef errorMessage) As Boolean`
+Registra el **cambio de talle o color** de una prenda ya vendida, sin anular el ticket. También es atómico:
+1. Lee el renglón (`detalle_ventas`) y rechaza el cambio si la venta está **Anulada** o si el talle/color nuevo es igual al original.
+2. Verifica que haya **stock suficiente** en la variante nueva.
+3. **Devuelve** la prenda original al stock y registra un movimiento `'Devolucion'`.
+4. **Descuenta** la variante nueva y registra un movimiento `'Cambio_Prenda'`.
+5. Actualiza el renglón con el nuevo talle/color y deja una nota `CAMBIO (fecha): ...` en las observaciones del ticket.
+6. `Commit`; si algo falla, `Rollback`.
+
+---
+
+## 🔎 Funciones de Consulta
+
+* **`GetVentas(fechaDesde, fechaHasta, busqueda, clienteId, usuarioId, metodoPago, estado) As List(Of Venta)`**:
+  * Es el buscador de tickets que usa `FrmReportes`. Todos los filtros salvo las fechas son opcionales y se agregan dinámicamente al SQL.
+  * El filtro de medio de pago usa `LIKE 'Transferencia%'` / `LIKE 'Tarjeta%'` para agrupar variantes como `"Transferencia / QR"`.
+  * La búsqueda de texto cubre número de ticket, nombre, apellido y DNI del cliente.
+* **`GetVentaPorId(ventaId) As Venta`**: devuelve un ticket con el nombre del vendedor, del cliente y de quien autorizó un descuento.
+* **`GetDetalleVenta(ventaId) As List(Of DetalleVenta)`**: devuelve los renglones de un ticket con el nombre del talle. Se usa para reimprimir el ticket y para anulaciones y cambios.
+* **`GetVentasPorTurnoVendedor(cajaId, usuarioId, busqueda) As List(Of Venta)`**: devuelve solo las ventas **de ese vendedor en ese turno de caja**. Alimenta la pantalla **Mis ventas del turno** (`FrmMisVentasTurno`), de modo que un vendedor nunca ve lo que vendieron otros.
+
+---
+
+## 💵 Medios de Pago y Efectivo
+
+El POS ofrece `Efectivo`, `Tarjeta Débito`, `Tarjeta Crédito`, `Transferencia / QR` y `Múltiple`. Antes de guardar, `ProcesarVenta` llama a `CalcularMontoEfectivoVenta`, que determina **cuánto de la venta entró en efectivo**:
+* `Efectivo`: todo el total.
+* `Múltiple`: solo la parte en efectivo que declaró el cajero.
+* Tarjetas y transferencia: `0`.
+
+Ese valor se guarda en `ventas.monto_efectivo` y es el que suma a `total_ventas_efectivo` y a `monto_esperado` de la caja; el resto suma a `total_ventas_digital`. Por eso el arqueo del efectivo físico es exacto.
+
+---
+
 ## 🛡️ Prevención de Concurrencia y Ventas Simultáneas (Race Conditions)
 
 ### Escenario Crítico: Dos cajeros vendiendo la última unidad (Stock = 1) al mismo tiempo

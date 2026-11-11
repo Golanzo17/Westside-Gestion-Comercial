@@ -9,19 +9,17 @@
 
 ### 1. Sección Categorías
 * **`GetCategorias(soloActivas) As List(Of Categoria)`**:
-  * Devuelve la lista de categorías ordenadas alfabéticamente. Si `soloActivas = True`, excluye las inactivas.
-* **`GuardarCategoria(cat, ByRef errorMessage) As Boolean`**:
-  * Valida que el nombre no esté vacío.
-  * Si `cat.Id = 0`, ejecuta un `INSERT` para crear una nueva categoría.
-  * Si `cat.Id > 0`, ejecuta un `UPDATE` para modificar la existente.
+  * Devuelve la lista de categorías ordenadas alfabéticamente. Si `soloActivas = True` (valor por defecto), excluye las inactivas.
+  * Las categorías y los talles son datos de referencia que se cargan con los scripts semilla (`seed_sqlite.sql`); este servicio solo los consulta.
 
 ---
 
-### 2. Sección Talles
+### 2. Sección Talles y Colores
 * **`GetTalles() As List(Of Talle)`**:
   * Devuelve los talles ordenados por la columna `orden` (para que "S" aparezca antes de "M" y "L", en vez de ordenarse alfabéticamente).
-* **`GuardarTalle(talle, ByRef errorMessage) As Boolean`**:
-  * Guarda o actualiza un talle con su número de orden.
+* **`GetColoresDisponibles() As List(Of String)`**:
+  * Devuelve la lista sin repetidos de colores ya usados en el inventario, para alimentar los desplegables del editor de prendas.
+  * Si la base todavía no tiene colores, devuelve una paleta base de indumentaria.
 
 ---
 
@@ -33,6 +31,9 @@
 * **`GetProductoPorCodigo(codigo) As Producto`**:
   * Usado por el **Lector de Código de Barras** en el Punto de Venta.
   * Busca si el código coincide con el código de barras escaneado o con el ID numérico del producto. Si lo encuentra, carga el producto con toda su matriz de talles y stock.
+* **`GetStockPorTalles(productoId) As List(Of ProductoTalle)`**:
+  * Devuelve la matriz de variantes (talle + color) de una prenda con su `stock_actual` y `stock_minimo`, ordenada por el orden del talle.
+  * Es la que usa el POS para dibujar los botones de talle con su stock (`[S (8)]`, `[L (0)]`).
 
 ---
 
@@ -57,7 +58,12 @@ Permite a los encargados corregir el stock cuando hacen recuentos físicos o cua
 
 ---
 
-### 6. `EliminarProducto(id, ByRef errorMessage) As Boolean`
+### 6. `ToggleActivo(id, ByRef errorMessage) As Boolean`
 * **¿Qué es un Soft Delete (Borrado Lógico)?**:
   En un sistema comercial **nunca se debe hacer `DELETE` físico** sobre un producto que ya tuvo ventas, porque rompería el historial contable del local.
-  En su lugar, este método hace `UPDATE productos SET activo = 0 WHERE id = @id`. La prenda ya no aparecerá para vender ni en el catálogo, pero los tickets pasados conservan intacta su información histórica.
+  En su lugar, este método alterna el estado: `UPDATE productos SET activo = CASE WHEN activo = 1 THEN 0 ELSE 1 END WHERE id = @id`. La prenda dada de baja ya no aparece para vender, pero los tickets pasados conservan intacta su información histórica, y se puede volver a activar.
+
+---
+
+### 7. Permisos
+El servicio no controla roles: lo hacen los formularios. En `FrmProductos` y `FrmStock`, un Vendedor no ve costos ni márgenes y, si intenta crear o modificar prendas o ajustar stock, el sistema pide la autorización de un Administrador o Gerente (`SolicitarAutorizacionAdminOManager`).

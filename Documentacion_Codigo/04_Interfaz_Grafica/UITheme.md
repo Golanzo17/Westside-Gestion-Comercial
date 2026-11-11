@@ -61,6 +61,18 @@ Transforma las tablas de datos (`DataGridView`):
 * Efecto visual al pasar el cursor o seleccionar: resalta la fila en azul claro suave (`#EEF2FF`).
 * Oculta la columna gris izquierda vacía que viene por defecto en Windows Forms.
 
-### 4. `CreateStatWidget(...) As Panel`
-* Construye las tarjetas de resumen del Dashboard (ej: "Total Vendido Hoy: $150.000").
-* Genera un contenedor con icono, texto descriptivo y valor numérico destacado.
+### 4. `StyleComboBox(cbo)`
+* Aplica la misma tipografía y estilo plano a los desplegables, para que coincidan con las cajas de texto.
+
+### 5. `ApplyRoundedRegion(ctrl, radius)`
+* Recorta las esquinas de cualquier control con un `GraphicsPath`. Lo usan los botones y las tarjetas.
+
+### 6. `CreateKpiCard(title, value, subtitle, accentColor) As Panel`
+* Construye las tarjetas de resumen del Dashboard y de las pantallas de caja, control de cajas y backup (ej: "TOTAL VENDIDO HOY: $150.000").
+* Genera un panel con una franja de color de acento, el título, el valor destacado y un subtítulo. Los formularios acceden al valor y al subtítulo por su posición dentro de `Controls` para actualizarlos (`Controls(2)` y `Controls(3)`), porque `Controls(0)` es la franja de acento.
+
+### 7. `ShowToast(parentControl, message, toastType, durationMs)`
+* Muestra una notificación temporal no bloqueante (éxito, error, aviso) en la esquina de la ventana, que desaparece sola.
+
+### 8. `CreateSidebarSection(sectionTitle)` y `CreateDivider(height, topMargin, bottomMargin)`
+* Crean los títulos de sección y los separadores del menú lateral de `FrmMain` (Operaciones, Gestión, Sistema).
