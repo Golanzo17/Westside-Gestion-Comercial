@@ -69,6 +69,16 @@ Para aprender sin abrumarte, te recomendamos seguir este orden de lectura:
 
 ---
 
+### Fase 7: Rutas de Vida por Rol y Formulario
+17. [07_Rutas_De_Vida_Por_Rol/01_Rol_Vendedor.md](07_Rutas_De_Vida_Por_Rol/01_Rol_Vendedor.md):
+    * Cada formulario y botón que opera el **Vendedor** (`FrmLogin`, `FrmMain`, `FrmVentasPOS`, `FrmMisVentasTurno`, `FrmCaja`, `FrmClientes`, `FrmProductos` y `FrmAutorizacionSupervisor`) con su recorrido completo UI → Servicio → SQLite.
+18. [07_Rutas_De_Vida_Por_Rol/02_Rol_Gerente.md](07_Rutas_De_Vida_Por_Rol/02_Rol_Gerente.md):
+    * Cada formulario y botón que opera el **Gerente** (`FrmLogin`, `FrmMain`, `FrmProductos`, `FrmStock`, `FrmControlCajas`, `FrmDetalleArqueoCaja`, `FrmReportes`, `FrmClientes` y autorizaciones presenciales).
+19. [07_Rutas_De_Vida_Por_Rol/03_Rol_Administrador.md](07_Rutas_De_Vida_Por_Rol/03_Rol_Administrador.md):
+    * Cada formulario y botón que opera el **Administrador** (`FrmLogin`, `FrmMain`, `FrmUsuarios`, `FrmBackup`, `FrmConfiguracion`, `FrmClientes` y control dual).
+
+---
+
 ## 💡 Consejo para estudiar
 Cada archivo de esta guía contiene:
 * **¿Qué hace este archivo?** (en lenguaje simple y sin tecnicismos difíciles).
