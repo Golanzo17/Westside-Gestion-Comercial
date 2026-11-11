@@ -237,7 +237,7 @@ Namespace Forms
                 .Dock = DockStyle.Fill,
                 .TextAlign = ContentAlignment.MiddleLeft,
                 .AutoEllipsis = True,
-                .Visible = Not AuthService.IsAdmin
+                .Visible = AuthService.IsVendor
             }
 
             ' Botón Venta Rápida
@@ -404,6 +404,8 @@ Namespace Forms
             Dim card4 As Panel
             If AuthService.IsAdmin Then
                 card4 = UITheme.CreateKpiCard("USUARIOS REGISTRADOS", "0", "Cuentas en el sistema", UITheme.ColorInfo)
+            ElseIf AuthService.IsManager Then
+                card4 = UITheme.CreateKpiCard("CAJAS EN CURSO", "0", "Turnos de vendedores abiertos", UITheme.ColorInfo)
             Else
                 card4 = UITheme.CreateKpiCard("CAJA DEL TURNO", "$ 0,00", "Efectivo disponible", UITheme.ColorInfo)
             End If
@@ -632,32 +634,35 @@ Namespace Forms
                         Dim usrList = usuarioService.GetUsuarios()
                         lblKpiCajaTurno.Text = usrList.Count.ToString()
                     End If
+                ElseIf AuthService.IsManager Then
+                    ' El Gerente no opera caja propia: ve la facturación global y cuántos turnos de vendedores siguen abiertos
+                    lblCajaStatus.Visible = False
+                    lblKpiVentasHoy.Text = resumen.TotalVendido.ToString("C2")
+                    lblKpiTicketsHoy.Text = resumen.CantidadTickets.ToString()
+                    If lblKpiCajaTurno IsNot Nothing Then
+                        Dim cajasAbiertas = cajaService.GetHistorialCajasAvanzado(New DateTime(2000, 1, 1), DateTime.Today, Nothing, "Abierta", Nothing)
+                        lblKpiCajaTurno.Text = cajasAbiertas.Count.ToString()
+                    End If
                 Else
                     lblCajaStatus.Visible = True
                     Dim userId = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.Id, 1)
                     Dim caja = cajaService.GetCajaAbierta(userId)
 
-                    If AuthService.IsVendor Then
-                        ' El vendedor solo ve la recaudación y tickets de su propio turno activo (nunca la facturación global del local)
-                        If caja IsNot Nothing Then
-                            Dim desglose = cajaService.GetDesgloseMediosTurno(caja.Id)
-                            lblKpiVentasHoy.Text = desglose.TotalVendido.ToString("C2")
-                            lblKpiTicketsHoy.Text = desglose.CantidadTickets.ToString()
-                        Else
-                            lblKpiVentasHoy.Text = "$ 0,00"
-                            lblKpiTicketsHoy.Text = "0"
-                        End If
+                    ' El vendedor solo ve la recaudación y tickets de su propio turno activo (nunca la facturación global del local)
+                    If caja IsNot Nothing Then
+                        Dim desglose = cajaService.GetDesgloseMediosTurno(caja.Id)
+                        lblKpiVentasHoy.Text = desglose.TotalVendido.ToString("C2")
+                        lblKpiTicketsHoy.Text = desglose.CantidadTickets.ToString()
                     Else
-                        lblKpiVentasHoy.Text = resumen.TotalVendido.ToString("C2")
-                        lblKpiTicketsHoy.Text = resumen.CantidadTickets.ToString()
+                        lblKpiVentasHoy.Text = "$ 0,00"
+                        lblKpiTicketsHoy.Text = "0"
                     End If
 
                     If caja IsNot Nothing Then
                         lblCajaStatus.Text = $"Caja Abierta  ·  Turno #{caja.Id}"
                         lblCajaStatus.ForeColor = UITheme.ColorSuccess
-                        Dim esp = caja.MontoInicial + caja.TotalVentasEfectivo + caja.TotalIngresos - caja.TotalEgresos
                         If lblKpiCajaTurno IsNot Nothing Then
-                            lblKpiCajaTurno.Text = If(AuthService.IsAdminOrManager, esp.ToString("C2"), "Arqueo Ciego")
+                            lblKpiCajaTurno.Text = "Arqueo Ciego"
                         End If
                     Else
                         lblCajaStatus.Text = "Caja Cerrada"
