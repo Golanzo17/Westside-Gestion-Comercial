@@ -24,11 +24,13 @@ Namespace Forms
         Private lblResumenMisVentas As Label
         Private listaVentasTurno As List(Of Venta) = New List(Of Venta)()
 
+        ' Constructor: inicializa la vista y carga las ventas del turno o rango seleccionado
         Public Sub New()
             InitializeUI()
             CargarVentasDelTurno()
         End Sub
 
+        ' Construye filtros de búsqueda, grilla de ventas del turno y botones de ticket/cambio
         Private Sub InitializeUI()
             Me.Text = "Mis Ventas del Turno Actual"
             Me.Size = New Size(1020, 640)
@@ -148,6 +150,7 @@ Namespace Forms
             Me.Controls.Add(pnlHeader)
         End Sub
 
+        ' Configura las columnas y formatos de la grilla de ventas realizadas
         Private Sub ConfigurarColumnasMisVentas()
             dgvMisVentas.Columns.Clear()
             dgvMisVentas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -193,6 +196,7 @@ Namespace Forms
             dgvMisVentas.Columns("Estado").MinimumWidth = 110
         End Sub
 
+        ' Carga y filtra las ventas de la caja actual (o del vendedor) y actualiza los totales
         Private Sub CargarVentasDelTurno()
             If dgvMisVentas Is Nothing Then Return
             dgvMisVentas.Rows.Clear()
@@ -232,6 +236,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Devuelve el objeto Venta correspondiente a la fila seleccionada en la grilla
         Private Function ObtenerVentaSeleccionada() As Venta
             If dgvMisVentas Is Nothing OrElse dgvMisVentas.SelectedRows.Count = 0 Then
                 MessageBox.Show("Seleccione un ticket de la grilla.", "Atención", MessageBoxButtons.OK, MessageBoxIcon.Information)
@@ -241,12 +246,14 @@ Namespace Forms
             Return listaVentasTurno.Find(Function(x) x.Id = idSel)
         End Function
 
+        ' Abre el detalle del ticket seleccionado si hay una venta elegida
         Private Sub BtnVerDetalleTicket_Click(sender As Object, e As EventArgs)
             Dim v = ObtenerVentaSeleccionada()
             If v Is Nothing Then Return
             MostrarDetalleTicketVendedor(v)
         End Sub
 
+        ' Reimprime o exporta a PDF el comprobante de la venta seleccionada
         Private Sub BtnReimprimirPdfTicket_Click(sender As Object, e As EventArgs)
             Dim v = ObtenerVentaSeleccionada()
             If v Is Nothing Then Return
@@ -254,6 +261,7 @@ Namespace Forms
             FrmReportes.GuardarTicketEnPdf(Me, v)
         End Sub
 
+        ' Abre el modal de cambio de prenda o devolución para la venta seleccionada
         Private Sub BtnCambioPrenda_Click(sender As Object, e As EventArgs)
             Dim v = ObtenerVentaSeleccionada()
             If v Is Nothing Then Return
@@ -264,6 +272,7 @@ Namespace Forms
             MostrarModalCambioPrenda(v)
         End Sub
 
+        ' Muestra un modal con el detalle completo de ítems, totales y datos del ticket
         Private Sub MostrarDetalleTicketVendedor(ventaSel As Venta)
             Dim detalles = ventaService.GetDetalleVenta(ventaSel.Id)
             ventaSel.Detalles = detalles
@@ -398,6 +407,7 @@ Namespace Forms
             frmDet.ShowDialog(Me)
         End Sub
 
+        ' Presenta un modal para gestionar el cambio de talle/prenda y registrar diferencias en caja
         Private Sub MostrarModalCambioPrenda(ventaSel As Venta)
             Dim detalles = ventaService.GetDetalleVenta(ventaSel.Id)
             If detalles.Count = 0 Then

@@ -150,6 +150,11 @@ Namespace Services
             Return resumen
         End Function
 
+        ''' <summary>
+        ''' Obtiene el ranking de las prendas más vendidas en un rango de fechas.
+        ''' Permite ordenar por mayor cantidad de unidades vendidas (MayorSalida) o por mayor ganancia (MayorMargen),
+        ''' y opcionalmente filtrar por un vendedor puntual.
+        ''' </summary>
         Public Function GetTopProductosVendidos(limite As Integer, fechaDesde As DateTime, fechaHasta As DateTime, Optional criterio As CriterioRankingProducto = CriterioRankingProducto.MayorSalida, Optional usuarioId As Integer = 0) As List(Of TopProductoVendido)
             Dim list As New List(Of TopProductoVendido)()
             Try
@@ -209,6 +214,10 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Genera el reporte analítico de compras agrupadas por cliente en un rango de fechas (cantidad de compras, unidades, facturación y ganancia).
+        ''' Puede filtrarse por un cliente puntual y ordenarse por facturación, salida o margen.
+        ''' </summary>
         Public Function GetReporteVentasPorCliente(fechaDesde As DateTime, fechaHasta As DateTime, Optional clienteId As Integer = 0, Optional criterio As CriterioOrdenCliente = CriterioOrdenCliente.MayorFacturacion) As List(Of ReporteVentaCliente)
             Dim list As New List(Of ReporteVentaCliente)()
             Try
@@ -302,6 +311,9 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Genera el reporte de desempeño por vendedor en un rango de fechas (cantidad de ventas, prendas, total facturado y rentabilidad).
+        ''' </summary>
         Public Function GetReporteVentasPorVendedor(fechaDesde As DateTime, fechaHasta As DateTime, Optional usuarioId As Integer = 0, Optional criterio As CriterioOrdenCliente = CriterioOrdenCliente.MayorFacturacion) As List(Of ReporteVentaVendedor)
             Dim list As New List(Of ReporteVentaVendedor)()
             Try
@@ -397,6 +409,9 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Lista todas las variantes (producto + talle + color) cuyo stock actual es menor o igual al stock mínimo configurado.
+        ''' </summary>
         Public Function GetAlertasStockBajo() As List(Of AlertaStock)
             Dim list As New List(Of AlertaStock)()
             Try
@@ -425,6 +440,10 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Calcula los indicadores financieros globales de un período (total facturado, costo de mercadería, ganancia neta, % margen,
+        ''' ticket promedio y separación entre efectivo y digital) solo sobre ventas completadas.
+        ''' </summary>
         Public Function GetMetricasFinancierasPeriodo(fechaDesde As DateTime, fechaHasta As DateTime, Optional usuarioId As Integer = 0, Optional clienteId As Integer = 0, Optional metodoPago As String = "") As MetricasFinancierasPeriodo
             Dim m As New MetricasFinancierasPeriodo()
             Try
@@ -480,6 +499,10 @@ Namespace Services
             Return m
         End Function
 
+        ''' <summary>
+        ''' Detecta prendas activas con stock disponible que no registraron ninguna venta en el período consultado (capital inmovilizado).
+        ''' Ordena primero las que nunca se vendieron o tienen la venta más antigua.
+        ''' </summary>
         Public Function GetStockInmovilizado(fechaDesde As DateTime, fechaHasta As DateTime, Optional limite As Integer = 0) As List(Of PrendaStockInmovilizado)
             Dim list As New List(Of PrendaStockInmovilizado)()
             Try

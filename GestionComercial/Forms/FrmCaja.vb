@@ -34,11 +34,13 @@ Namespace Forms
         Private btnRefrescar As Button
         Private dgvMovimientos As DataGridView
 
+        ' Constructor: construye la interfaz de caja y carga el turno/movimientos actuales
         Public Sub New()
             InitializeUI()
             LoadCajaData()
         End Sub
 
+        ' Inicializa controles de apertura, KPIs, grilla de movimientos y botones de acción
         Private Sub InitializeUI()
             Me.Text = "Caja Diaria y Arqueo de Turno"
             Me.Size = New Size(1000, 640)
@@ -162,6 +164,7 @@ Namespace Forms
             Me.Controls.Add(pnlHeader)
         End Sub
 
+        ' Configura las columnas, formatos y anchos de la grilla de movimientos de caja
         Private Sub ConfigurarColumnas()
             dgvMovimientos.Columns.Clear()
             dgvMovimientos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -202,6 +205,7 @@ Namespace Forms
             dgvMovimientos.Columns("Referencia").MinimumWidth = 90
         End Sub
 
+        ' Consulta la caja abierta actual y actualiza tarjetas KPI, estado y movimientos
         Private Sub LoadCajaData()
             Dim userId As Integer = If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.Id, 1)
             cajaActual = cajaService.GetCajaAbierta(userId)
@@ -246,6 +250,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Valida el monto inicial y abre una nueva caja para el usuario actual
         Private Sub BtnAbrirCaja_Click(sender As Object, e As EventArgs)
             Dim prompt As New Form() With {
                 .Text = "Apertura de Caja",
@@ -281,6 +286,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Muestra un modal para registrar un ingreso o egreso manual en la caja abierta
         Private Sub BtnNuevoMovimiento_Click(sender As Object, e As EventArgs)
             If cajaActual Is Nothing Then Return
 
@@ -341,6 +347,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Realiza el arqueo y cierre de la caja actual tras confirmar con el usuario
         Private Sub BtnCerrarCaja_Click(sender As Object, e As EventArgs)
             If cajaActual Is Nothing Then Return
 

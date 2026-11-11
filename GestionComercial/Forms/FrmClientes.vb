@@ -32,11 +32,13 @@ Namespace Forms
         Private dgvClientes As DataGridView
         Private lblTotal As Label
 
+        ' Inicializa la pantalla del directorio de clientes y carga el listado inicial
         Public Sub New()
             InitializeUI()
             LoadClientes()
         End Sub
 
+        ' Construye por código la barra de búsqueda/acciones, la grilla de clientes y el pie con el conteo
         Private Sub InitializeUI()
             Me.Text = "Directorio de Clientes"
             Me.Size = New Size(1020, 580)
@@ -127,6 +129,7 @@ Namespace Forms
             Me.Controls.Add(pnlHeader)
         End Sub
 
+        ' Define las columnas y proporciones de la grilla de clientes
         Private Sub ConfigurarColumnas()
             dgvClientes.Columns.Clear()
             dgvClientes.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -207,6 +210,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Abre el formulario modal en modo alta (ID = 0) para registrar un cliente nuevo
         Private Sub BtnNuevo_Click(sender As Object, e As EventArgs)
             Dim frmEdit As New FrmClienteEditor(0)
             If frmEdit.ShowDialog() = DialogResult.OK Then
@@ -214,10 +218,12 @@ Namespace Forms
             End If
         End Sub
 
+        ' Abre el editor para modificar el cliente seleccionado en la grilla
         Private Sub BtnEditar_Click(sender As Object, e As EventArgs)
             EditarSeleccionado()
         End Sub
 
+        ' Obtiene el ID de la fila seleccionada y abre FrmClienteEditor para editar sus datos
         Private Sub EditarSeleccionado()
             If dgvClientes.CurrentRow IsNot Nothing Then
                 Dim id As Integer = Convert.ToInt32(dgvClientes.CurrentRow.Cells("Id").Value)
@@ -280,12 +286,14 @@ Namespace Forms
         Private btnGuardar As Button
         Private btnCancelar As Button
 
+        ' Inicializa el editor modal de cliente (si clienteId = 0 es alta; si > 0 carga el cliente para editar)
         Public Sub New(clienteId As Integer)
             _clienteId = clienteId
             InitializeUI()
             LoadData()
         End Sub
 
+        ' Construye por código los campos personales, fecha de nacimiento y notas del cliente
         Private Sub InitializeUI()
             Me.Text = If(_clienteId = 0, "Nuevo Cliente", "Editar Cliente")
             Me.Size = New Size(540, 570)
@@ -345,6 +353,7 @@ Namespace Forms
             Me.Controls.AddRange({lblDni, txtDni, lblTel, txtTelefono, lblNom, txtNombre, lblApe, txtApellido, lblEmail, txtEmail, lblDir, txtDireccion, lblCiu, txtCiudad, lblFnac, dtpFechaNac, lblNotas, txtNotas, pnlBottom})
         End Sub
 
+        ' Carga en pantalla los datos del cliente seleccionado (o crea una instancia vacía si es alta)
         Private Sub LoadData()
             If _clienteId = 0 Then
                 clienteActual = New Cliente()

@@ -1,4 +1,4 @@
-﻿' ARCHIVO: UsuarioService.vb
+' ARCHIVO: UsuarioService.vb
 ' PROPÓSITO: Administración de cuentas de empleados, roles, DNI único y contraseñas.
 ' En este servicio manejamos el personal del comercio:
 ' 1. Roles Soportados: Vendedor, Gerente y Administrador.
@@ -46,6 +46,9 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Busca y devuelve un empleado puntual por su ID numérico; devuelve Nothing si no existe.
+        ''' </summary>
         Public Function GetUsuarioById(id As Integer) As Usuario
             Try
                 Dim sql As String = "SELECT * FROM `usuarios` WHERE `id` = @id LIMIT 1;"
@@ -73,6 +76,10 @@ Namespace Services
             Return count > 0
         End Function
 
+        ''' <summary>
+        ''' Da de alta un nuevo empleado validando campos obligatorios, rol válido y unicidad de username y DNI.
+        ''' Encripta la contraseña con PBKDF2 antes de guardar y registra el alta en la auditoría.
+        ''' </summary>
         Public Function CrearUsuario(username As String, password As String,
                                       nombre As String, apellido As String,
                                       rol As String, ByRef errorMessage As String,
@@ -181,6 +188,10 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>
+        ''' Modifica los datos personales y el rol de un usuario existente, verificando que el DNI no pertenezca a otro empleado.
+        ''' Impide quitar el rol de Administrador si es el único Administrador activo del sistema.
+        ''' </summary>
         Public Function ActualizarUsuario(usuarioId As Integer,
                                            nombre As String, apellido As String,
                                            rol As String, ByRef errorMessage As String,
@@ -278,6 +289,9 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>
+        ''' Cambia la contraseña de un usuario generando un nuevo hash seguro PBKDF2 y dejando registro en auditoría.
+        ''' </summary>
         Public Function CambiarPassword(usuarioId As Integer, nuevaPassword As String, ByRef errorMessage As String) As Boolean
             Try
                 If String.IsNullOrWhiteSpace(nuevaPassword) OrElse nuevaPassword.Length < 4 Then
@@ -302,6 +316,10 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>
+        ''' Activa o desactiva (baja lógica) a un usuario sin borrar su historial de ventas o cajas.
+        ''' Bloquea la desactivación si se trata del único Administrador activo.
+        ''' </summary>
         Public Function ToggleActivo(usuarioId As Integer, ByRef errorMessage As String) As Boolean
             Try
                 Dim user = GetUsuarioById(usuarioId)
@@ -338,6 +356,7 @@ Namespace Services
             End Try
         End Function
 
+        ' Verifica que el nombre del rol coincida con alguno de los definidos en RolesDisponibles (Vendedor, Gerente, Administrador)
         Private Function EsRolValido(rol As String) As Boolean
             If String.IsNullOrWhiteSpace(rol) Then Return False
             For Each r In RolesDisponibles
@@ -348,6 +367,7 @@ Namespace Services
             Return False
         End Function
 
+        ' Método auxiliar privado que convierte una fila de la tabla 'usuarios' en un objeto Usuario en memoria
         Private Function MapUsuario(row As DataRow) As Usuario
             Dim fnac As Nullable(Of DateTime) = Nothing
             If row.Table.Columns.Contains("fecha_nacimiento") AndAlso Not Convert.IsDBNull(row("fecha_nacimiento")) Then

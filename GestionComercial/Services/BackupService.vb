@@ -1,4 +1,4 @@
-﻿Imports System.IO
+Imports System.IO
 Imports Microsoft.Data.Sqlite
 Imports GestionComercial.Config
 Imports GestionComercial.Data
@@ -14,12 +14,14 @@ Imports GestionComercial.Data
 '   Organiza los respaldos en 'Database/Backups/' con estampas cronológicas precisas (yyyyMMdd_HHmmss).
 
 Namespace Services
+    ' DTO que representa un archivo de respaldo (.db) listado en la grilla de copias de seguridad
     Public Class BackupItem
         Public Property NombreArchivo As String = String.Empty
         Public Property RutaCompleta As String = String.Empty
         Public Property FechaCreacion As DateTime = DateTime.MinValue
         Public Property TamanoBytes As Long = 0
 
+        ' Convierte el tamaño en bytes a una cadena legible (B, KB o MB)
         Public ReadOnly Property TamanoFormateado As String
             Get
                 If TamanoBytes >= 1024 * 1024 Then
@@ -33,6 +35,7 @@ Namespace Services
         End Property
     End Class
 
+    ' DTO con las estadísticas actuales de la base de datos activa (tamaño, cantidad de tablas y tickets)
     Public Class DatabaseInfo
         Public Property RutaDb As String = String.Empty
         Public Property TamanoBytes As Long = 0
@@ -40,6 +43,7 @@ Namespace Services
         Public Property CantidadTablas As Integer = 0
         Public Property CantidadVentas As Integer = 0
 
+        ' Convierte el tamaño en bytes de la base activa a una cadena legible (B, KB o MB)
         Public ReadOnly Property TamanoFormateado As String
             Get
                 If TamanoBytes >= 1024 * 1024 Then
@@ -55,6 +59,9 @@ Namespace Services
 
     Public Class BackupService
 
+        ''' <summary>
+        ''' Obtiene la ruta de la carpeta predeterminada donde se guardan los respaldos (Database/Backups).
+        ''' </summary>
         Public Function GetDirectorioBackups() As String
             Dim dbPath = AppConfig.Settings.GetSqlitePath()
             Dim baseDir = Path.GetDirectoryName(dbPath)
@@ -64,6 +71,9 @@ Namespace Services
             Return Path.Combine(baseDir, "Backups")
         End Function
 
+        ''' <summary>
+        ''' Busca todos los archivos .db en la carpeta de backups y los devuelve ordenados del más reciente al más antiguo.
+        ''' </summary>
         Public Function GetBackups(Optional customDir As String = "") As List(Of BackupItem)
             Dim list As New List(Of BackupItem)()
             Dim dir = If(String.IsNullOrWhiteSpace(customDir), GetDirectorioBackups(), customDir)
@@ -87,10 +97,17 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Crea una copia de seguridad automática en la carpeta por defecto (Database/Backups) con fecha y hora en el nombre.
+        ''' </summary>
         Public Function CrearBackup(ByRef mensajeError As String) As String
             Return CrearBackup(String.Empty, mensajeError)
         End Function
 
+        ''' <summary>
+        ''' Crea una copia consistente de la base de datos activa usando el Online Backup API de SQLite.
+        ''' Si se recibe una ruta personalizada, exporta el archivo a esa ubicación; si está vacía, usa la carpeta por defecto.
+        ''' </summary>
         Public Function CrearBackup(rutaDestinoPersonalizada As String, ByRef mensajeError As String) As String
             mensajeError = String.Empty
             Try
@@ -134,6 +151,10 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>
+        ''' Restaura la base de datos activa a partir de un archivo de backup seleccionado.
+        ''' Primero cierra las conexiones abiertas (ClearAllPools) y luego sobrescribe la base activa con el respaldo.
+        ''' </summary>
         Public Function RestaurarBackup(rutaBackup As String, ByRef mensajeError As String) As Boolean
             mensajeError = String.Empty
             Try
@@ -164,6 +185,9 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>
+        ''' Consulta información de diagnóstico de la base de datos actual: ruta, peso en disco, cantidad de tablas y total de ventas.
+        ''' </summary>
         Public Function ObtenerInfoBaseDatosActual() As DatabaseInfo
             Dim info As New DatabaseInfo()
             Try

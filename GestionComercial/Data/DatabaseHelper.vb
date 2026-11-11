@@ -309,6 +309,7 @@ Namespace Data
             End Try
         End Function
 
+        ' Ejecuta el script seed_catalogo_demo.sql (idempotente) para asegurar el catálogo y clientes de prueba
         Private Sub ApplyDemoCatalogSeed(conn As DbConnection)
             Dim seedFile As String = ResolveDatabaseScriptPath("seed_catalogo_demo.sql")
             If String.IsNullOrEmpty(seedFile) OrElse Not File.Exists(seedFile) Then Return
@@ -382,6 +383,7 @@ Namespace Data
             End Try
         End Sub
 
+        ' Verifica con PRAGMA table_info si la columna existe en la tabla; si falta, la agrega con ALTER TABLE
         Private Sub EnsureColumnExists(conn As DbConnection, tableName As String, colDefinition As String)
             Dim colName = colDefinition.Split(" "c)(0)
             Dim exists As Boolean = False

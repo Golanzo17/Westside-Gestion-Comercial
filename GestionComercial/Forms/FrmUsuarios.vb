@@ -31,11 +31,13 @@ Namespace Forms
         Private btnRefrescar As Button
         Private lblTotalUsuarios As Label
 
+        ' Constructor: construye la pantalla de gestión de usuarios y carga la nómina inicial
         Public Sub New()
             InitializeUI()
             LoadUsuarios()
         End Sub
 
+        ' Verifica al cargar que el usuario actual tenga rol Administrador; caso contrario cierra la ventana
         Protected Overrides Sub OnLoad(e As EventArgs)
             MyBase.OnLoad(e)
             If Not AuthService.IsAdmin Then
@@ -44,6 +46,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Inicializa encabezado, barra de acciones ABM, grilla de usuarios y footer de totales
         Private Sub InitializeUI()
             Me.Text = "Gestión de Usuarios y Vendedores"
             Me.Size = New Size(1020, 640)
@@ -138,6 +141,7 @@ Namespace Forms
             Me.Controls.Add(pnlHeader)
         End Sub
 
+        ' Configura columnas, alineaciones y pesos de la grilla de usuarios
         Private Sub ConfigurarColumnas()
             dgvUsuarios.Columns.Clear()
             dgvUsuarios.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -269,12 +273,14 @@ Namespace Forms
             End If
         End Sub
 
+        ' Abre la edición del usuario al hacer doble clic si el operador es Administrador
         Private Sub DgvUsuarios_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
             If AuthService.IsAdmin AndAlso e.RowIndex >= 0 Then
                 EditarSeleccionado()
             End If
         End Sub
 
+        ' Abre el formulario modal en modo alta para crear un nuevo empleado/usuario
         Private Sub BtnNuevo_Click(sender As Object, e As EventArgs)
             Dim frmEdit As New FrmUsuarioEditor(0)
             If frmEdit.ShowDialog() = DialogResult.OK Then
@@ -282,10 +288,12 @@ Namespace Forms
             End If
         End Sub
 
+        ' Dispara la edición de datos del usuario seleccionado en la grilla
         Private Sub BtnEditar_Click(sender As Object, e As EventArgs)
             EditarSeleccionado()
         End Sub
 
+        ' Obtiene el ID seleccionado y abre el modal editor de usuario; recarga al confirmar
         Private Sub EditarSeleccionado()
             If dgvUsuarios.CurrentRow IsNot Nothing Then
                 Dim uId As Integer = Convert.ToInt32(dgvUsuarios.CurrentRow.Cells("Id").Value)
@@ -298,6 +306,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Abre el diálogo de restablecimiento de contraseña para el usuario seleccionado
         Private Sub BtnCambiarPass_Click(sender As Object, e As EventArgs)
             If dgvUsuarios.CurrentRow IsNot Nothing Then
                 Dim uId As Integer = Convert.ToInt32(dgvUsuarios.CurrentRow.Cells("Id").Value)
@@ -366,6 +375,7 @@ Namespace Forms
         Private btnGuardar As Button
         Private btnCancelar As Button
 
+        ' Constructor: inicializa el editor de usuario para alta (usuarioId = 0) o edición
         Public Sub New(usuarioId As Integer)
             _usuarioId = usuarioId
             InitializeUI()
@@ -374,6 +384,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Construye los campos personales, laborales, rol y contraseña inicial (solo alta)
         Private Sub InitializeUI()
             Me.Text = If(_usuarioId = 0, "Crear Nuevo Usuario / Empleado", "Editar Datos de Usuario / Empleado")
             Me.Size = New Size(560, If(_usuarioId = 0, 690, 630))
@@ -469,6 +480,7 @@ Namespace Forms
             Me.CancelButton = btnCancelar
         End Sub
 
+        ' Carga en el formulario los datos existentes del empleado seleccionado y bloquea el username
         Private Sub LoadUserData()
             Dim u = usuarioService.GetUsuarioById(_usuarioId)
             If u IsNot Nothing Then
@@ -575,12 +587,14 @@ Namespace Forms
         Private btnGuardar As Button
         Private btnCancelar As Button
 
+        ' Constructor: guarda el ID y username del usuario objetivo y arma la ventana
         Public Sub New(usuarioId As Integer, username As String)
             _usuarioId = usuarioId
             _username = username
             InitializeUI()
         End Sub
 
+        ' Construye los campos de nueva contraseña, confirmación y botones de acción
         Private Sub InitializeUI()
             Me.Text = "Cambiar Contraseña de Usuario"
             Me.Size = New Size(400, 260)
@@ -620,6 +634,7 @@ Namespace Forms
             Me.CancelButton = btnCancelar
         End Sub
 
+        ' Verifica coincidencia de contraseñas y delega el cambio al UsuarioService
         Private Sub BtnGuardar_Click(sender As Object, e As EventArgs)
             If txtNueva.Text <> txtConfirmar.Text Then
                 MessageBox.Show("Las contraseñas ingresadas no coinciden.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)

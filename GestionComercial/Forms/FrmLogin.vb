@@ -24,6 +24,7 @@ Namespace Forms
         Private lblStatus As Label
         Private lblInfoCuentas As Label
 
+        ' Inicializa la pantalla de acceso, verifica la base de datos y asegura cerrar el proceso si se cierra sin loguearse
         Public Sub New()
             InitializeUI()
             ' Verificamos la base de datos antes de que el usuario intente ingresar
@@ -35,6 +36,7 @@ Namespace Forms
                                       End Sub
         End Sub
 
+        ' Arma por código la interfaz del banner y la tarjeta central de usuario/contraseña
         Private Sub InitializeUI()
             Me.Text = "Acceso al Sistema - Gestión Comercial de Indumentaria"
             Me.Size = New Size(450, 475)
@@ -152,6 +154,7 @@ Namespace Forms
             Me.AcceptButton = btnLogin
         End Sub
 
+        ' Comprueba la conectividad con la base SQLite al abrir el login y actualiza el indicador visual
         Private Sub CheckInitialConnection()
             Dim errMsg As String = ""
             Dim ok As Boolean = DatabaseHelper.TestConnection(errMsg)
@@ -164,6 +167,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Valida las credenciales con AuthService.Login; si son correctas oculta el login y abre FrmMain
         Private Sub BtnLogin_Click(sender As Object, e As EventArgs)
             Dim user As String = txtUser.Text.Trim()
             Dim pass As String = txtPass.Text

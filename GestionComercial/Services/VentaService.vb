@@ -137,6 +137,10 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>
+        ''' Busca y filtra el historial de ventas por rango de fechas, texto (ticket/cliente/DNI), cliente, vendedor, medio de pago y estado.
+        ''' Es el método principal que alimenta la grilla del módulo de Reportes.
+        ''' </summary>
         Public Function GetVentas(fechaDesde As DateTime, fechaHasta As DateTime, Optional busqueda As String = "", Optional clienteId As Integer = 0, Optional usuarioId As Integer = 0, Optional metodoPago As String = "", Optional estado As String = "") As List(Of Venta)
             Dim list = New List(Of Venta)()
             Dim query = "SELECT v.*, u.nombre_completo AS usuario_nombre, IFNULL(ua.nombre_completo, '') AS autorizado_por_nombre, (c.apellido || ', ' || c.nombre) AS cliente_nombre " &
@@ -190,6 +194,9 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Devuelve la lista de renglones/prendas vendidas que pertenecen a un ticket específico.
+        ''' </summary>
         Public Function GetDetalleVenta(ventaId As Integer) As List(Of DetalleVenta)
             Dim list = New List(Of DetalleVenta)()
             If ventaId <= 0 Then
@@ -208,6 +215,9 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Obtiene la cabecera completa de una venta por su ID (incluyendo nombres de vendedor, cliente y supervisor autorizante).
+        ''' </summary>
         Public Function GetVentaPorId(ventaId As Integer) As Venta
             If ventaId <= 0 Then
                 Return Nothing
@@ -311,6 +321,7 @@ Namespace Services
 
         ' --- Helpers privados de soporte ---
 
+        ' Determina cuánto dinero de la venta ingresó efectivamente en billetes (total si es Efectivo, o la parte en efectivo si es pago Múltiple)
         Private Shared Function CalcularMontoEfectivoVenta(venta As Venta) As Decimal
             If venta.MontoEfectivo.HasValue Then
                 Return Math.Clamp(Math.Round(venta.MontoEfectivo.Value, 2), 0D, venta.Total)
@@ -328,6 +339,7 @@ Namespace Services
             Return 0D
         End Function
 
+        ' Asigna un número de ticket nuevo si no tiene uno o si el correlativo ya fue usado por otra caja simultánea
         Private Sub GarantizarNumeroTicket(conn As DbConnection, trans As DbTransaction, venta As Venta)
             If String.IsNullOrWhiteSpace(venta.NumeroTicket) Then
                 venta.NumeroTicket = GenerarNumeroTicket(conn, trans)
@@ -344,6 +356,7 @@ Namespace Services
             End Using
         End Sub
 
+        ' Verifica dentro de la transacción que cada prenda (talle + color) tenga stock suficiente antes de cobrar
         Private Function ValidarStockDisponible(conn As DbConnection, trans As DbTransaction, detalles As List(Of DetalleVenta), ByRef errorMessage As String) As Boolean
             Dim queryStock = "SELECT stock_actual FROM `producto_talles` WHERE `producto_id` = @prodId AND `talle_id` = @talleId AND `color` = @color;"
             For Each item In detalles
@@ -368,6 +381,7 @@ Namespace Services
             Return True
         End Function
 
+        ' Resta las unidades vendidas en producto_talles y guarda el movimiento de salida en movimientos_stock
         Private Sub DescontarStockYAuditar(conn As DbConnection, trans As DbTransaction, detalles As List(Of DetalleVenta), numeroTicket As String, usuarioId As Integer)
             Dim querySelect = "SELECT stock_actual FROM `producto_talles` WHERE `producto_id` = @prodId AND `talle_id` = @talleId AND `color` = @color;"
             Dim queryDescontar = "UPDATE `producto_talles` SET `stock_actual` = @nuevoStock WHERE `producto_id` = @prodId AND `talle_id` = @talleId AND `color` = @color;"
@@ -406,6 +420,7 @@ Namespace Services
             Next
         End Sub
 
+        ' Inserta la cabecera de la venta en la tabla 'ventas' y retorna el ID recién generado
         Private Function InsertarVenta(conn As DbConnection, trans As DbTransaction, venta As Venta) As Integer
             Dim queryVenta = "INSERT INTO `ventas` (`numero_ticket`, `fecha`, `usuario_id`, `autorizado_por_id`, `cliente_id`, `caja_id`, " &
                              "`tipo_comprobante`, `metodo_pago`, `subtotal`, `descuento_porcentaje`, `descuento_monto`, " &
@@ -435,6 +450,7 @@ Namespace Services
             Return Convert.ToInt32(DatabaseHelper.GetLastInsertedId(conn, trans))
         End Function
 
+        ' Guarda cada ítem/prenda del carrito en la tabla 'detalle_ventas' asociado a la venta
         Private Sub InsertarDetalles(conn As DbConnection, trans As DbTransaction, ventaId As Integer, detalles As List(Of DetalleVenta))
             Dim queryDetalle = "INSERT INTO `detalle_ventas` (`venta_id`, `producto_id`, `talle_id`, `color`, `codigo_barra`, `descripcion_articulo`, `precio_unitario`, `costo_unitario`, `cantidad`, `subtotal`) " &
                                "VALUES (@vId, @pId, @tId, @color, @cod, @desc, @pu, @cu, @cant, @sub);"
@@ -456,6 +472,7 @@ Namespace Services
             Next
         End Sub
 
+        ' Suma a la caja del turno los importes cobrados en efectivo y en medios digitales, y actualiza el esperado en cajón
         Private Sub ActualizarCajaVenta(conn As DbConnection, trans As DbTransaction, cajaId As Integer, montoEfectivo As Decimal, montoDigital As Decimal)
             Dim updateCajaQuery = "UPDATE `cajas` SET " &
                                   "`total_ventas_efectivo` = ROUND(`total_ventas_efectivo` + @efec, 2), " &
@@ -471,6 +488,7 @@ Namespace Services
             End Using
         End Sub
 
+        ' Lee los datos crudos de la fila de una venta dentro de la transacción activa (para anulación)
         Private Function ObtenerVentaRow(conn As DbConnection, trans As DbTransaction, ventaId As Integer) As DataRow
             Dim queryVenta = "SELECT * FROM `ventas` WHERE `id` = @vId;"
             Using cmdVenta = DatabaseHelper.CreateCommand(conn, queryVenta, trans)
@@ -486,6 +504,7 @@ Namespace Services
             End Using
         End Function
 
+        ' Recupera los ítems vendidos dentro de la misma transacción de anulación para saber qué cantidades devolver al stock
         Private Function ObtenerDetallesVentaEnTransaccion(conn As DbConnection, trans As DbTransaction, ventaId As Integer) As List(Of DetalleVenta)
             Dim list = New List(Of DetalleVenta)()
             Dim query = "SELECT dv.*, t.nombre AS talle_nombre " &
@@ -517,6 +536,7 @@ Namespace Services
             Return list
         End Function
 
+        ' Devuelve al inventario las prendas de una venta anulada y registra el ingreso en movimientos_stock
         Private Sub RestituirStockYAuditar(conn As DbConnection, trans As DbTransaction, detalles As List(Of DetalleVenta), numeroTicket As String, motivo As String, usuarioId As Integer)
             Dim querySelect = "SELECT stock_actual FROM `producto_talles` WHERE `producto_id` = @pId AND `talle_id` = @tId AND `color` = @color;"
             Dim queryStock = "UPDATE `producto_talles` SET `stock_actual` = @nuevoStock WHERE `producto_id` = @pId AND `talle_id` = @tId AND `color` = @color;"
@@ -559,6 +579,7 @@ Namespace Services
             Next
         End Sub
 
+        ' Cambia el estado de la venta a 'Anulada', guarda quién autorizó y anexa el motivo en observaciones
         Private Sub MarcarVentaAnulada(conn As DbConnection, trans As DbTransaction, ventaId As Integer, motivo As String, usuarioId As Integer)
             Dim queryUpdateVenta = "UPDATE `ventas` SET `estado` = 'Anulada', `autorizado_por_id` = @autId, `observaciones` = (IFNULL(`observaciones`,'') || ' | ANULADA: ' || @motivo) WHERE `id` = @vId;"
             Using cmdUpdVenta = DatabaseHelper.CreateCommand(conn, queryUpdateVenta, trans)
@@ -569,6 +590,7 @@ Namespace Services
             End Using
         End Sub
 
+        ' Descuenta de la caja del turno los montos de una venta anulada para mantener cuadradas las cuentas del arqueo
         Private Sub ActualizarCajaAnulacion(conn As DbConnection, trans As DbTransaction, cajaId As Integer, montoEfectivo As Decimal, montoDigital As Decimal)
             Dim updateCajaQuery = "UPDATE `cajas` SET " &
                                   "`total_ventas_efectivo` = ROUND(`total_ventas_efectivo` - @efec, 2), " &
@@ -584,6 +606,9 @@ Namespace Services
             End Using
         End Sub
 
+        ''' <summary>
+        ''' Obtiene únicamente los tickets emitidos por un vendedor puntual en su caja abierta actual (pantalla Mis Ventas del Turno).
+        ''' </summary>
         Public Function GetVentasPorTurnoVendedor(cajaId As Integer, usuarioId As Integer, Optional busqueda As String = "") As List(Of Venta)
             Dim list = New List(Of Venta)()
             Try
@@ -619,6 +644,10 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Procesa el cambio de talle o color de una prenda ya vendida sin anular el ticket, dentro de una transacción ACID.
+        ''' Devuelve la prenda original al stock, descuenta la nueva variante, audita ambos movimientos y actualiza el renglón.
+        ''' </summary>
         Public Function ProcesarCambioPrenda(ventaId As Integer, detalleId As Integer, nuevoTalleId As Integer, nuevoColor As String, usuarioId As Integer, motivo As String, ByRef errorMessage As String) As Boolean
             Try
                 Using conn = DatabaseHelper.GetConnection()
@@ -803,6 +832,7 @@ Namespace Services
             End Try
         End Function
 
+        ' Convierte una fila DataRow de la tabla 'ventas' en un objeto Venta en memoria
         Private Shared Function MapVenta(row As DataRow) As Venta
             Dim autId As Nullable(Of Integer) = Nothing
             If row.Table.Columns.Contains("autorizado_por_id") AndAlso Not Convert.IsDBNull(row("autorizado_por_id")) Then
@@ -848,6 +878,7 @@ Namespace Services
             }
         End Function
 
+        ' Convierte una fila DataRow de la tabla 'detalle_ventas' en un objeto DetalleVenta en memoria
         Private Shared Function MapDetalleVenta(row As DataRow) As DetalleVenta
             Return New DetalleVenta() With {
                 .Id = Convert.ToInt32(row("id")),

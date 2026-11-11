@@ -42,11 +42,13 @@ Namespace Forms
 
         Private configService As New ConfiguracionService()
 
+        ' Inicializa el formulario de configuración general y carga los datos actuales del local
         Public Sub New()
             InitializeUI()
             LoadConfigData()
         End Sub
 
+        ' Construye por código los paneles de conexión SQLite, datos comerciales para tickets y botones inferiores
         Private Sub InitializeUI()
             Me.Text = "Configuración del Sistema y Base de Datos"
             Me.Size = New Size(760, 610)
@@ -214,6 +216,7 @@ Namespace Forms
             Me.Controls.Add(pnlBottom)
         End Sub
 
+        ' Lee la ruta de SQLite, carga los datos comerciales en los campos y verifica el estado de conexión
         Private Sub LoadConfigData()
             txtSqlitePath.Text = AppConfig.Settings.GetSqlitePath()
 

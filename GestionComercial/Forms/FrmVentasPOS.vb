@@ -70,11 +70,13 @@ Namespace Forms
         Private ventaActual As Venta = New Venta()
         Private _descuentoAutorizado As Boolean = False
 
+        ' Constructor: construye la terminal de punto de venta y carga el listado inicial de clientes
         Public Sub New()
             InitializeUI()
             LoadInitialData()
         End Sub
 
+        ' Inicializa buscadores, selector táctil de talles, carrito, panel de cobro y atajos de teclado
         Private Sub InitializeUI()
             Me.Text = "Punto de Venta (POS) - Local de Ropa"
             Me.Size = New Size(1100, 720)
@@ -394,6 +396,7 @@ Namespace Forms
             AddHandler Me.KeyDown, AddressOf FrmVentasPOS_KeyDown
         End Sub
 
+        ' Configura las columnas, formatos y alineaciones de la grilla del carrito
         Private Sub ConfigurarColumnasCarrito()
             dgvCarrito.Columns.Clear()
             dgvCarrito.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -444,10 +447,12 @@ Namespace Forms
             dgvCarrito.Columns("Subtotal").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
         End Sub
 
+        ' Carga los datos iniciales necesarios para operar en mostrador
         Private Sub LoadInitialData()
             CargarClientes()
         End Sub
 
+        ' Obtiene los clientes activos desde ClienteService y puebla el selector del POS
         Private Sub CargarClientes()
             _actualizandoCliente = True
             Try
@@ -464,6 +469,7 @@ Namespace Forms
             End Try
         End Sub
 
+        ' Filtra clientes en memoria mientras se escribe y muestra la lista desplegable de sugerencias
         Private Sub TxtBuscarCliente_TextChanged(sender As Object, e As EventArgs)
             If _actualizandoCliente Then Return
 
@@ -506,6 +512,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Busca coincidencias locales de clientes por nombre completo, apellido o DNI/CUIT
         Private Function FiltrarClientesLocal(term As String) As List(Of Cliente)
             Return listaClientes.Where(Function(c)
                                            Return (c.NombreCompleto IsNot Nothing AndAlso c.NombreCompleto.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0) OrElse
@@ -515,6 +522,7 @@ Namespace Forms
                                        End Function).ToList()
         End Function
 
+        ' Permite moverse por las sugerencias de cliente con flechas, confirmar con Enter o cerrar con Escape
         Private Sub TxtBuscarCliente_KeyDown(sender As Object, e As KeyEventArgs)
             If e.KeyCode = Keys.Down AndAlso lstSugerenciasCliente.Visible Then
                 lstSugerenciasCliente.Focus()
@@ -532,10 +540,12 @@ Namespace Forms
             End If
         End Sub
 
+        ' Selecciona el cliente al hacer clic sobre la lista de sugerencias
         Private Sub LstSugerenciasCliente_Click(sender As Object, e As EventArgs)
             ConfirmarSugerenciaCliente()
         End Sub
 
+        ' Confirma con Enter o regresa al cuadro de búsqueda de cliente con Escape
         Private Sub LstSugerenciasCliente_KeyDown(sender As Object, e As KeyEventArgs)
             If e.KeyCode = Keys.Enter Then
                 e.SuppressKeyPress = True
@@ -546,6 +556,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Toma el cliente seleccionado de las sugerencias y lo asigna en el combo del POS
         Private Sub ConfirmarSugerenciaCliente()
             Dim cli = TryCast(lstSugerenciasCliente.SelectedItem, Cliente)
             If cli IsNot Nothing Then
@@ -553,10 +564,12 @@ Namespace Forms
             End If
         End Sub
 
+        ' Dispara la búsqueda manual del cliente ingresado
         Private Sub BtnBuscarCliente_Click(sender As Object, e As EventArgs)
             EjecutarBusquedaCliente()
         End Sub
 
+        ' Busca clientes coincidentes y selecciona automáticamente el DNI exacto o único resultado
         Private Sub EjecutarBusquedaCliente()
             Dim term As String = txtBuscarCliente.Text.Trim()
             If String.IsNullOrWhiteSpace(term) Then
@@ -586,6 +599,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Sincroniza el cliente elegido en el ComboBox y actualiza el texto del buscador sin disparar filtros
         Private Sub SeleccionarClienteEnCombo(cli As Cliente, Optional mantenerSugerencias As Boolean = False)
             _actualizandoCliente = True
             Try
@@ -606,6 +620,7 @@ Namespace Forms
             End Try
         End Sub
 
+        ' Busca prendas activas mientras se escribe para desplegar el autocompletado del POS
         Private Sub TxtBuscarArticulo_TextChanged(sender As Object, e As EventArgs)
             Dim term = txtBuscarArticulo.Text.Trim()
             If String.IsNullOrWhiteSpace(term) Then
@@ -626,6 +641,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Gestiona flechas, Enter (pistola lectora o sugerencia) y Escape en el buscador de prendas
         Private Sub TxtBuscarArticulo_KeyDown(sender As Object, e As KeyEventArgs)
             If e.KeyCode = Keys.Down AndAlso lstSugerenciasPOS.Visible Then
                 lstSugerenciasPOS.Focus()
@@ -644,10 +660,12 @@ Namespace Forms
             End If
         End Sub
 
+        ' Selecciona la prenda al hacer clic en las sugerencias del buscador POS
         Private Sub LstSugerenciasPOS_Click(sender As Object, e As EventArgs)
             ConfirmarSugerenciaPOS()
         End Sub
 
+        ' Confirma prenda con Enter o vuelve al buscador con Escape desde la lista de sugerencias
         Private Sub LstSugerenciasPOS_KeyDown(sender As Object, e As KeyEventArgs)
             If e.KeyCode = Keys.Enter Then
                 e.SuppressKeyPress = True
@@ -658,6 +676,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Carga la prenda completa elegida desde la lista de sugerencias y dibuja sus talles
         Private Sub ConfirmarSugerenciaPOS()
             Dim item = TryCast(lstSugerenciasPOS.SelectedItem, SugerenciaPOSItem)
             If item IsNot Nothing Then
@@ -676,20 +695,24 @@ Namespace Forms
         Private Class SugerenciaPOSItem
             Public Property Producto As Producto
 
+            ' Constructor: envuelve un producto para mostrarlo en el autocompletado del POS
             Public Sub New(p As Producto)
                 Me.Producto = p
             End Sub
 
+            ' Devuelve el texto resumido con nombre, código de barras y precio de venta
             Public Overrides Function ToString() As String
                 Return $"{Producto.Nombre}  |  Cód: {Producto.CodigoBarra}  |  {Producto.PrecioVenta:C2}"
             End Function
         End Class
 
+        ' Dispara la búsqueda manual del artículo ingresado en el buscador
         Private Sub BtnBuscarArticulo_Click(sender As Object, e As EventArgs)
             lstSugerenciasPOS.Visible = False
             BuscarArticulo()
         End Sub
 
+        ' Busca una prenda exacta por código de barra o la primera coincidencia parcial por nombre
         Private Sub BuscarArticulo()
             lstSugerenciasPOS.Visible = False
             Dim term As String = txtBuscarArticulo.Text.Trim()
@@ -712,6 +735,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Renderiza dinámicamente los botones de talles, colores y stock de la prenda elegida
         Private Sub MostrarPrendaSeleccionada(prod As Producto)
             productoActual = prod
             talleSeleccionado = Nothing
@@ -769,6 +793,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Resalta el talle seleccionado, ajusta color y limita el máximo de unidades al stock real
         Private Sub SeleccionarTalle(pt As ProductoTalle)
             talleSeleccionado = pt
             btnAgregarAlCarrito.Enabled = (pt IsNot Nothing AndAlso pt.StockActual > 0)
@@ -794,6 +819,7 @@ Namespace Forms
             numCantidad.Value = 1
         End Sub
 
+        ' Valida stock disponible y agrega o acumula la prenda/talle/color en el carrito de venta
         Private Sub BtnAgregarAlCarrito_Click(sender As Object, e As EventArgs)
             If productoActual Is Nothing OrElse talleSeleccionado Is Nothing Then
                 MessageBox.Show("Por favor seleccione un producto y un talle disponible.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
@@ -837,6 +863,7 @@ Namespace Forms
             txtBuscarArticulo.Focus()
         End Sub
 
+        ' Sincroniza la grilla visual del carrito con la colección de ítems de ventaActual
         Private Sub RefrescarGrillaCarrito()
             dgvCarrito.Rows.Clear()
             For Each item In ventaActual.Detalles
@@ -844,6 +871,7 @@ Namespace Forms
             Next
         End Sub
 
+        ' Elimina del carrito el ítem actualmente seleccionado y recalcula totales
         Private Sub BtnQuitarItem_Click(sender As Object, e As EventArgs)
             If dgvCarrito.CurrentRow IsNot Nothing Then
                 Dim idx = dgvCarrito.CurrentRow.Index
@@ -855,6 +883,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Vacía todos los artículos del carrito tras pedir confirmación
         Private Sub BtnVaciarCarrito_Click(sender As Object, e As EventArgs)
             If ventaActual.Detalles.Count > 0 Then
                 If MessageBox.Show("¿Deseas vaciar todos los artículos del carrito?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.Yes Then
@@ -865,6 +894,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Recalcula subtotal, descuento en pesos, total a pagar y vuelto en tiempo real
         Private Sub RecalcularTotales(Optional sender As Object = Nothing, Optional e As EventArgs = Nothing)
             Dim subtotal As Decimal = ventaActual.Detalles.Sum(Function(d) d.Subtotal)
             Dim descPorc As Decimal = numDescuentoPorc.Value
@@ -882,10 +912,12 @@ Namespace Forms
             CalcularVuelto()
         End Sub
 
+        ' Recalcula el vuelto cada vez que cambia el monto abonado por el cliente
         Private Sub TxtMontoAbonado_TextChanged(sender As Object, e As EventArgs)
             CalcularVuelto()
         End Sub
 
+        ' Calcula la diferencia entre el monto abonado y el total a pagar para mostrar el vuelto
         Private Sub CalcularVuelto()
             Dim abonado As Decimal = 0D
             Decimal.TryParse(txtMontoAbonado.Text.Trim(), abonado)
@@ -899,6 +931,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Controla que un vendedor no aplique más del 15% de descuento sin autorización de supervisor
         Private Function ValidarDescuentoVendedor() As Boolean
             If AuthService.IsAdminOrManager Then Return True
             If numDescuentoPorc.Value > 15 AndAlso Not _descuentoAutorizado Then
@@ -915,16 +948,19 @@ Namespace Forms
             Return True
         End Function
 
+        ' Abre el formulario de clientes para dar de alta uno nuevo y actualiza la lista del POS
         Private Sub BtnNuevoCliente_Click(sender As Object, e As EventArgs)
             Dim frm As New FrmClientes()
             frm.ShowDialog()
             CargarClientes()
         End Sub
 
+        ' Inicia el proceso de cobro de la venta al presionar el botón Cobrar
         Private Sub BtnFinalizarVenta_Click(sender As Object, e As EventArgs)
             FinalizarVenta()
         End Sub
 
+        ' Atajo F5 del teclado para finalizar y cobrar la venta rápidamente
         Private Sub FrmVentasPOS_KeyDown(sender As Object, e As KeyEventArgs)
             If e.KeyCode = Keys.F5 Then
                 e.SuppressKeyPress = True
@@ -932,6 +968,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Valida carrito, descuento, caja abierta y cliente; confirma, registra en VentaService e imprime ticket
         Private Sub FinalizarVenta()
             If ventaActual.Detalles.Count = 0 Then
                 MessageBox.Show("El carrito de ventas está vacío. Agregue prendas para cobrar.", "Carrito Vacío", MessageBoxButtons.OK, MessageBoxIcon.Warning)
@@ -1037,6 +1074,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Arma el comprobante térmico en texto y lo muestra en un modal con opción a guardar PDF
         Private Sub MostrarTicketImpresion(v As Venta)
             Dim cfg = configService.GetConfiguracion()
             Dim sb As New System.Text.StringBuilder()

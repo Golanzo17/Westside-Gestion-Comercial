@@ -58,6 +58,7 @@ Namespace Forms
         Private listaCajasActual As New List(Of Caja)()
         Private isLoading As Boolean = True
 
+        ' Constructor: construye el tablero gerencial, carga vendedores y ejecuta la consulta inicial
         Public Sub New()
             InitializeUI()
             CargarFiltroVendedores()
@@ -65,6 +66,7 @@ Namespace Forms
             CargarDatosAuditoria()
         End Sub
 
+        ' Arma filtros multidimensionales, tarjetas KPI, grilla de turnos y barra de acciones
         Private Sub InitializeUI()
             Me.Text = "Control de Cierres y Arqueos de Caja - Auditoría Gerencial"
             Me.Size = New Size(1100, 720)
@@ -313,6 +315,7 @@ Namespace Forms
             Me.Controls.Add(pnlHeader)
         End Sub
 
+        ' Define las columnas, formatos de moneda y proporciones de la grilla de cajas
         Private Sub ConfigurarColumnasGrilla()
             dgvCajas.Columns.Clear()
             ' Modo Fill: las columnas se distribuyen proporcionalmente al ancho disponible
@@ -439,16 +442,19 @@ Namespace Forms
             Public Property Id As Integer
             Public Property Texto As String
 
+            ' Constructor: almacena ID y etiqueta visible para ítems del combo de vendedores
             Public Sub New(id As Integer, texto As String)
                 Me.Id = id
                 Me.Texto = texto
             End Sub
 
+            ' Devuelve el texto a mostrar en el ComboBox
             Public Overrides Function ToString() As String
                 Return Texto
             End Function
         End Class
 
+        ' Puebla el combo de filtro con todos los usuarios/vendedores registrados
         Private Sub CargarFiltroVendedores()
             cboVendedor.Items.Clear()
             cboVendedor.Items.Add(New ComboItem(0, "Todos los vendedores"))
@@ -461,6 +467,7 @@ Namespace Forms
             cboVendedor.SelectedIndex = 0
         End Sub
 
+        ' Ajusta automáticamente las fechas Desde/Hasta al elegir un período rápido y recarga la grilla
         Private Sub CboRapidoFechas_SelectedIndexChanged(sender As Object, e As EventArgs)
             If isLoading Then Return
             Dim hoy = DateTime.Today
@@ -493,6 +500,7 @@ Namespace Forms
             CargarDatosAuditoria()
         End Sub
 
+        ' Restablece todos los filtros a los valores predeterminados y vuelve a consultar
         Private Sub BtnLimpiar_Click(sender As Object, e As EventArgs)
             isLoading = True
             cboRapidoFechas.SelectedIndex = 5
@@ -505,6 +513,7 @@ Namespace Forms
             CargarDatosAuditoria()
         End Sub
 
+        ' Consulta el historial filtrado de turnos, actualiza la grilla y recalcula los KPIs de arqueo
         Public Sub CargarDatosAuditoria()
             Dim desde = dtpDesde.Value.Date
             Dim hasta = dtpHasta.Value.Date
@@ -615,6 +624,7 @@ Namespace Forms
             lblStatusFooter.Text = $"Mostrando {listaCajasActual.Count} turnos auditados  |  Recaudación total: {granTotal:C2}"
         End Sub
 
+        ' Colorea el estado del turno y resalta faltantes (rojo), sobrantes (azul) o exactos (verde)
         Private Sub DgvCajas_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs)
             If e.RowIndex < 0 Then Return
             Dim colName = dgvCajas.Columns(e.ColumnIndex).Name
@@ -650,6 +660,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Obtiene el ID de caja de la fila seleccionada actualmente en la grilla (0 si no hay selección)
         Private Function GetSelectedCajaId() As Integer
             If dgvCajas.CurrentRow IsNot Nothing Then
                 Dim val = dgvCajas.CurrentRow.Cells("Id").Value
@@ -661,16 +672,19 @@ Namespace Forms
             Return 0
         End Function
 
+        ' Abre la ventana de auditoría al hacer doble clic sobre un turno de la grilla
         Private Sub DgvCajas_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
             If e.RowIndex >= 0 Then
                 AbrirAuditoriaSeleccionada()
             End If
         End Sub
 
+        ' Abre la auditoría completa para el turno actualmente seleccionado
         Private Sub BtnAuditar_Click(sender As Object, e As EventArgs)
             AbrirAuditoriaSeleccionada()
         End Sub
 
+        ' Valida selección y muestra el formulario FrmDetalleArqueoCaja del turno elegido
         Private Sub AbrirAuditoriaSeleccionada()
             Dim id = GetSelectedCajaId()
             If id <= 0 Then
@@ -683,6 +697,7 @@ Namespace Forms
             End Using
         End Sub
 
+        ' Abre el detalle del arqueo directamente posicionado en la pestaña del Acta Oficial
         Private Sub BtnVerActa_Click(sender As Object, e As EventArgs)
             Dim id = GetSelectedCajaId()
             If id <= 0 Then
@@ -695,6 +710,7 @@ Namespace Forms
             End Using
         End Sub
 
+        ' Muestra un modal rápido con los ingresos y retiros manuales registrados en el turno
         Private Sub BtnVerMovimientos_Click(sender As Object, e As EventArgs)
             Dim id = GetSelectedCajaId()
             If id <= 0 Then
@@ -756,6 +772,7 @@ Namespace Forms
             End Using
         End Sub
 
+        ' Muestra un modal rápido con los comprobantes de venta emitidos durante el turno
         Private Sub BtnVerTickets_Click(sender As Object, e As EventArgs)
             Dim id = GetSelectedCajaId()
             If id <= 0 Then
@@ -814,6 +831,7 @@ Namespace Forms
             End Using
         End Sub
 
+        ' Exporta el listado filtrado de arqueos de caja a un archivo CSV separado por punto y coma
         Private Sub BtnExportarCSV_Click(sender As Object, e As EventArgs)
             If listaCajasActual.Count = 0 Then
                 MessageBox.Show("No hay registros en la grilla para exportar.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)

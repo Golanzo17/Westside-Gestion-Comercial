@@ -40,6 +40,9 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Obtiene los datos completos de un cliente específico buscando por su ID numérico.
+        ''' </summary>
         Public Function GetClienteById(id As Integer) As Cliente
             Dim query As String = "SELECT * FROM `clientes` WHERE `id` = @id LIMIT 1;"
             Dim dt As DataTable = DatabaseHelper.ExecuteQuery(query, New Dictionary(Of String, Object) From {{"@id", id}})
@@ -47,6 +50,9 @@ Namespace Services
             Return MapCliente(dt.Rows(0))
         End Function
 
+        ''' <summary>
+        ''' Método auxiliar privado que transforma una fila de la base de datos (DataRow) en un objeto Cliente.
+        ''' </summary>
         Private Function MapCliente(row As DataRow) As Cliente
             Dim fnac As Nullable(Of DateTime) = Nothing
             If Not Convert.IsDBNull(row("fecha_nacimiento")) Then
@@ -99,6 +105,10 @@ Namespace Services
             Return False
         End Function
 
+        ''' <summary>
+        ''' Crea un nuevo cliente (si cli.Id = 0) o actualiza uno existente (si cli.Id > 0).
+        ''' Valida campos obligatorios y verifica que el DNI/CUIT no esté repetido antes de guardar.
+        ''' </summary>
         Public Function GuardarCliente(cli As Cliente, ByRef errorMessage As String) As Boolean
             Try
                 Dim dniTrimmed = If(cli.DniCuit, "").Trim()

@@ -145,6 +145,9 @@ Namespace Services
             Return prod
         End Function
 
+        ''' <summary>
+        ''' Obtiene la matriz de talles, colores y stock actual/mínimo de una prenda puntual, ordenada por el orden lógico del talle.
+        ''' </summary>
         Public Function GetStockPorTalles(productoId As Integer) As List(Of ProductoTalle)
             Dim list = New List(Of ProductoTalle)()
             If productoId <= 0 Then
@@ -166,6 +169,10 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Crea una nueva prenda (si prod.Id = 0) o actualiza una existente junto con su matriz de talles/colores.
+        ''' Redondea los precios a 2 decimales y ejecuta todo dentro de una transacción atómica.
+        ''' </summary>
         Public Function GuardarProducto(prod As Producto, ByRef errorMessage As String) As Boolean
             If prod Is Nothing Then
                 errorMessage = "Los datos del producto son inválidos."
@@ -240,6 +247,10 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>
+        ''' Suma o resta stock manualmente para un producto, talle y color específico (ej: ingreso de proveedor o merma).
+        ''' Registra la auditoría en movimientos_stock (Ingreso_Compra o Ajuste_Manual) dentro de una transacción.
+        ''' </summary>
         Public Function AjustarStockManual(productoId As Integer, talleId As Integer, color As String, cantidadDelta As Integer, motivo As String, usuarioId As Integer, ByRef errorMessage As String) As Boolean
             Dim esAjusteValido = productoId > 0 AndAlso talleId > 0 AndAlso cantidadDelta <> 0
             If Not esAjusteValido Then
@@ -305,6 +316,9 @@ Namespace Services
 
 #Region "Helpers Privados de Soporte"
 
+        ''' <summary>
+        ''' Inserta o actualiza cada combinación de talle y color del producto usando UPSERT (ON CONFLICT DO UPDATE).
+        ''' </summary>
         Private Sub GuardarMatrizTalles(conn As DbConnection, trans As DbTransaction, prodId As Integer, codBarra As String, talles As List(Of ProductoTalle))
             Dim queryPt = "INSERT INTO `producto_talles` (`producto_id`, `talle_id`, `color`, `stock_actual`, `stock_minimo`, `sku_especifico`) " &
                           "VALUES (@prodId, @talleId, @color, @stock, @stockMin, @sku) " &
@@ -326,6 +340,9 @@ Namespace Services
             Next
         End Sub
 
+        ''' <summary>
+        ''' Busca el stock actual de una variante (producto, talle y color); si aún no existe la fila en producto_talles, la crea en 0.
+        ''' </summary>
         Private Function ObtenerOInsertarStockFila(conn As DbConnection, trans As DbTransaction, productoId As Integer, talleId As Integer, color As String) As Integer
             Dim querySelect = "SELECT stock_actual FROM `producto_talles` WHERE `producto_id` = @prodId AND `talle_id` = @talleId AND `color` = @color;"
             Using cmdSelect = DatabaseHelper.CreateCommand(conn, querySelect, trans)
@@ -349,6 +366,9 @@ Namespace Services
             Return 0
         End Function
 
+        ''' <summary>
+        ''' Actualiza el campo stock_actual de una variante puntual en la base de datos.
+        ''' </summary>
         Private Sub ActualizarStockFila(conn As DbConnection, trans As DbTransaction, productoId As Integer, talleId As Integer, color As String, nuevoStock As Integer)
             Dim queryUpdate = "UPDATE `producto_talles` SET `stock_actual` = @nuevoStock WHERE `producto_id` = @prodId AND `talle_id` = @talleId AND `color` = @color;"
             Using cmdUpd = DatabaseHelper.CreateCommand(conn, queryUpdate, trans)
@@ -360,6 +380,9 @@ Namespace Services
             End Using
         End Sub
 
+        ''' <summary>
+        ''' Inserta el registro de auditoría en movimientos_stock guardando el stock anterior, posterior, motivo y usuario.
+        ''' </summary>
         Private Sub RegistrarAuditoriaStock(conn As DbConnection, trans As DbTransaction, productoId As Integer, talleId As Integer, color As String, cantidadDelta As Integer, stockActual As Integer, nuevoStock As Integer, motivo As String, usuarioId As Integer)
             Dim queryMov = "INSERT INTO `movimientos_stock` (`producto_id`, `talle_id`, `color`, `tipo_movimiento`, `cantidad`, `stock_anterior`, `stock_posterior`, `motivo`, `usuario_id`) " &
                            "VALUES (@prodId, @talleId, @color, @tipo, @cant, @ant, @post, @motivo, @userId);"
@@ -377,6 +400,7 @@ Namespace Services
             End Using
         End Sub
 
+        ' Convierte una fila DataRow en un objeto Categoria
         Private Shared Function MapCategoria(row As DataRow) As Categoria
             Return New Categoria() With {
                 .Id = Convert.ToInt32(row("id")),
@@ -386,6 +410,7 @@ Namespace Services
             }
         End Function
 
+        ' Convierte una fila DataRow en un objeto Talle
         Private Shared Function MapTalle(row As DataRow) As Talle
             Return New Talle() With {
                 .Id = Convert.ToInt32(row("id")),
@@ -394,6 +419,7 @@ Namespace Services
             }
         End Function
 
+        ' Convierte una fila DataRow en un objeto Producto; si incluirTalles es True, carga también su matriz de talles
         Private Function MapProducto(row As DataRow, Optional incluirTalles As Boolean = False) As Producto
             Dim prodId = Convert.ToInt32(row("id"))
             Dim prod = New Producto() With {
@@ -418,6 +444,7 @@ Namespace Services
             Return prod
         End Function
 
+        ' Convierte una fila DataRow en un objeto ProductoTalle (variante talle + color + stock)
         Private Shared Function MapProductoTalle(row As DataRow) As ProductoTalle
             Return New ProductoTalle() With {
                 .Id = Convert.ToInt32(row("id")),

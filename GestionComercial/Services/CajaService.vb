@@ -14,6 +14,7 @@ Imports GestionComercial.Data
 Imports GestionComercial.Models
 
 Namespace Services
+    ' DTO que agrupa el resumen de ventas cobradas en un turno separadas por medio de pago (Efectivo, Tarjetas, Transferencia/QR)
     Public Class DesgloseTurnoCaja
         Public Property CantidadTickets As Integer = 0
         Public Property TotalVendido As Decimal = 0D
@@ -179,6 +180,10 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>
+        ''' Obtiene todos los movimientos manuales (ingresos y egresos/retiros) de un turno de caja,
+        ''' incluyendo quién los registró y qué supervisor los autorizó.
+        ''' </summary>
         Public Function GetMovimientosCaja(cajaId As Integer) As List(Of MovimientoCaja)
             Dim list As New List(Of MovimientoCaja)()
             Dim query As String = "SELECT mc.*, u.nombre_completo AS usuario_nombre, IFNULL(ua.nombre_completo, '') AS autorizado_por_nombre " &
@@ -219,6 +224,9 @@ Namespace Services
             Return list
         End Function
 
+        ''' <summary>
+        ''' Obtiene los datos completos de un turno de caja puntual buscando por su ID (usado en la auditoría de arqueo).
+        ''' </summary>
         Public Function GetCajaById(id As Integer) As Caja
             Try
                 Dim query As String = "SELECT c.*, u.nombre_completo AS usuario_nombre " &
@@ -383,6 +391,9 @@ Namespace Services
             Return res
         End Function
 
+        ''' <summary>
+        ''' Método auxiliar privado que transforma una fila de la tabla 'cajas' en un objeto Caja.
+        ''' </summary>
         Private Function MapCaja(row As DataRow) As Caja
             Dim fechaCierreVal As Nullable(Of DateTime) = Nothing
             If Not Convert.IsDBNull(row("fecha_cierre")) Then

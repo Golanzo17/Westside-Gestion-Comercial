@@ -29,6 +29,7 @@ Namespace Forms
         Private btnRefrescar As Button
         Private lblResumenAlertas As Label
 
+        ' Constructor: inicializa la pantalla de control de stock y carga alertas y movimientos
         Public Sub New()
             InitializeUI()
             LoadStockData()
@@ -126,6 +127,7 @@ Namespace Forms
             Me.Controls.Add(pnlHeader)
         End Sub
 
+        ' Configura las columnas de la grilla de alertas de stock bajo/crítico
         Private Sub ConfigurarColumnasAlertas()
             dgvAlertas.Columns.Clear()
             dgvAlertas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -180,6 +182,7 @@ Namespace Forms
             dgvAlertas.Columns("Estado").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
         End Sub
 
+        ' Configura las columnas del historial de movimientos de inventario
         Private Sub ConfigurarColumnasMovimientos()
             dgvMovimientos.Columns.Clear()
             dgvMovimientos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -324,12 +327,14 @@ Namespace Forms
         Private btnGuardar As Button
         Private btnCancelar As Button
 
+        ' Constructor: inicializa el modal de ajuste/ingreso de stock y carga catálogo y colores
         Public Sub New()
             InitializeUI()
             CargarCatalogo()
             CargarColores()
         End Sub
 
+        ' Construye buscador predictivo de prendas, selector de talle/color y grilla de ajuste
         Private Sub InitializeUI()
             Me.Text = "Ingreso de Mercadería / Reposición de Stock"
             Me.Size = New Size(560, 560)
@@ -437,6 +442,7 @@ Namespace Forms
             lstSugerencias.BringToFront()
         End Sub
 
+        ' Obtiene todos los productos activos para habilitar el autocompletado de búsqueda
         Private Sub CargarCatalogo()
             todosLosProductos = catalogService.GetProductos("", 0, True)
             If todosLosProductos.Count > 0 Then
@@ -444,6 +450,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Carga la lista de colores existentes más la opción para crear uno nuevo
         Private Sub CargarColores()
             cboColor.Items.Clear()
             Dim colores = catalogService.GetColoresDisponibles()
@@ -457,6 +464,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Filtra en tiempo real el catálogo de prendas y despliega la lista de sugerencias
         Private Sub TxtBuscarPrenda_TextChanged(sender As Object, e As EventArgs)
             Dim term = txtBuscarPrenda.Text.Trim()
             If String.IsNullOrWhiteSpace(term) Then
@@ -480,6 +488,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Permite navegar o confirmar sugerencias con el teclado desde el cuadro de búsqueda
         Private Sub TxtBuscarPrenda_KeyDown(sender As Object, e As KeyEventArgs)
             If e.KeyCode = Keys.Down AndAlso lstSugerencias.Visible Then
                 lstSugerencias.Focus()
@@ -498,10 +507,12 @@ Namespace Forms
             End If
         End Sub
 
+        ' Selecciona la prenda al hacer clic en la lista desplegable de sugerencias
         Private Sub LstSugerencias_Click(sender As Object, e As EventArgs)
             ConfirmarSeleccionSugerencia()
         End Sub
 
+        ' Confirma con Enter o vuelve al buscador con Escape dentro de la lista de sugerencias
         Private Sub LstSugerencias_KeyDown(sender As Object, e As KeyEventArgs)
             If e.KeyCode = Keys.Enter Then
                 e.SuppressKeyPress = True
@@ -512,6 +523,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Toma el ítem seleccionado de las sugerencias y lo carga en el formulario
         Private Sub ConfirmarSeleccionSugerencia()
             Dim item = TryCast(lstSugerencias.SelectedItem, PrendaItem)
             If item IsNot Nothing Then
@@ -522,6 +534,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Carga los detalles y variantes actuales de la prenda elegida para ajustar su stock
         Private Sub SeleccionarPrenda(prod As Producto)
             productoSeleccionado = prod
             lblPrendaSeleccionada.Text = $"✔ Seleccionada: {prod.Nombre} (Cód: {prod.CodigoBarra})"
@@ -537,12 +550,14 @@ Namespace Forms
             If cboTalles.Items.Count > 0 Then cboTalles.SelectedIndex = 0
         End Sub
 
+        ' Dispara el alta rápida de un color si se selecciona la opción de crear uno nuevo
         Private Sub CboColor_SelectedIndexChanged(sender As Object, e As EventArgs)
             If cboColor.SelectedItem IsNot Nothing AndAlso cboColor.SelectedItem.ToString().Contains("[+ Crear nuevo color...]") Then
                 CrearNuevoColor()
             End If
         End Sub
 
+        ' Solicita el nombre de un nuevo color, lo registra en el catálogo y lo selecciona
         Private Sub CrearNuevoColor()
             Using dlgPrompt As New Form()
                 dlgPrompt.Text = "Registrar Nuevo Color de Prenda"
@@ -619,15 +634,18 @@ Namespace Forms
         Private Class PrendaItem
             Public Property Producto As Producto
 
+            ' Constructor: envuelve un producto para mostrarlo en la lista de sugerencias
             Public Sub New(p As Producto)
                 Me.Producto = p
             End Sub
 
+            ' Formatea el texto mostrado en el buscador predictivo (nombre, código, categoría y stock)
             Public Overrides Function ToString() As String
                 Return $"{Producto.Nombre}  |  Cód: {Producto.CodigoBarra}  |  Cat: {Producto.CategoriaNombre}  |  Stock: {Producto.TotalStock}"
             End Function
         End Class
 
+        ' Valida los datos del ajuste y registra el ingreso, egreso o movimiento de stock
         Private Sub BtnGuardar_Click(sender As Object, e As EventArgs)
             If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Guardar movimientos de stock manuales requiere permisos de Administrador o Gerente.") Then
                 Return

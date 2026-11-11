@@ -47,6 +47,7 @@ Namespace Forms
         Private activeNavBtn As Button = Nothing  ' Botón de nav activo (para indicador visual)
         Private _cerrandoPorLogout As Boolean = False
 
+        ' Constructor: construye la ventana principal, inicia el reloj y carga los KPIs del dashboard
         Public Sub New()
             InitializeUI()
             StartClock()
@@ -59,6 +60,7 @@ Namespace Forms
                                       End Sub
         End Sub
 
+        ' Inicializa barra lateral filtrada por rol, barra superior, panel anfitrión y atajo F1
         Private Sub InitializeUI()
             Me.Text = "Software de Gestión Comercial - Local de Ropa & Indumentaria"
             Me.Size = New Size(1280, 800)
@@ -290,6 +292,7 @@ Namespace Forms
                                    End Sub
         End Sub
 
+        ' Crea un botón del menú lateral con pintado personalizado para resaltar la sección activa
         Private Function CreateNavButton(text As String, clickHandler As EventHandler) As Button
             Dim btn As New Button() With {
                 .Text = text,
@@ -318,6 +321,7 @@ Namespace Forms
             Return btn
         End Function
 
+        ' Marca el botón de navegación activo y fuerza el repintado del menú lateral
         Private Sub SetActiveNavButton(btn As Button)
             activeNavBtn = btn
             For Each ctrl As Control In pnlSidebar.Controls
@@ -331,6 +335,7 @@ Namespace Forms
             Next
         End Sub
 
+        ' Construye el panel inicial con tarjetas KPI y accesos rápidos adaptados al rol conectado
         Private Sub BuildDashboardHome()
             pnlDashboardHome = New Panel() With {
                 .Dock = DockStyle.Fill,
@@ -613,6 +618,7 @@ Namespace Forms
             pnlDashboardHome.Controls.Add(pnlHeaderDash)
         End Sub
 
+        ' Inicia el temporizador que actualiza fecha y hora en tiempo real en la barra superior
         Private Sub StartClock()
             timerClock = New Timer() With {.Interval = 1000}
             AddHandler timerClock.Tick, Sub()
@@ -621,6 +627,7 @@ Namespace Forms
             timerClock.Start()
         End Sub
 
+        ' Consulta métricas del día y estado de caja según el rol para refrescar los KPIs del inicio
         Public Sub LoadDashboardData()
             Try
                 Dim resumen = reporteService.GetResumenHoy()
@@ -677,6 +684,7 @@ Namespace Forms
             End Try
         End Sub
 
+        ' Cierra la vista hija anterior e incrusta el nuevo formulario dentro del panel anfitrión
         Private Sub OpenChildForm(childForm As Form)
             If activeChildForm IsNot Nothing Then
                 activeChildForm.Close()
@@ -695,6 +703,7 @@ Namespace Forms
             childForm.Show()
         End Sub
 
+        ' Vuelve al Panel Principal y recarga sus indicadores
         Private Sub Nav_Home(sender As Object, e As EventArgs)
             SetActiveNavButton(Nothing)
             If activeChildForm IsNot Nothing Then
@@ -706,41 +715,48 @@ Namespace Forms
             LoadDashboardData()
         End Sub
 
+        ' Abre el módulo de Punto de Venta (solo Vendedor)
         Private Sub Nav_POS(sender As Object, e As EventArgs)
             If Not AuthService.IsVendor Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmVentasPOS())
         End Sub
 
+        ' Abre el catálogo de productos y talles (Gerente o Vendedor)
         Private Sub Nav_Productos(sender As Object, e As EventArgs)
             If AuthService.IsAdmin Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmProductos())
         End Sub
 
+        ' Abre la pantalla de control y reposición de stock (solo Gerente)
         Private Sub Nav_Stock(sender As Object, e As EventArgs)
             If Not AuthService.IsManager Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmStock())
         End Sub
 
+        ' Abre el directorio y ABM de clientes
         Private Sub Nav_Clientes(sender As Object, e As EventArgs)
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmClientes())
         End Sub
 
+        ' Abre la gestión de apertura, movimientos y cierre de caja del vendedor
         Private Sub Nav_Caja(sender As Object, e As EventArgs)
             If Not AuthService.IsVendor Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmCaja())
         End Sub
 
+        ' Abre el listado de ventas del turno y cambios de prenda del vendedor
         Private Sub Nav_MisVentas(sender As Object, e As EventArgs)
             If Not AuthService.IsVendor Then Return
             If sender IsNot Nothing AndAlso TypeOf sender Is Button Then SetActiveNavButton(CType(sender, Button))
             OpenChildForm(New FrmMisVentasTurno())
         End Sub
 
+        ' Abre el tablero gerencial de auditoría de cierres y arqueos de caja
         Private Sub Nav_ControlCajas(sender As Object, e As EventArgs)
             If Not AuthService.IsManager Then
                 MessageBox.Show("El control de cierres y arqueos de caja está reservado exclusivamente para el rol de Gerente.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
@@ -750,6 +766,7 @@ Namespace Forms
             OpenChildForm(New FrmControlCajas())
         End Sub
 
+        ' Abre el módulo de reportes y estadísticas comerciales (solo Gerente)
         Private Sub Nav_Reportes(sender As Object, e As EventArgs)
             If Not AuthService.IsManager Then
                 MessageBox.Show("El acceso a reportes comerciales y ventas está reservado exclusivamente para el rol de Gerente.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
@@ -759,6 +776,7 @@ Namespace Forms
             OpenChildForm(New FrmReportes())
         End Sub
 
+        ' Abre el ABM de usuarios y empleados (solo Administrador)
         Private Sub Nav_Usuarios(sender As Object, e As EventArgs)
             If Not AuthService.IsAdmin Then
                 MessageBox.Show("El acceso al módulo de usuarios y equipo está reservado exclusivamente para Administradores.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
@@ -768,6 +786,7 @@ Namespace Forms
             OpenChildForm(New FrmUsuarios())
         End Sub
 
+        ' Abre el módulo de copias de seguridad y restauración de la base (solo Administrador)
         Private Sub Nav_Backup(sender As Object, e As EventArgs)
             If Not AuthService.IsAdmin Then
                 MessageBox.Show("El acceso a las copias de seguridad está reservado exclusivamente para Administradores.", "Acceso Restringido", MessageBoxButtons.OK, MessageBoxIcon.Warning)
@@ -778,6 +797,7 @@ Namespace Forms
         End Sub
 
 
+        ' Solicita autorización de Administrador y abre el modal de configuración general
         Private Sub Nav_Config(sender As Object, e As EventArgs)
             If Not AuthService.SolicitarAutorizacionAdmin(Me, "La configuración general del sistema está reservada para Administradores.") Then
                 Return
@@ -788,6 +808,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Cierra la sesión activa tras confirmar y vuelve a mostrar la pantalla de Login
         Private Sub BtnLogout_Click(sender As Object, e As EventArgs)
             If MessageBox.Show("¿Deseas cerrar tu sesión actual?", "Cerrar Sesión", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.Yes Then
                 _cerrandoPorLogout = True

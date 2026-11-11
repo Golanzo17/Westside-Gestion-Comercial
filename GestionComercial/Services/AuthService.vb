@@ -56,6 +56,7 @@ Namespace Services
             End Set
         End Property
 
+        ' Indica si hay algún usuario con sesión iniciada en este momento
         Public ReadOnly Property IsAuthenticated As Boolean
             Get
                 Return _currentUser IsNot Nothing
@@ -66,24 +67,28 @@ Namespace Services
         ' Estas propiedades las usamos en los formularios para mostrar u ocultar botones
         ' según los privilegios del perfil activo.
 
+        ' Devuelve True únicamente si el usuario conectado tiene el rol "Administrador"
         Public ReadOnly Property IsAdmin As Boolean
             Get
                 Return _currentUser IsNot Nothing AndAlso _currentUser.Rol.Equals("Administrador", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
+        ' Devuelve True únicamente si el usuario conectado tiene el rol "Gerente"
         Public ReadOnly Property IsManager As Boolean
             Get
                 Return _currentUser IsNot Nothing AndAlso _currentUser.Rol.Equals("Gerente", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
+        ' Devuelve True únicamente si el usuario conectado tiene el rol "Vendedor"
         Public ReadOnly Property IsVendor As Boolean
             Get
                 Return _currentUser IsNot Nothing AndAlso _currentUser.Rol.Equals("Vendedor", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
+        ' Devuelve True si el usuario conectado es "Administrador" o "Gerente" (perfil de supervisión)
         Public ReadOnly Property IsAdminOrManager As Boolean
             Get
                 Return IsAdmin OrElse IsManager
@@ -150,6 +155,10 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>
+        ''' Verifica si la cuenta o clave indicada se encuentra temporalmente bloqueada por haber superado los 5 intentos fallidos.
+        ''' Si el tiempo de bloqueo ya venció, limpia el registro y permite volver a intentar.
+        ''' </summary>
         Private Function EstaBloqueadoPorFuerzaBruta(userKey As String, ByRef errorMessage As String) As Boolean
             SyncLock _lockObj
                 If Not _attempts.ContainsKey(userKey) Then
@@ -170,6 +179,9 @@ Namespace Services
             End SyncLock
         End Function
 
+        ''' <summary>
+        ''' Borra el historial de intentos fallidos de un usuario luego de iniciar sesión o autorizar correctamente.
+        ''' </summary>
         Private Sub LimpiarIntentosFallidos(userKey As String)
             SyncLock _lockObj
                 If _attempts.ContainsKey(userKey) Then
@@ -203,6 +215,9 @@ Namespace Services
             End SyncLock
         End Sub
 
+        ''' <summary>
+        ''' Convierte una fila (DataRow) de la tabla 'usuarios' en un objeto Usuario en memoria.
+        ''' </summary>
         Private Function ConstruirUsuarioDesdeFila(row As DataRow) As Usuario
             Dim dniVal As String = ""
             If row.Table.Columns.Contains("dni") AndAlso Not Convert.IsDBNull(row("dni")) Then
@@ -272,6 +287,10 @@ Namespace Services
             Return False
         End Function
 
+        ''' <summary>
+        ''' Solicita autorización de un Gerente si el usuario actual no tiene ese rol (por ejemplo, para anular una venta).
+        ''' Si quien opera ya es Gerente, retorna True sin abrir el diálogo.
+        ''' </summary>
         Public Function SolicitarAutorizacionManager(owner As Form, motivo As String) As Boolean
             If IsManager Then
                 LastAuthorizingSupervisor = CurrentUser

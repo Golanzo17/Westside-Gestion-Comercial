@@ -96,16 +96,19 @@ Namespace Forms
             Public Property Id As Integer
             Public Property Descripcion As String
 
+            ' Constructor: almacena ID y etiqueta visible para los filtros de clientes y vendedores
             Public Sub New(id As Integer, descripcion As String)
                 Me.Id = id
                 Me.Descripcion = descripcion
             End Sub
 
+            ' Devuelve el texto a mostrar dentro del ComboBox
             Public Overrides Function ToString() As String
                 Return Descripcion
             End Function
         End Class
 
+        ' Constructor: inicializa pestañas, combos de filtro y carga las métricas del período inicial
         Public Sub New()
             InitializeUI()
             CargarComboClientes()
@@ -114,6 +117,7 @@ Namespace Forms
             LoadReportes()
         End Sub
 
+        ' Verifica al cargar que el operador sea Gerente; de lo contrario cierra la pantalla
         Protected Overrides Sub OnLoad(e As EventArgs)
             MyBase.OnLoad(e)
             If Not AuthService.IsManager Then
@@ -122,6 +126,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Construye barra de filtros por fecha/vendedor, tarjetas KPI financieras y las 5 pestañas de análisis
         Private Sub InitializeUI()
             Me.Text = "Reportes Comerciales, Ventas por Cliente y Estadísticas"
             Me.Size = New Size(1120, 720)
@@ -297,6 +302,7 @@ Namespace Forms
             Me.Controls.Add(pnlHeader)
         End Sub
 
+        ' Construye la pestaña 1 con filtros por cliente/medio/estado y la grilla general de ventas
         Private Sub ConstruirTabVentas()
             Dim pnlVentasToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
@@ -369,6 +375,7 @@ Namespace Forms
             tabVentas.Controls.Add(pnlVentasToolbar)
         End Sub
 
+        ' Construye la pestaña 2 con el resumen y listado histórico de ventas anuladas
         Private Sub ConstruirTabAnulaciones()
             Dim pnlAnulacionesToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
@@ -397,6 +404,7 @@ Namespace Forms
             tabAnulaciones.Controls.Add(pnlAnulacionesToolbar)
         End Sub
 
+        ' Construye la pestaña 3 con métricas agrupadas por cliente arriba y sus tickets debajo
         Private Sub ConstruirTabClientes()
             ' Panel superior de filtros para clientes (responsivo)
             Dim pnlClientesToolbar As New Panel() With {
@@ -530,6 +538,7 @@ Namespace Forms
             tabClientes.Controls.Add(pnlClientesToolbar)
         End Sub
 
+        ' Construye la pestaña 4 con el rendimiento agrupado por vendedor arriba y sus tickets debajo
         Private Sub ConstruirTabVendedores()
             ' Panel superior de filtros para vendedores (responsivo)
             Dim pnlVendedoresToolbar As New Panel() With {
@@ -663,6 +672,7 @@ Namespace Forms
             tabVendedores.Controls.Add(pnlVendedoresToolbar)
         End Sub
 
+        ' Construye la pestaña 5 para alternar entre ranking de salida, margen y stock inmovilizado
         Private Sub ConstruirTabRanking()
             Dim pnlRankingToolbar As New Panel() With {
                 .Dock = DockStyle.Top,
@@ -746,6 +756,7 @@ Namespace Forms
             tabRanking.Controls.Add(pnlRankingToolbar)
         End Sub
 
+        ' Carga la lista de clientes activos en los selectores de Ventas Generales y Reporte por Cliente
         Private Sub CargarComboClientes()
             cboClienteGeneral.Items.Clear()
             cboClienteGeneral.Items.Add(New FiltroComboItem(0, "[ Todos los clientes ]"))
@@ -768,6 +779,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Carga vendedores y gerentes en los selectores de filtro general y por vendedor
         Private Sub CargarComboVendedores()
             cboVendedorGeneral.Items.Clear()
             cboVendedorGeneral.Items.Add(New FiltroComboItem(0, "[ Todos los vendedores ]"))
@@ -792,6 +804,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Configura las columnas de la grilla de listado general de ventas
         Private Sub ConfigurarColumnasVentas()
             dgvVentas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvVentas.Columns.Clear()
@@ -839,6 +852,7 @@ Namespace Forms
             dgvVentas.Columns("Estado").MinimumWidth = 80
         End Sub
 
+        ' Configura las columnas de la grilla de métricas acumuladas por cliente
         Private Sub ConfigurarColumnasClientesReporte()
             dgvClientesReporte.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvClientesReporte.Columns.Clear()
@@ -892,6 +906,7 @@ Namespace Forms
             dgvClientesReporte.Columns("UltimaCompra").MinimumWidth = 105
         End Sub
 
+        ' Configura las columnas de la grilla inferior de comprobantes del cliente seleccionado
         Private Sub ConfigurarColumnasTicketsCliente()
             dgvTicketsCliente.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvTicketsCliente.Columns.Clear()
@@ -935,6 +950,7 @@ Namespace Forms
             dgvTicketsCliente.Columns("Estado").MinimumWidth = 80
         End Sub
 
+        ' Configura las columnas de la grilla de desempeño agrupado por vendedor
         Private Sub ConfigurarColumnasVendedoresReporte()
             dgvVendedoresReporte.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvVendedoresReporte.Columns.Clear()
@@ -988,6 +1004,7 @@ Namespace Forms
             dgvVendedoresReporte.Columns("UltimaVenta").MinimumWidth = 105
         End Sub
 
+        ' Configura las columnas de la grilla inferior de comprobantes emitidos por el vendedor seleccionado
         Private Sub ConfigurarColumnasTicketsVendedor()
             dgvTicketsVendedor.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvTicketsVendedor.Columns.Clear()
@@ -1031,6 +1048,7 @@ Namespace Forms
             dgvTicketsVendedor.Columns("Estado").MinimumWidth = 80
         End Sub
 
+        ' Configura las columnas de ranking de prendas vendidas (oculta costos si el rol fuera Vendedor)
         Private Sub ConfigurarColumnasRanking()
             dgvRanking.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvRanking.Columns.Clear()
@@ -1079,6 +1097,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Reconfigura la grilla de ranking para mostrar variantes con stock sin rotación y su capital retenido
         Private Sub ConfigurarColumnasStockInmovilizado()
             dgvRanking.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvRanking.Columns.Clear()
@@ -1124,6 +1143,7 @@ Namespace Forms
             dgvRanking.Columns("UltimaVenta").MinimumWidth = 130
         End Sub
 
+        ' Configura las columnas de la grilla de tickets anulados con autorizador y motivo
         Private Sub ConfigurarColumnasAnulaciones()
             dgvAnulaciones.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             dgvAnulaciones.Columns.Clear()
@@ -1167,6 +1187,7 @@ Namespace Forms
             dgvAnulaciones.Columns("Motivo").MinimumWidth = 150
         End Sub
 
+        ' Actualiza el rango Desde/Hasta según el acceso rápido de período elegido y recarga reportes
         Private Sub CboRapidoFechas_SelectedIndexChanged(sender As Object, e As EventArgs)
             If isLoading Then Return
             Dim hoy = DateTime.Today
@@ -1210,6 +1231,7 @@ Namespace Forms
             LoadRanking()
         End Sub
 
+        ' Consulta las ventas filtradas del período, puebla la grilla general y actualiza las 4 KPI Cards
         Private Sub LoadVentasGenerales()
             Dim desde = dtpDesde.Value.Date
             Dim hasta = dtpHasta.Value.Date
@@ -1261,6 +1283,7 @@ Namespace Forms
             lblTicketPromedioSub.Text = $"Gasto promedio ({metricas.CantidadTickets} compras)"
         End Sub
 
+        ' Consulta los comprobantes en estado Anulada del período y calcula el monto total revertido
         Private Sub LoadAnulaciones()
             Dim desde = dtpDesde.Value.Date
             Dim hasta = dtpHasta.Value.Date
@@ -1293,6 +1316,7 @@ Namespace Forms
             lblResumenAnulaciones.Text = $"Ventas anuladas / devueltas en el período: {anuladas.Count}  |  Total revertido: {totalRevertido:C2}  (Doble clic para ver prendas devueltas)"
         End Sub
 
+        ' Carga métricas de facturación, prendas y margen agrupadas por cliente según el orden elegido
         Private Sub LoadVentasPorCliente()
             Dim desde = dtpDesde.Value.Date
             Dim hasta = dtpHasta.Value.Date
@@ -1337,6 +1361,7 @@ Namespace Forms
             DgvClientesReporte_SelectionChanged(Nothing, EventArgs.Empty)
         End Sub
 
+        ' Carga métricas de facturación, prendas y margen agrupadas por vendedor según el orden elegido
         Private Sub LoadVentasPorVendedor()
             Dim desde = dtpDesde.Value.Date
             Dim hasta = dtpHasta.Value.Date
@@ -1381,6 +1406,7 @@ Namespace Forms
             DgvVendedoresReporte_SelectionChanged(Nothing, EventArgs.Empty)
         End Sub
 
+        ' Actualiza la grilla inferior de comprobantes cada vez que cambia el vendedor seleccionado
         Private Sub DgvVendedoresReporte_SelectionChanged(sender As Object, e As EventArgs)
             If dgvVendedoresReporte.CurrentRow IsNot Nothing AndAlso dgvVendedoresReporte.CurrentRow.Cells("Id").Value IsNot Nothing Then
                 Dim vendedorId As Integer = Convert.ToInt32(dgvVendedoresReporte.CurrentRow.Cells("Id").Value)
@@ -1392,6 +1418,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Obtiene y muestra los tickets emitidos en el período por el vendedor seleccionado
         Private Sub LoadTicketsVendedor(vendedorId As Integer, vendedorNombre As String)
             Dim desde = dtpDesde.Value.Date
             Dim hasta = dtpHasta.Value.Date
@@ -1409,6 +1436,7 @@ Namespace Forms
             Next
         End Sub
 
+        ' Actualiza la grilla inferior de comprobantes cada vez que cambia el cliente seleccionado
         Private Sub DgvClientesReporte_SelectionChanged(sender As Object, e As EventArgs)
             If dgvClientesReporte.CurrentRow IsNot Nothing AndAlso dgvClientesReporte.CurrentRow.Cells("Id").Value IsNot Nothing Then
                 Dim clienteId As Integer = Convert.ToInt32(dgvClientesReporte.CurrentRow.Cells("Id").Value)
@@ -1420,6 +1448,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Obtiene y muestra los tickets emitidos en el período para el cliente seleccionado
         Private Sub LoadTicketsCliente(clienteId As Integer, clienteNombre As String)
             Dim desde = dtpDesde.Value.Date
             Dim hasta = dtpHasta.Value.Date
@@ -1437,6 +1466,7 @@ Namespace Forms
             Next
         End Sub
 
+        ' Carga el ranking por mayor salida, mayor margen o stock inmovilizado según el criterio seleccionado
         Private Sub LoadRanking()
             Dim desde = dtpDesde.Value.Date
             Dim hasta = dtpHasta.Value.Date
@@ -1502,6 +1532,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Abre el detalle de prendas al hacer doble clic en el listado general de ventas
         Private Sub DgvVentas_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
             If e.RowIndex >= 0 Then
                 Dim row = dgvVentas.Rows(e.RowIndex)
@@ -1511,6 +1542,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Abre el detalle de prendas devueltas al hacer doble clic en una venta anulada
         Private Sub DgvAnulaciones_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
             If e.RowIndex >= 0 Then
                 Dim row = dgvAnulaciones.Rows(e.RowIndex)
@@ -1520,6 +1552,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Abre el detalle del ticket seleccionado al hacer doble clic en la pestaña de Clientes
         Private Sub DgvTicketsCliente_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
             If e.RowIndex >= 0 Then
                 Dim row = dgvTicketsCliente.Rows(e.RowIndex)
@@ -1529,6 +1562,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Muestra el modal con las prendas incluidas en el ticket seleccionado del cliente
         Private Sub BtnVerDetalleTicketCliente_Click(sender As Object, e As EventArgs)
             If dgvTicketsCliente.CurrentRow IsNot Nothing Then
                 Dim ventaId As Integer = Convert.ToInt32(dgvTicketsCliente.CurrentRow.Cells("Id").Value)
@@ -1539,6 +1573,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Abre el detalle del ticket seleccionado al hacer doble clic en la pestaña de Vendedores
         Private Sub DgvTicketsVendedor_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
             If e.RowIndex >= 0 Then
                 Dim row = dgvTicketsVendedor.Rows(e.RowIndex)
@@ -1548,6 +1583,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Muestra el modal con las prendas incluidas en el ticket seleccionado del vendedor
         Private Sub BtnVerDetalleTicketVendedor_Click(sender As Object, e As EventArgs)
             If dgvTicketsVendedor.CurrentRow IsNot Nothing Then
                 Dim ventaId As Integer = Convert.ToInt32(dgvTicketsVendedor.CurrentRow.Cells("Id").Value)
@@ -1558,6 +1594,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Descarga en PDF el comprobante seleccionado en la pestaña de Vendedores
         Private Sub BtnDescargarPdfTicketVendedor_Click(sender As Object, e As EventArgs)
             If dgvTicketsVendedor.CurrentRow IsNot Nothing AndAlso dgvTicketsVendedor.CurrentRow.Cells("Id").Value IsNot Nothing Then
                 Dim ventaId As Integer = Convert.ToInt32(dgvTicketsVendedor.CurrentRow.Cells("Id").Value)
@@ -1567,6 +1604,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Detecta la pestaña activa y exporta a PDF el ticket seleccionado en su grilla
         Private Sub BtnDescargarPdf_Click(sender As Object, e As EventArgs)
             If tabs.SelectedTab Is tabVentas Then
                 If dgvVentas.CurrentRow IsNot Nothing AndAlso dgvVentas.CurrentRow.Cells("Id").Value IsNot Nothing Then
@@ -1591,6 +1629,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Descarga en PDF el comprobante seleccionado en la pestaña de Clientes
         Private Sub BtnDescargarPdfTicketCliente_Click(sender As Object, e As EventArgs)
             If dgvTicketsCliente.CurrentRow IsNot Nothing AndAlso dgvTicketsCliente.CurrentRow.Cells("Id").Value IsNot Nothing Then
                 Dim ventaId As Integer = Convert.ToInt32(dgvTicketsCliente.CurrentRow.Cells("Id").Value)
@@ -1600,6 +1639,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Recupera cabecera y renglones completos de una venta por ID y dispara su exportación a PDF
         Private Sub DescargarTicketPdfPorId(ventaId As Integer)
             Dim venta = ventaService.GetVentaPorId(ventaId)
             If venta Is Nothing Then
@@ -1617,6 +1657,7 @@ Namespace Forms
             GuardarTicketEnPdf(Me, venta)
         End Sub
 
+        ' Abre una ventana modal con los ítems vendidos de un ticket y botón para reimprimir en PDF
         Private Sub MostrarModalDetalleVenta(ventaId As Integer, ticketNumero As String)
             Dim venta = ventaService.GetVentaPorId(ventaId)
             If venta Is Nothing Then
@@ -1724,6 +1765,7 @@ Namespace Forms
             modal.ShowDialog(Me)
         End Sub
 
+        ' Genera e imprime el ticket en formato PDF usando la impresora virtual "Microsoft Print to PDF"
         Friend Shared Sub GuardarTicketEnPdf(owner As IWin32Window, venta As Venta)
             If venta Is Nothing OrElse venta.Detalles Is Nothing OrElse venta.Detalles.Count = 0 Then
                 MessageBox.Show(owner, "No hay información suficiente para imprimir el ticket.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning)
@@ -1803,6 +1845,7 @@ Namespace Forms
             End Using
         End Sub
 
+        ' Formatea cabecera del comercio, ítems, totales y pie del ticket ajustando líneas a un ancho fijo
         Friend Shared Function ConstruirLineasTicket(venta As Venta, configuracion As ConfiguracionComercio) As List(Of String)
             Dim vendedorNombre As String = If(String.IsNullOrWhiteSpace(venta.UsuarioNombre),
                                               If(AuthService.CurrentUser IsNot Nothing, AuthService.CurrentUser.NombreCompleto, "Caja"),

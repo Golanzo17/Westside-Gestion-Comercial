@@ -48,6 +48,7 @@ Namespace Forms
         Private lblFormulaDiferencia As Label
         Private txtObservaciones As TextBox
 
+        ' Constructor: inicializa el detalle de arqueo para la caja indicada y opcionalmente abre la pestaña del acta
         Public Sub New(cajaId As Integer, Optional seleccionarTabActa As Boolean = False)
             _cajaId = cajaId
             InitializeComponent()
@@ -57,6 +58,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Construye encabezado, footer de acciones y las 4 pestañas de auditoría del turno
         Private Sub InitializeComponent()
             Me.Text = $"Auditoría de Turno de Caja #{_cajaId}"
             Me.Size = New Size(950, 680)
@@ -161,6 +163,7 @@ Namespace Forms
             Me.Controls.Add(pnlHeader)
         End Sub
 
+        ' Arma la pestaña 1 con la fórmula de conciliación de efectivo y el resumen por medio de pago
         Private Sub ConstruirTabConciliacion()
             Dim pnlContent As New Panel() With {
                 .Dock = DockStyle.Fill,
@@ -315,6 +318,7 @@ Namespace Forms
             tabConciliacion.Controls.Add(pnlContent)
         End Sub
 
+        ' Crea una fila alineada etiqueta/valor dentro de la tarjeta de fórmula matemática y retorna el label del valor
         Private Function AgregarFilaFormula(parent As Panel, labelText As String, valText As String, y As Integer, valColor As Color, isBold As Boolean) As Label
             Dim valWidth As Integer = 165
             Dim rightPad As Integer = 18
@@ -350,6 +354,7 @@ Namespace Forms
             Return lblVal
         End Function
 
+        ' Define las columnas y formatos de la grilla resumen por medio de pago
         Private Sub ConfigurarColumnasMediosPago()
             dgvMediosPago.Columns.Clear()
             dgvMediosPago.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -378,6 +383,7 @@ Namespace Forms
             dgvMediosPago.Columns("TotalCobrado").DefaultCellStyle.Font = UITheme.FontBold
         End Sub
 
+        ' Arma la pestaña 2 con la grilla de tickets y comprobantes emitidos durante el turno
         Private Sub ConstruirTabVentas()
             Dim pnlGrid As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(20)}
             dgvVentas = New DataGridView() With {.Dock = DockStyle.Fill}
@@ -448,6 +454,7 @@ Namespace Forms
             tabVentas.Controls.Add(pnlGrid)
         End Sub
 
+        ' Arma la pestaña 3 con la grilla de ingresos y egresos manuales de caja
         Private Sub ConstruirTabMovimientos()
             Dim pnlGrid As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(20)}
             dgvMovimientos = New DataGridView() With {.Dock = DockStyle.Fill}
@@ -507,6 +514,7 @@ Namespace Forms
             tabMovimientos.Controls.Add(pnlGrid)
         End Sub
 
+        ' Arma la pestaña 4 con el visor monoespaciado del acta oficial de cierre
         Private Sub ConstruirTabActa()
             Dim pnlActa As New Panel() With {.Dock = DockStyle.Fill, .Padding = New Padding(20)}
 
@@ -524,6 +532,7 @@ Namespace Forms
             tabActa.Controls.Add(pnlActa)
         End Sub
 
+        ' Consulta la caja, sus ventas, medios de pago y movimientos para poblar todas las pestañas
         Private Sub CargarDatosTurno()
             _caja = _cajaService.GetCajaById(_cajaId)
             If _caja Is Nothing Then
@@ -625,6 +634,7 @@ Namespace Forms
             GenerarActaOficial()
         End Sub
 
+        ' Redacta el texto formal del Acta de Arqueo y Cierre de Turno con datos del comercio y conciliación
         Private Sub GenerarActaOficial()
             If _caja Is Nothing Then Return
             Dim cfg = _configService.GetConfiguracion()
@@ -687,6 +697,7 @@ Namespace Forms
             txtActa.Text = sb.ToString()
         End Sub
 
+        ' Exporta el texto generado del acta oficial a un archivo .txt seleccionado por el usuario
         Private Sub BtnImprimirActa_Click(sender As Object, e As EventArgs)
             If String.IsNullOrWhiteSpace(txtActa.Text) Then Return
 

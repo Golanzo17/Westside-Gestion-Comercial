@@ -1,4 +1,4 @@
-﻿' ARCHIVO: FrmAutorizacionSupervisor.vb
+' ARCHIVO: FrmAutorizacionSupervisor.vb
 ' PROPÓSITO: Diálogo modal reutilizable para autorizaciones de supervisor (Gerente / Administrador).
 ' Desacopla la interfaz gráfica de AuthService y aplica control anti fuerza bruta y auditoría del autorizante.
 
@@ -20,12 +20,14 @@ Namespace Forms
         <System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)>
         Public Property SupervisorAutorizante As Usuario = Nothing
 
+        ' Constructor del diálogo: recibe el título de cabecera, el nombre del rol requerido, el motivo y los roles válidos
         Public Sub New(tituloHeader As String, etiquetaRol As String, motivo As String, rolesPermitidos As String())
             _rolesPermitidos = rolesPermitidos
             _motivo = motivo
             InitializeUI(tituloHeader, etiquetaRol)
         End Sub
 
+        ' Construye por código la ventana modal de solicitud de contraseña de supervisor
         Private Sub InitializeUI(tituloHeader As String, etiquetaRol As String)
             Me.Text = "Autorización de Supervisor"
             Me.Size = New Size(430, 275)
@@ -97,6 +99,7 @@ Namespace Forms
             Me.CancelButton = btnCancelar
         End Sub
 
+        ' Valida que se haya ingresado una contraseña y la autentica mediante AuthService contra los roles permitidos
         Private Sub ProcesarConfirmacion(etiquetaRol As String)
             If String.IsNullOrWhiteSpace(txtPass.Text) Then
                 MessageBox.Show($"Ingrese la contraseña de {etiquetaRol}.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning)

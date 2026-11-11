@@ -31,12 +31,14 @@ Namespace Forms
         Private dgvProductos As DataGridView
         Private lblTotalArticulos As Label
 
+        ' Constructor: inicializa el catálogo de productos, filtros de categoría y grilla
         Public Sub New()
             InitializeUI()
             LoadCategorias()
             LoadProductos()
         End Sub
 
+        ' Construye barra de búsqueda, filtro de categoría, botones de ABM y grilla de prendas
         Private Sub InitializeUI()
             Me.Text = "Catálogo de Prendas y Matriz de Talles"
             Me.Size = New Size(1050, 650)
@@ -152,6 +154,7 @@ Namespace Forms
             Me.Controls.Add(pnlHeader)
         End Sub
 
+        ' Configura las columnas, formatos monetarios y anchos de la grilla de productos
         Private Sub ConfigurarColumnas()
             dgvProductos.Columns.Clear()
             dgvProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -225,6 +228,7 @@ Namespace Forms
             dgvProductos.Columns("Activo").HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter
         End Sub
 
+        ' Carga las categorías disponibles en el combo de filtro
         Private Sub LoadCategorias()
             cboFiltroCategoria.Items.Clear()
             cboFiltroCategoria.Items.Add(New Categoria() With {.Id = 0, .Nombre = "-- Todas las Categorías --"})
@@ -235,6 +239,7 @@ Namespace Forms
             cboFiltroCategoria.SelectedIndex = 0
         End Sub
 
+        ' Consulta los productos según texto, categoría y estado, actualizando la grilla y contador
         Private Sub LoadProductos()
             Dim filtro As String = txtBuscar.Text.Trim()
             Dim catId As Integer = 0
@@ -277,6 +282,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Solicita autorización y abre el editor para dar de alta un nuevo producto
         Private Sub BtnNuevo_Click(sender As Object, e As EventArgs)
             If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Dar de alta prendas en el catálogo requiere permisos de Administrador o Gerente.") Then Return
             Dim frmEditor As New FrmProductoEditor(0)
@@ -285,16 +291,19 @@ Namespace Forms
             End If
         End Sub
 
+        ' Abre el editor sobre la prenda actualmente seleccionada
         Private Sub BtnEditar_Click(sender As Object, e As EventArgs)
             EditarSeleccionado()
         End Sub
 
+        ' Permite abrir la edición al hacer doble clic en una fila si el usuario tiene permisos
         Private Sub DgvProductos_CellDoubleClick(sender As Object, e As DataGridViewCellEventArgs)
             If AuthService.IsAdminOrManager AndAlso e.RowIndex >= 0 Then
                 EditarSeleccionado()
             End If
         End Sub
 
+        ' Valida permisos y abre el modal de edición para el producto seleccionado
         Private Sub EditarSeleccionado()
             If dgvProductos.CurrentRow IsNot Nothing Then
                 If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Modificar artículos o precios requiere permisos de Administrador o Gerente.") Then Return
@@ -308,6 +317,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Activa o desactiva la prenda seleccionada previa autorización de administrador/gerente
         Private Sub BtnToggleActivo_Click(sender As Object, e As EventArgs)
             If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Modificar el estado de prendas requiere permisos de Administrador o Gerente.") Then Return
             If dgvProductos.CurrentRow IsNot Nothing Then
@@ -352,12 +362,14 @@ Namespace Forms
         Private btnGuardar As Button
         Private btnCancelar As Button
 
+        ' Constructor: abre el editor para alta (productoId = 0) o modificación de una prenda
         Public Sub New(productoId As Integer)
             _productoId = productoId
             InitializeUI()
             LoadData()
         End Sub
 
+        ' Construye los campos del formulario de prenda, precios y grilla de talles/colores
         Private Sub InitializeUI()
             Me.Text = If(_productoId = 0, "Nueva Prenda de Ropa", "Editar Prenda de Ropa")
             Me.Size = New Size(720, 640)
@@ -453,6 +465,7 @@ Namespace Forms
             Me.Controls.Add(pnlBottom)
         End Sub
 
+        ' Configura las columnas editables de variantes (talle, color y stock)
         Private Sub ConfigurarColumnasTalles()
             dgvTalles.Columns.Clear()
             dgvTalles.Columns.Add("TalleId", "ID")
@@ -475,6 +488,7 @@ Namespace Forms
             dgvTalles.Columns("Sku").AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
         End Sub
 
+        ' Carga combos de categorías/marcas y, si es edición, los datos y variantes del producto
         Private Sub LoadData()
             ' Cargar categorías
             cboCategoria.Items.Clear()
@@ -526,12 +540,14 @@ Namespace Forms
             End If
         End Sub
 
+        ' Recalcula automáticamente el precio de venta a partir del costo y porcentaje de ganancia
         Private Sub CalcularPrecios(sender As Object, e As EventArgs)
             Dim costo As Decimal = numCosto.Value
             Dim ganancia As Decimal = numGanancia.Value
             numVenta.Value = Math.Round(costo * (1D + (ganancia / 100D)), 2)
         End Sub
 
+        ' Valida los campos obligatorios y persiste el producto junto con sus variantes de stock
         Private Sub BtnGuardar_Click(sender As Object, e As EventArgs)
             If Not AuthService.SolicitarAutorizacionAdminOManager(Me, "Guardar cambios en prendas o precios requiere permisos de Administrador o Gerente.") Then
                 Return

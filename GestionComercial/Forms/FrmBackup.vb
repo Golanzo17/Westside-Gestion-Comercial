@@ -33,11 +33,13 @@ Namespace Forms
 
         Private dgvBackups As DataGridView
 
+        ' Inicializa la interfaz de copias de seguridad y carga el historial inicial
         Public Sub New()
             InitializeUI()
             LoadDashboardBackup()
         End Sub
 
+        ' Verifica al cargar el formulario que el usuario conectado tenga rol de Administrador
         Protected Overrides Sub OnLoad(e As EventArgs)
             MyBase.OnLoad(e)
             If Not AuthService.IsAdmin Then
@@ -46,6 +48,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Construye por código las 4 tarjetas KPI, la barra de botones y la grilla de respaldos
         Private Sub InitializeUI()
             Me.Text = "Copias de Seguridad (Backup) y Restauración de Base de Datos"
             Me.Size = New Size(1060, 680)
@@ -219,6 +222,7 @@ Namespace Forms
             Me.Controls.Add(pnlHeader)
         End Sub
 
+        ' Configura las columnas y proporciones de la grilla de archivos de respaldo
         Private Sub ConfigurarColumnasGrid()
             dgvBackups.Columns.Clear()
             dgvBackups.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
@@ -245,6 +249,7 @@ Namespace Forms
             dgvBackups.Columns("Ruta").MinimumWidth = 160
         End Sub
 
+        ' Refresca las tarjetas KPI con el peso/tablas de la BD activa y recarga el listado de copias en la grilla
         Private Sub LoadDashboardBackup()
             ' Cargar información de la base de datos en vivo
             Dim info = backupService.ObtenerInfoBaseDatosActual()
@@ -270,6 +275,7 @@ Namespace Forms
             Next
         End Sub
 
+        ' Crea una copia de seguridad inmediata en Database/Backups previa autorización presencial de un Gerente (control dual)
         Private Sub BtnCrearBackup_Click(sender As Object, e As EventArgs)
             If Not AuthService.SolicitarAutorizacionGerente(Me, "Por política de control dual (cuatro ojos), generar una copia de seguridad requiere autorización presencial de un Gerente.") Then
                 Return
@@ -287,6 +293,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Exporta una copia de seguridad a una carpeta elegida por el usuario previa autorización de un Gerente
         Private Sub BtnCrearEnRuta_Click(sender As Object, e As EventArgs)
             If Not AuthService.SolicitarAutorizacionGerente(Me, "Por política de control dual (cuatro ojos), exportar una copia de seguridad requiere autorización presencial de un Gerente.") Then
                 Return
@@ -311,6 +318,7 @@ Namespace Forms
             End Using
         End Sub
 
+        ' Restaura la base de datos activa desde el respaldo seleccionado en la grilla previa confirmación y clave de Gerente
         Private Sub BtnRestaurar_Click(sender As Object, e As EventArgs)
             If dgvBackups.CurrentRow Is Nothing Then
                 MessageBox.Show("Por favor seleccione un archivo de respaldo de la lista para restaurar.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
@@ -343,6 +351,7 @@ Namespace Forms
             End If
         End Sub
 
+        ' Abre en el Explorador de Windows la carpeta local donde se almacenan los respaldos
         Private Sub BtnAbrirCarpeta_Click(sender As Object, e As EventArgs)
             Try
                 Dim dir = backupService.GetDirectorioBackups()
